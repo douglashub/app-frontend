@@ -59,7 +59,7 @@ export default function Dashboard() {
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {/* Ônibus Ativos */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+        <div className="bg-white p-6 border-b border-r border-gray-200">
           <div className="flex justify-between items-start">
             <div>
               <div className="text-3xl font-bold text-gray-900">{stats.onibusAtivos}</div>
@@ -234,4 +234,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
+};

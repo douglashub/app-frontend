@@ -109,12 +109,12 @@ export default function Alunos() {
   };
 
   return (
-    <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8 2xl:px-12 3xl:max-w-screen-4xl">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-[clamp(1.5rem,3vw,2.75rem)] font-bold leading-tight">Gerenciamento de Alunos</h1>
+        <h1 className="text-2xl font-bold">Gerenciamento de Alunos</h1>
         <button
           onClick={() => navigate('/alunos/novo')}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center"
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -123,8 +123,8 @@ export default function Alunos() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="border-b px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="bg-white overflow-hidden">
+        <div className="px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50 border-b">
           <h2 className="font-bold text-lg">Alunos Cadastrados</h2>
           
           {/* Search box */}
@@ -154,21 +154,19 @@ export default function Alunos() {
             </div>
           )}
           
-          <div className="px-4 max-w-full overflow-x-auto 3xl:overflow-visible">
-            <DataTable
-              columns={columns}
-              data={filteredAlunos}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              loading={loading}
-              error={null}
-            />
-          </div>
+          <DataTable
+            columns={columns}
+            data={filteredAlunos}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            loading={loading}
+            error={null} // Error is already shown above
+          />
         </div>
       </div>
 
       {/* Quick Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 gap-[min(1.5vw,1.5rem)] p-[clamp(1rem,2vw,2rem)]">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
           <div className="bg-blue-100 text-blue-600 p-3 rounded-lg mr-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -211,4 +209,4 @@ export default function Alunos() {
       </div>
     </div>
   );
-}
+};

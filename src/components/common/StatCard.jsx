@@ -10,7 +10,7 @@ export default function StatCard({ title, value, icon, color }) {
   }[icon] || ArrowUpIcon
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+    <div className="bg-blue-50 p-6 rounded-lg shadow-sm border border-gray-100">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500 mb-1">{title}</p>

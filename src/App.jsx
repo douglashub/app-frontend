@@ -28,7 +28,7 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row max-w-[2560px] mx-auto">
+    <div className="h-screen flex flex-col md:flex-row w-full bg-blue-50 overflow-hidden">
       {/* Sidebar - Always visible but collapsible on smaller screens */}
       <div className={`
         bg-gray-800 text-white transition-all duration-300 
@@ -140,8 +140,8 @@ const App = () => {
       </div>
       
       {/* Main Content */}
-      <div className="flex-1 min-h-screen">
-        <main className="p-6 max-w-7xl mx-auto">
+      <div className="flex-1 h-full bg-blue-50 overflow-auto">
+        <main className="px-6 py-4 w-full h-full">
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/" element={<Dashboard />} />
@@ -156,4 +156,4 @@ const App = () => {
   );
 }
 
-export default App
+export default App;

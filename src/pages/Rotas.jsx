@@ -108,7 +108,7 @@ const Rotas = () => {
   };
 
   return (
-    <div>
+    <div className="space-y-6 flex-1 bg-white">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Rotas</h1>
         <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center">
