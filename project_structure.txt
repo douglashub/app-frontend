@@ -5,8 +5,14 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 body {
-  @apply bg-gray-50;
+  @apply min-h-screen bg-white;
 }
 
 .primary {
@@ -18,12 +24,11 @@ body {
 }
 === /Users/micaelsantana/Documents/app-frontend/src/components/common/DataTable.jsx ===
 
-import React from 'react'
-import StatusBadge from './StatusBadge'
+import React, { useState } from 'react'
 
 export default function DataTable({ 
   columns, 
-  data = [], // Add default empty array
+  data = [], 
   onEdit, 
   onDelete,
   loading,
@@ -32,82 +37,269 @@ export default function DataTable({
   // Ensure data is always an array
   const safeData = Array.isArray(data) ? data : [];
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(safeData.length / rowsPerPage);
+  const paginatedData = safeData.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+  
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white overflow-hidden">
       {loading && (
-        <div className="p-4 text-gray-500">Carregando...</div>
+        <div className="flex justify-center items-center p-8">
+          <div className="flex items-center">
+            <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Carregando dados...</span>
+          </div>
+        </div>
       )}
 
       {error && (
-        <div className="p-4 text-red-600">{error}</div>
+        <div className="p-4 text-red-600 bg-red-50 rounded-md m-4 flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          <span>{error}</span>
+        </div>
       )}
 
       {!loading && !error && (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm text-gray-500 border-b">
-                {columns.map((col) => (
-                  <th key={col.key} className="pb-3 px-4">{col.header}</th>
-                ))}
-                <th className="pb-3 px-4">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {safeData.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length + 1} className="py-4 px-4 text-center text-gray-500">
-                    Nenhum registro encontrado
-                  </td>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto min-w-full">
+              <thead>
+                <tr className="text-left border-b">
+                  {columns.map((col) => (
+                    <th key={col.key} scope="col" className="px-4 py-3 text-sm font-medium text-gray-500 uppercase">
+                      {col.header}
+                    </th>
+                  ))}
+                  <th scope="col" className="px-4 py-3 text-right text-sm font-medium text-gray-500 uppercase">
+                    Ações
+                  </th>
                 </tr>
-              ) : (
-                safeData.map((item) => (
-                  <tr key={item.id} className="border-b hover:bg-gray-50">
-                    {columns.map((col) => (
-                      <td key={col.key} className="py-3 px-4">
-                        {col.format ? col.format(item) : item[col.key]}
-                      </td>
-                    ))}
-                    <td className="py-3 px-4 space-x-2">
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="text-primary hover:text-secondary"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => onDelete(item)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Excluir
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {paginatedData.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length + 1} className="px-4 py-8 text-center text-gray-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Nenhum registro encontrado</span>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  paginatedData.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      {columns.map((col) => (
+                        <td key={col.key} className="px-4 py-3 text-sm text-gray-900">
+                          {col.format ? col.format(item) : item[col.key]}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-right text-sm font-medium">
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => onEdit(item)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Editar"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => onDelete(item)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Excluir"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Mostrando <span className="font-medium">{(currentPage - 1) * rowsPerPage + 1}</span> a <span className="font-medium">
+                      {Math.min(currentPage * rowsPerPage, safeData.length)}
+                    </span> de <span className="font-medium">{safeData.length}</span> resultados
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === 1 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : 'text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="sr-only">Anterior</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    
+                    {/* Page Numbers */}
+                    {[...Array(totalPages)].map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentPage(i + 1)}
+                        className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium ${
+                          currentPage === i + 1
+                            ? 'bg-blue-50 border-blue-500 text-blue-600 z-10'
+                            : 'bg-white text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                    
+                    <button
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === totalPages 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : 'text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="sr-only">Próximo</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+              
+              {/* Mobile pagination */}
+              <div className="flex sm:hidden justify-between items-center w-full">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                    currentPage === 1 
+                      ? 'text-gray-300 bg-gray-50 cursor-not-allowed' 
+                      : 'text-gray-700 bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-gray-500">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`relative inline-flex items-center px-4 py-2 ml-3 border border-gray-300 text-sm font-medium rounded-md ${
+                    currentPage === totalPages 
+                      ? 'text-gray-300 bg-gray-50 cursor-not-allowed' 
+                      : 'text-gray-700 bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  Próximo
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
-  )
-}
+  );
+};
 === /Users/micaelsantana/Documents/app-frontend/src/components/common/StatusBadge.jsx ===
 
 import React from 'react'
 
-export default function StatusBadge({ status }) {
-  const statusStyles = {
-    active: 'bg-green-100 text-green-800',
-    inactive: 'bg-yellow-100 text-yellow-800',
-    completed: 'bg-blue-100 text-blue-800',
-    canceled: 'bg-red-100 text-red-800',
-    pending: 'bg-purple-100 text-purple-800'
-  }
+export default function StatusBadge({ status, type = 'default', size = 'md' }) {
+  // Status types can be expanded for different contexts
+  const statusMap = {
+    // Generic statuses
+    active: { bg: 'bg-green-100', text: 'text-green-800', label: 'active' },
+    inactive: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'inactive' },
+    pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pendente' },
+    completed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Concluído' },
+    canceled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelada' },
+    
+    // Ônibus specific
+    maintenance: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Em Manutenção' },
+    
+    // Viagem specific
+    in_progress: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Em Andamento' },
+    scheduled: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Programada' },
+    
+    // Aluno specific
+    enrolled: { bg: 'bg-green-100', text: 'text-green-800', label: 'Matriculado' },
+    graduated: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Formado' },
+    
+    // Fallback
+    default: { bg: 'bg-gray-100', text: 'text-gray-800', label: status }
+  };
 
+  // For context-specific labels we can override based on type
+  const contextMap = {
+    aluno: {
+      active: { label: 'Ativo' },
+      inactive: { label: 'Inativo' }
+    },
+    onibus: {
+      active: { label: 'Em Operação' },
+      inactive: { label: 'Fora de Serviço' }
+    },
+    rota: {
+      active: { label: 'Ativa' },
+      inactive: { label: 'Temporária' }
+    },
+    viagem: {
+      completed: { label: 'Concluída' },
+      pending: { label: 'Programada' },
+      in_progress: { label: 'Em andamento' },
+      canceled: { label: 'Cancelada' }
+    }
+  };
+
+  // Size variants
+  const sizeClasses = {
+    sm: 'px-2 py-0.5 text-xs',
+    md: 'px-2 py-1 text-xs',
+    lg: 'px-2 py-1 text-xs'
+  };
+
+  // Get base styling
+  const baseStyle = statusMap[status] || statusMap.default;
+  
+  // Apply context override if applicable
+  let label = baseStyle.label;
+  if (contextMap[type] && contextMap[type][status]) {
+    label = contextMap[type][status].label;
+  }
+  
   return (
-    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
-      {status}
+    <span className={`inline-flex items-center justify-center rounded-full font-normal ${baseStyle.bg} ${baseStyle.text} ${sizeClasses[size]}`}>
+      {label}
     </span>
   )
 }
@@ -155,8 +347,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 )
 === /Users/micaelsantana/Documents/app-frontend/src/App.jsx ===
 
-import React from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import Alunos from './pages/Alunos'
 import Login from './pages/Login'
@@ -165,63 +357,131 @@ import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
 
 const App = () => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const location = useLocation();
+  
+  // Check if current path is active
+  const isActive = (path) => {
+    return location.pathname === path || 
+           (location.pathname === '/' && path === '/dashboard');
+  };
+  
+  // Don't render sidebar on login page
+  if (location.pathname === '/login') {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Login />} />
+      </Routes>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-gray-800 text-white fixed h-full">
-        <div className="p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
-          <p className="text-sm text-gray-400">Sistema de Transporte</p>
+    <div className="min-h-screen flex flex-col md:flex-row w-full bg-gray-50">
+      {/* Sidebar - Always visible but collapsible on smaller screens */}
+      <div className={`
+        bg-gray-800 text-white transition-all duration-300 
+        ${sidebarCollapsed ? 'w-16' : 'w-64'} 
+        flex-shrink-0 sticky top-0 h-screen z-30
+      `}>
+        {/* Sidebar Header with Toggle Button */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          {!sidebarCollapsed && (
+            <div>
+              <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
+              <p className="text-sm text-gray-400">Sistema de Transporte</p>
+            </div>
+          )}
+          <button 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="text-gray-400 hover:text-white p-1 rounded-md"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            )}
+          </button>
         </div>
         
-        <nav className="mt-4">
+        {/* Navigation Links */}
+        <nav className="mt-4 overflow-y-auto h-[calc(100%-4rem)]">
           <ul>
             <li>
               <Link 
                 to="/dashboard"
-                className="flex items-center px-4 py-3 w-full text-left text-gray-300 hover:bg-gray-700"
+                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/dashboard') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                title="Dashboard"
               >
-                <span>Dashboard</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                {!sidebarCollapsed && <span className="ml-3">Dashboard</span>}
               </Link>
             </li>
             <li>
               <Link 
                 to="/onibus"
-                className="flex items-center px-4 py-3 w-full text-left text-gray-300 hover:bg-gray-700"
+                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/onibus') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                title="Ônibus"
               >
-                <span>Ônibus</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 5h8m-4 6v-4m4 4v-4" />
+                </svg>
+                {!sidebarCollapsed && <span className="ml-3">Ônibus</span>}
               </Link>
             </li>
             <li>
               <Link 
                 to="/alunos"
-                className="flex items-center px-4 py-3 w-full text-left text-gray-300 hover:bg-gray-700"
+                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/alunos') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                title="Alunos"
               >
-                <span>Alunos</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {!sidebarCollapsed && <span className="ml-3">Alunos</span>}
               </Link>
             </li>
             <li>
               <Link 
                 to="/rotas"
-                className="flex items-center px-4 py-3 w-full text-left text-gray-300 hover:bg-gray-700"
+                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/rotas') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                title="Rotas"
               >
-                <span>Rotas</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                {!sidebarCollapsed && <span className="ml-3">Rotas</span>}
               </Link>
             </li>
             <li>
               <Link 
                 to="/viagens"
-                className="flex items-center px-4 py-3 w-full text-left text-gray-300 hover:bg-gray-700"
+                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/viagens') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                title="Viagens"
               >
-                <span>Viagens</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {!sidebarCollapsed && <span className="ml-3">Viagens</span>}
               </Link>
             </li>
             <li className="mt-6 border-t border-gray-700 pt-4">
               <Link 
                 to="/login"
-                className="flex items-center px-4 py-3 w-full text-left text-gray-300 hover:bg-gray-700"
+                className="flex items-center py-3 px-4 w-full text-left text-gray-300 hover:bg-gray-700"
+                title="Sair"
               >
-                <span>Sair</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                {!sidebarCollapsed && <span className="ml-3">Sair</span>}
               </Link>
             </li>
           </ul>
@@ -229,22 +489,23 @@ const App = () => {
       </div>
       
       {/* Main Content */}
-      <div className="ml-64 flex-1">
-        <Routes>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/alunos" element={<Alunos />} />
-          <Route path="/onibus" element={<Onibus />} />
-          <Route path="/rotas" element={<Rotas />} />
-          <Route path="/viagens" element={<Viagens />} />
-          <Route path="/login" element={<Login />} />
-        </Routes>
+      <div className="flex-1 min-h-screen bg-blue-50">
+        <main className="px-6 py-4 w-full">
+          <Routes>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/alunos" element={<Alunos />} />
+            <Route path="/onibus" element={<Onibus />} />
+            <Route path="/rotas" element={<Rotas />} />
+            <Route path="/viagens" element={<Viagens />} />
+          </Routes>
+        </main>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
 === /Users/micaelsantana/Documents/app-frontend/src/api/services.js ===
 
 import axios from 'axios';
@@ -302,12 +563,14 @@ export const MotoristaService = {
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/common/DataTable';
+import StatusBadge from '../components/common/StatusBadge';
 import { AlunoService } from '../api/services';
 
 export default function Alunos() {
   const [alunos, setAlunos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   // Mock data for when API fails
@@ -345,7 +608,7 @@ export default function Alunos() {
       nome: 'Gabriel Santos',
       responsavel: 'Patricia Santos',
       endereco: 'Alameda dos Cedros, 89 - Pedreiras',
-      status: 'active'
+      status: 'inactive'
     }
   ];
 
@@ -374,6 +637,13 @@ export default function Alunos() {
     }
   };
 
+  // Search and filter function
+  const filteredAlunos = alunos.filter(aluno => 
+    aluno.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    aluno.responsavel.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    aluno.endereco.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const columns = [
     { key: 'nome', header: 'Nome' },
     { key: 'responsavel', header: 'Responsável' },
@@ -381,13 +651,7 @@ export default function Alunos() {
     { 
       key: 'status', 
       header: 'Status',
-      format: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          item.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {item.status === 'active' ? 'Ativo' : 'Inativo'}
-        </span>
-      )
+      format: (item) => <StatusBadge status={item.status} type="aluno" />
     }
   ];
 
@@ -407,8 +671,8 @@ export default function Alunos() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">Gerenciamento de Alunos</h1>
         <button
           onClick={() => navigate('/alunos/novo')}
@@ -421,24 +685,93 @@ export default function Alunos() {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="border-b px-6 py-4">
+      <div className="bg-white overflow-hidden">
+        <div className="px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50 border-b">
           <h2 className="font-bold text-lg">Alunos Cadastrados</h2>
+          
+          {/* Search box */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar alunos..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
+        
         <div className="p-4">
+          {error && (
+            <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+          
           <DataTable
             columns={columns}
-            data={alunos}
+            data={filteredAlunos}
             onEdit={handleEdit}
             onDelete={handleDelete}
             loading={loading}
-            error={error}
+            error={null} // Error is already shown above
           />
+        </div>
+      </div>
+
+      {/* Quick Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Total de Alunos</div>
+            <div className="text-xl font-bold">{alunos.length}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Alunos Ativos</div>
+            <div className="text-xl font-bold">
+              {alunos.filter(aluno => aluno.status === 'active').length}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Alunos Inativos</div>
+            <div className="text-xl font-bold">
+              {alunos.filter(aluno => aluno.status === 'inactive').length}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Rotas.jsx ===
 
 import React, { useState, useEffect } from 'react';
@@ -551,7 +884,7 @@ const Rotas = () => {
   };
 
   return (
-    <div>
+    <div className="space-y-6 flex-1 bg-white">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Rotas</h1>
         <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center">
@@ -585,7 +918,7 @@ export default Rotas;
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Dashboard.jsx ===
 
 import React from 'react';
-import StatCard from '../components/common/StatCard';
+import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
   const [loading, setLoading] = React.useState(false);
@@ -638,17 +971,20 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-      <p className="text-gray-600 mb-6">Bem-vindo ao sistema de transporte Coracao. Acompanhe as principais informações do sistema.</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+        <p className="text-gray-600">Bem-vindo ao sistema de transporte Coracao. Acompanhe as principais informações do sistema.</p>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {/* Ônibus Ativos */}
+        <div className="bg-white p-6 border-b border-r border-gray-200">
           <div className="flex justify-between items-start">
             <div>
-              <div className="text-3xl font-bold">{stats.onibusAtivos}</div>
-              <div className="text-gray-500">Ônibus Ativos</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.onibusAtivos}</div>
+              <div className="text-gray-500 mt-1">Ônibus Ativos</div>
             </div>
-            <div className="bg-blue-100 text-blue-500 p-3 rounded-lg">
+            <div className="bg-blue-100 text-blue-600 p-3 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
               </svg>
@@ -656,13 +992,14 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* Alunos Cadastrados */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
           <div className="flex justify-between items-start">
             <div>
-              <div className="text-3xl font-bold">{stats.totalAlunos}</div>
-              <div className="text-gray-500">Alunos Cadastrados</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.totalAlunos}</div>
+              <div className="text-gray-500 mt-1">Alunos Cadastrados</div>
             </div>
-            <div className="bg-green-100 text-green-500 p-3 rounded-lg">
+            <div className="bg-green-100 text-green-600 p-3 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
               </svg>
@@ -670,42 +1007,65 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* Rotas Ativas */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
           <div className="flex justify-between items-start">
             <div>
-              <div className="text-3xl font-bold">{stats.viagensHoje}</div>
-              <div className="text-gray-500">Viagens Programadas</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.rotasAtivas}</div>
+              <div className="text-gray-500 mt-1">Rotas Ativas</div>
             </div>
-            <div className="bg-purple-100 text-purple-500 p-3 rounded-lg">
+            <div className="bg-purple-100 text-purple-600 p-3 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        {/* Viagens Programadas */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="text-3xl font-bold text-gray-900">{stats.viagensHoje}</div>
+              <div className="text-gray-500 mt-1">Viagens Programadas</div>
+            </div>
+            <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" />
               </svg>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Próximas Viagens */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="border-b px-6 py-4 flex justify-between items-center">
             <h2 className="font-bold text-lg">Próximas Viagens</h2>
+            <Link to="/viagens" className="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+              Ver todas
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </Link>
           </div>
-          <div className="p-4">
+          <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="text-left bg-gray-50">
-                  <th className="p-3">Data</th>
-                  <th className="p-3">Rota</th>
-                  <th className="p-3">Status</th>
+                  <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                  <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Rota</th>
+                  <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200">
                 {viagensData.map((viagem, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-3">{viagem.data_viagem}</td>
-                    <td className="p-3">{viagem.rota}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="py-3 px-4 whitespace-nowrap">{viagem.data_viagem}</td>
+                    <td className="py-3 px-4">{viagem.rota}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                         {viagem.status}
                       </span>
                     </td>
@@ -714,28 +1074,54 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+          {/* Mobile view for Próximas Viagens */}
+          <div className="md:hidden px-4 pb-4 pt-2">
+            <div className="text-sm text-gray-500 mb-2 font-medium">Visualização mobile</div>
+            {viagensData.map((viagem, index) => (
+              <div key={index} className="mb-3 bg-gray-50 p-3 rounded-lg">
+                <div className="font-medium mb-1">{viagem.rota}</div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Data:</span>
+                  <span>{viagem.data_viagem}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-gray-500">Status:</span>
+                  <span className="px-2 py-0.5 text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                    {viagem.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow">
-          <div className="border-b px-6 py-4">
+        {/* Rotas Ativas */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="border-b px-6 py-4 flex justify-between items-center">
             <h2 className="font-bold text-lg">Rotas Ativas</h2>
+            <Link to="/rotas" className="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+              Ver todas
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </Link>
           </div>
-          <div className="p-4">
+          <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="text-left bg-gray-50">
-                  <th className="p-3">Nome</th>
-                  <th className="p-3">Tipo</th>
-                  <th className="p-3">Status</th>
+                  <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                  <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                  <th className="py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200">
                 {rotasData.map((rota, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-3">{rota.nome}</td>
-                    <td className="p-3">{rota.tipo}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="py-3 px-4">{rota.nome}</td>
+                    <td className="py-3 px-4">{rota.tipo}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                         {rota.status}
                       </span>
                     </td>
@@ -744,11 +1130,30 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+          {/* Mobile view for Rotas Ativas */}
+          <div className="md:hidden px-4 pb-4 pt-2">
+            <div className="text-sm text-gray-500 mb-2 font-medium">Visualização mobile</div>
+            {rotasData.map((rota, index) => (
+              <div key={index} className="mb-3 bg-gray-50 p-3 rounded-lg">
+                <div className="font-medium mb-1">{rota.nome}</div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Tipo:</span>
+                  <span>{rota.tipo}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-gray-500">Status:</span>
+                  <span className="px-2 py-0.5 text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    {rota.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Login.jsx ===
 
 import React, { useState } from 'react'
@@ -758,66 +1163,147 @@ export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if(username === 'admin' && password === 'admin') {
-      navigate('/dashboard')
-    } else {
-      setError('Credenciais inválidas. Use admin/admin')
-    }
+    setLoading(true)
+    
+    // Simulate API request with a delay
+    setTimeout(() => {
+      if(username === 'admin' && password === 'admin') {
+        navigate('/dashboard')
+      } else {
+        setError('Credenciais inválidas. Use admin/admin')
+        setLoading(false)
+      }
+    }, 800)
   }
 
   return (
-    <div className="bg-gray-100 min-h-screen flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-500">Coracao</h1>
-          <p className="text-gray-600">Sistema de Gerenciamento de Transporte</p>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Left side - Login Form */}
+      <div className="flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 w-full md:w-1/2">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <h1 className="text-center text-3xl font-bold text-gray-900 mb-1">Coracao</h1>
+          <h2 className="text-center text-xl font-semibold text-gray-900">Login</h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Sistema de Gerenciamento de Transporte
+          </p>
         </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Usuário</label>
-            <input 
-              type="text" 
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" 
-              placeholder="Digite seu usuário"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Senha</label>
-            <input 
-              type="password" 
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" 
-              placeholder="Digite sua senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          
-          {error && (
-            <div className="text-red-600 text-sm mt-2">
-              {error}
+
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                  Nome de usuário
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Digite seu nome de usuário"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Senha
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Digite sua senha"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 text-sm text-red-700">
+                  <div className="flex items-center">
+                    <svg className="h-5 w-5 text-red-500 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {error}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                    loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Entrando...
+                    </>
+                  ) : 'Entrar'}
+                </button>
+              </div>
+            </form>
+            
+            <div className="mt-6 bg-gray-50 p-4 rounded border border-gray-200 text-sm">
+              <p className="font-medium mb-2">Para demonstração, use:</p>
+              <p><span className="text-gray-500">Usuário:</span> <strong>admin</strong></p>
+              <p><span className="text-gray-500">Senha:</span> <strong>admin</strong></p>
             </div>
-          )}
-          
-          <button 
-            type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md"
-          >
-            Entrar
-          </button>
-        </form>
-        
-        <div className="mt-6 bg-gray-100 p-4 rounded-md text-sm">
-          <p>Para demonstração, use:</p>
-          <p>Usuário: <strong>admin</strong></p>
-          <p>Senha: <strong>admin</strong></p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right side - Banner Image (only visible on md screens and up) */}
+      <div className="hidden md:block md:w-1/2 bg-blue-600">
+        <div className="h-full flex items-center justify-center p-8 text-white">
+          <div className="max-w-lg">
+            <h2 className="text-3xl font-bold mb-4">Sistema de Gerenciamento de Transporte Escolar</h2>
+            <p className="text-lg text-blue-100 mb-6">
+              Uma plataforma completa para gerenciar ônibus, rotas e alunos com eficiência e segurança.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <svg className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Gerenciamento de frota escolar</span>
+              </div>
+              <div className="flex items-center">
+                <svg className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Controle de rotas e viagens</span>
+              </div>
+              <div className="flex items-center">
+                <svg className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Cadastro e acompanhamento de alunos</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -973,6 +1459,30 @@ const Viagens = () => {
 };
 
 export default Viagens;
+=== /Users/micaelsantana/Documents/app-frontend/src/pages/PageHeader.jsx ===
+
+import React from 'react';
+
+export default function PageHeader({ 
+  title, 
+  description,
+  actionButton = null 
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row 2xl:flex-row justify-between items-start sm:items-center xl:items-center gap-4 mb-4 sm:mb-6 xl:mb-8 2xl:mb-10">
+      <div>
+        <h1 className="text-2xl sm:text-3xl xl:text-4xl 2xl:text-5xl font-bold">{title}</h1>
+        {description && <p className="text-gray-600 mt-1 sm:mt-1.5 xl:mt-2 text-sm sm:text-base xl:text-lg 2xl:text-xl">{description}</p>}
+      </div>
+      
+      {actionButton && (
+        <div className="self-stretch sm:self-auto">
+          {actionButton}
+        </div>
+      )}
+    </div>
+  );
+}
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Onibus.jsx ===
 
 import React, { useState, useEffect } from 'react';
@@ -1145,6 +1655,10 @@ module.exports = {
     ],
     theme: {
       extend: {
+        screens: {
+          '3xl': '1920px',
+          '4xl': '2560px'
+        },
         colors: {
           primary: '#1e40af',
           secondary: '#1d4ed8',
