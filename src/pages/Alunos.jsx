@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { AlunoService } from '../api/services';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -11,6 +12,7 @@ export default function Alunos() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentAluno, setCurrentAluno] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showSuccess, showError } = useNotification ? useNotification() : { 
@@ -187,17 +189,22 @@ export default function Alunos() {
     openModal(aluno);
   };
 
-  const handleDelete = async (aluno) => {
-    if(window.confirm(`Deseja excluir ${aluno.nome}?`)) {
-      try {
-        await AlunoService.deleteAluno(aluno.id);
-        showSuccess('Aluno excluído com sucesso!');
-        fetchAlunos();
-      } catch (err) {
-        const errorMsg = err.response?.data?.message || err.message;
-        showError('Erro ao excluir aluno: ' + errorMsg);
-        setError('Erro ao excluir aluno: ' + errorMsg);
-      }
+  const handleDelete = (aluno) => {
+    setCurrentAluno(aluno);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await AlunoService.deleteAluno(currentAluno.id);
+      showSuccess('Aluno excluído com sucesso!');
+      setIsDeleteModalOpen(false);
+      setCurrentAluno(null);
+      fetchAlunos();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message;
+      showError('Erro ao excluir aluno: ' + errorMsg);
+      setError('Erro ao excluir aluno: ' + errorMsg);
     }
   };
 
@@ -369,6 +376,16 @@ export default function Alunos() {
           </div>
         </div>
       </FormModal>
+      
+      {/* Delete Confirmation Modal - moved outside of FormModal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirmar Exclusão"
+        message={`Tem certeza que deseja excluir o aluno ${currentAluno?.nome}?`}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Quick Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
