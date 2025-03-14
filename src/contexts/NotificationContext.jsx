@@ -22,18 +22,40 @@ export const NotificationProvider = ({ children }) => {
   });
 
   const showNotification = ({ message, type = 'success', duration = 4000 }) => {
-    setNotification({ message, type, duration });
+    // Handle multiline messages
+    const formattedMessage = Array.isArray(message) ? message.join('\n') : message;
+    setNotification({ message: formattedMessage, type, duration });
   };
 
   const clearNotification = () => {
     setNotification({ ...notification, message: '' });
   };
 
-  // Shorthand methods for different notification types
-  const showSuccess = (message, duration) => showNotification({ message, type: 'success', duration });
-  const showError = (message, duration) => showNotification({ message, type: 'error', duration });
-  const showWarning = (message, duration) => showNotification({ message, type: 'warning', duration });
-  const showInfo = (message, duration) => showNotification({ message, type: 'info', duration });
+  // Enhanced notification methods with better error handling
+  const showSuccess = (message, duration = 4000) => {
+    showNotification({ message, type: 'success', duration });
+  };
+
+  const showError = (error, duration = 6000) => {
+    let message = error;
+    
+    // Handle API errors
+    if (error?.response) {
+      message = error.userMessage || error.response.data?.message || 'Ocorreu um erro inesperado';
+    } else if (typeof error === 'object') {
+      message = error.message || 'Ocorreu um erro inesperado';
+    }
+
+    showNotification({ message, type: 'error', duration });
+  };
+
+  const showWarning = (message, duration = 5000) => {
+    showNotification({ message, type: 'warning', duration });
+  };
+
+  const showInfo = (message, duration = 4000) => {
+    showNotification({ message, type: 'info', duration });
+  };
 
   return (
     <NotificationContext.Provider 

@@ -25,18 +25,40 @@ export const NotificationProvider = ({ children }) => {
   });
 
   const showNotification = ({ message, type = 'success', duration = 4000 }) => {
-    setNotification({ message, type, duration });
+    // Handle multiline messages
+    const formattedMessage = Array.isArray(message) ? message.join('\n') : message;
+    setNotification({ message: formattedMessage, type, duration });
   };
 
   const clearNotification = () => {
     setNotification({ ...notification, message: '' });
   };
 
-  // Shorthand methods for different notification types
-  const showSuccess = (message, duration) => showNotification({ message, type: 'success', duration });
-  const showError = (message, duration) => showNotification({ message, type: 'error', duration });
-  const showWarning = (message, duration) => showNotification({ message, type: 'warning', duration });
-  const showInfo = (message, duration) => showNotification({ message, type: 'info', duration });
+  // Enhanced notification methods with better error handling
+  const showSuccess = (message, duration = 4000) => {
+    showNotification({ message, type: 'success', duration });
+  };
+
+  const showError = (error, duration = 6000) => {
+    let message = error;
+    
+    // Handle API errors
+    if (error?.response) {
+      message = error.userMessage || error.response.data?.message || 'Ocorreu um erro inesperado';
+    } else if (typeof error === 'object') {
+      message = error.message || 'Ocorreu um erro inesperado';
+    }
+
+    showNotification({ message, type: 'error', duration });
+  };
+
+  const showWarning = (message, duration = 5000) => {
+    showNotification({ message, type: 'warning', duration });
+  };
+
+  const showInfo = (message, duration = 4000) => {
+    showNotification({ message, type: 'info', duration });
+  };
 
   return (
     <NotificationContext.Provider 
@@ -58,6 +80,104 @@ export const NotificationProvider = ({ children }) => {
       />
     </NotificationContext.Provider>
   );
+};
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/errorHandler.js ===
+
+/**
+ * Utility functions for handling API errors and providing user-friendly messages
+ */
+
+// Map of HTTP status codes to user-friendly messages
+const HTTP_ERROR_MESSAGES = {
+  400: 'Os dados fornecidos são inválidos',
+  401: 'Sua sessão expirou. Por favor, faça login novamente',
+  403: 'Você não tem permissão para realizar esta ação',
+  404: 'O recurso solicitado não foi encontrado',
+  422: 'Os dados fornecidos são inválidos',
+  429: 'Muitas tentativas. Por favor, aguarde um momento',
+  500: 'Ocorreu um erro no servidor. Tente novamente mais tarde',
+  503: 'Serviço temporariamente indisponível. Tente novamente mais tarde'
+};
+
+// Map of validation error fields to user-friendly labels
+const FIELD_LABELS = {
+  nome: 'Nome',
+  email: 'E-mail',
+  telefone: 'Telefone',
+  placa: 'Placa',
+  modelo: 'Modelo',
+  capacidade: 'Capacidade',
+  ano_fabricacao: 'Ano de Fabricação',
+  horario_inicio: 'Horário de Início',
+  horario_fim: 'Horário de Fim',
+  status: 'Status'
+};
+
+/**
+ * Format validation errors into user-friendly messages
+ * @param {Object} errors - Validation errors object from API
+ * @returns {string} Formatted error message
+ */
+export const formatValidationErrors = (errors) => {
+  if (!errors || typeof errors !== 'object') return 'Dados inválidos fornecidos';
+
+  return Object.entries(errors)
+    .map(([field, messages]) => {
+      const label = FIELD_LABELS[field] || field;
+      const message = Array.isArray(messages) ? messages[0] : messages;
+      return `${label}: ${message}`;
+    })
+    .join('\n');
+};
+
+/**
+ * Get a user-friendly error message from an API error
+ * @param {Error} error - The error object from API call
+ * @returns {string} User-friendly error message
+ */
+export const getErrorMessage = (error) => {
+  if (!error) return 'Ocorreu um erro desconhecido';
+
+  // Handle network errors
+  if (!error.response) {
+    return 'Não foi possível conectar ao servidor. Verifique sua conexão';
+  }
+
+  const { status, data } = error.response;
+
+  // Handle validation errors
+  if (status === 422 && data.errors) {
+    return formatValidationErrors(data.errors);
+  }
+
+  // Handle known HTTP status codes
+  if (HTTP_ERROR_MESSAGES[status]) {
+    return HTTP_ERROR_MESSAGES[status];
+  }
+
+  // Handle errors with message in response
+  if (data.message) {
+    return data.message;
+  }
+
+  // Default error message
+  return 'Ocorreu um erro inesperado. Tente novamente mais tarde';
+};
+
+/**
+ * Format error details for logging
+ * @param {Error} error - The error object
+ * @returns {Object} Formatted error details
+ */
+export const formatErrorForLogging = (error) => {
+  return {
+    message: error.message,
+    status: error.response?.status,
+    data: error.response?.data,
+    url: error.config?.url,
+    method: error.config?.method,
+    timestamp: new Date().toISOString()
+  };
 };
 === /Users/micaelsantana/Documents/app-frontend/src/index.css ===
 
@@ -522,17 +642,28 @@ export default function Notification({
   onClose
 }) {
   const [isVisible, setIsVisible] = useState(true);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
     if (!message) return;
     
+    setIsVisible(true);
+    setIsLeaving(false);
+    
     const timer = setTimeout(() => {
-      setIsVisible(false);
-      if (onClose) onClose();
+      handleClose();
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [message, duration, onClose]);
+  }, [message, duration]);
+
+  const handleClose = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      setIsVisible(false);
+      if (onClose) onClose();
+    }, 300); // Match animation duration
+  };
 
   if (!message || !isVisible) return null;
 
@@ -567,20 +698,26 @@ export default function Notification({
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 animate-slide-in-right">
-      <div className={`px-4 py-3 rounded-md shadow-md border ${typeClasses[type]} flex items-start max-w-md`}>
+    <div 
+      className={`fixed bottom-5 right-5 z-50 transition-all duration-300 ease-in-out
+        ${isLeaving ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'}`}
+    >
+      <div className={`
+        px-4 py-3 rounded-md shadow-lg border ${typeClasses[type]}
+        flex items-start max-w-md
+        transform transition-transform duration-200 hover:scale-102
+        ${message.includes('\n') ? 'whitespace-pre-line' : ''}
+      `}>
         <div className="flex-shrink-0 mr-3">
           {iconMap[type]}
         </div>
-        <div>
+        <div className="flex-grow">
           {message}
         </div>
         <button 
-          className="ml-3 text-gray-500 hover:text-gray-700"
-          onClick={() => {
-            setIsVisible(false);
-            if (onClose) onClose();
-          }}
+          className="ml-3 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+          onClick={handleClose}
+          aria-label="Close notification"
         >
           <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -589,6 +726,7 @@ export default function Notification({
       </div>
     </div>
   );
+
 }
 === /Users/micaelsantana/Documents/app-frontend/src/components/common/StatCard.jsx ===
 
@@ -635,7 +773,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 === /Users/micaelsantana/Documents/app-frontend/src/App.jsx ===
 
 import React, { useState } from 'react'
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, useLocation, BrowserRouter } from 'react-router-dom'
 import { NotificationProvider } from './contexts/NotificationContext.jsx'
 import Dashboard from './pages/Dashboard'
 import Alunos from './pages/Alunos'
@@ -645,7 +783,23 @@ import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
 import Monitores from './pages/Monitores'
 
+// The App component is the only one using BrowserRouter now
 const App = () => {
+  return (
+    <BrowserRouter future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true
+    }}>
+      <AppContent />
+    </BrowserRouter>
+  );
+}
+
+// The main app content extracted into a separate component
+const AppContent = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
   
@@ -804,61 +958,52 @@ export default App;
 
 import axios from 'axios';
 
-// Configuração do Axios
+// Axios configuration
 const api = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  timeout: 15000 // 15 segundos
+  timeout: 15000 // 15 seconds
 });
 
-// Interceptor para logs de requisição (debug)
+// Request interceptor for logging
 api.interceptors.request.use(request => {
-  console.log('API Request:', request.method, request.url);
+  // console.log('API Request:', request.method, request.url);
   return request;
 }, error => {
   console.error('API Request Error:', error);
   return Promise.reject(error);
 });
 
-// Interceptor para tratamento de respostas
+import { getErrorMessage, formatErrorForLogging } from '../utils/errorHandler';
+
+// Response interceptor for error handling
 api.interceptors.response.use(
   response => {
-    // Processamento de sucesso
+    // Success processing
     return response;
   },
   error => {
-    // Processamento de erro centralizado
-    if (error.response) {
-      // Servidor respondeu com status de erro
-      console.error('API Error:', error.response.status, error.response.data);
-      
-      // Processar erros específicos
-      if (error.response.status === 401) {
-        // Redirecionar para login
-        // window.location.href = '/login';
-      }
-      
-      if (error.response.status === 422) {
-        // Transformar erros de validação em formato amigável
-        console.warn('Validation errors:', error.response.data.errors);
-      }
-    } else if (error.request) {
-      // Sem resposta do servidor
-      console.error('No response from server', error.request);
-    } else {
-      // Erro na configuração da requisição
-      console.error('Request error:', error.message);
+    // Log error details for debugging
+    console.error('API Error:', formatErrorForLogging(error));
+    
+    // Handle specific errors
+    if (error.response?.status === 401) {
+      // Redirect to login if unauthorized
+      window.location.href = '/login';
     }
+    
+    // Get user-friendly error message
+    error.userMessage = getErrorMessage(error);
     
     return Promise.reject(error);
   }
 );
 
 /**
- * Formatação comum para horários em formato H:i (exigido pela API Laravel)
+ * Format time values for API (HH:mm to H:i)
  * @param {string} time - Time in HH:mm format 
  * @returns {string} - Time in H:i format or null if input is empty
  */
@@ -866,13 +1011,13 @@ function formatTimeForApi(time) {
   if (!time) return null;
   
   try {
-    // Split the time string into hours and minutes
+    // Split time into hours and minutes
     const [hours, minutes] = time.split(':');
     
     // Convert hours to integer to remove leading zeros
     const hour = parseInt(hours, 10);
     
-    // Return the formatted time string (H:i format exactly as Laravel expects)
+    // Return formatted time (H:i format as Laravel expects)
     return `${hour}:${minutes}`;
   } catch (error) {
     console.error('Error formatting time:', error);
@@ -881,7 +1026,7 @@ function formatTimeForApi(time) {
 }
 
 /**
- * Converte horários do formato da API (H:i) para o formato HTML (HH:mm)
+ * Format time values from API (H:i) to HTML time input format (HH:mm)
  * @param {string} time - Time in H:i format
  * @returns {string} - Time in HH:mm format
  */
@@ -889,13 +1034,13 @@ function formatTimeForDisplay(time) {
   if (!time) return '';
   
   try {
-    // Handle different time formats that might come from the API
+    // Handle different time formats from API
     const timeParts = time.split(':');
     
-    if (timeParts.length < 2) return time; // Return as is if not a valid time format
+    if (timeParts.length < 2) return time; // Return as is if not valid
     
     const hours = timeParts[0].padStart(2, '0');
-    const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
+    const minutes = timeParts[1].substring(0, 2).padStart(2, '0');
     
     return `${hours}:${minutes}`;
   } catch (error) {
@@ -904,7 +1049,7 @@ function formatTimeForDisplay(time) {
   }
 }
 
-// Serviços para API - com tratamentos de erros e mensagens amigáveis
+// API Services with error handling and friendly messages
 export const AlunoService = {
   getAlunos: () => api.get('/alunos').catch(error => {
     throw new Error('Erro ao buscar alunos: ' + getErrorMessage(error));
@@ -1030,14 +1175,6 @@ export const ViagemService = {
       }
     });
     
-    console.log('Formatted data for API:', formattedData);
-    console.log('Time fields after formatting:', {
-      hora_saida_prevista: formattedData.hora_saida_prevista,
-      hora_chegada_prevista: formattedData.hora_chegada_prevista,
-      hora_saida_real: formattedData.hora_saida_real,
-      hora_chegada_real: formattedData.hora_chegada_real
-    });
-    
     return api.post('/viagens', formattedData).catch(error => {
       throw new Error('Erro ao criar viagem: ' + getErrorMessage(error));
     });
@@ -1053,14 +1190,6 @@ export const ViagemService = {
       if (formattedData[field]) {
         formattedData[field] = formatTimeForApi(formattedData[field]);
       }
-    });
-    
-    console.log('Formatted data for API update:', formattedData);
-    console.log('Time fields after formatting:', {
-      hora_saida_prevista: formattedData.hora_saida_prevista,
-      hora_chegada_prevista: formattedData.hora_chegada_prevista,
-      hora_saida_real: formattedData.hora_saida_real,
-      hora_chegada_real: formattedData.hora_chegada_real
     });
     
     return api.put(`/viagens/${id}`, formattedData).catch(error => {
@@ -1092,10 +1221,6 @@ export const MonitorService = {
   
   deleteMonitor: (id) => api.delete(`/monitores/${id}`).catch(error => {
     throw new Error('Erro ao excluir monitor: ' + getErrorMessage(error));
-  }),
-  
-  getMonitorViagens: (id) => api.get(`/monitores/${id}/viagens`).catch(error => {
-    throw new Error('Erro ao buscar viagens do monitor: ' + getErrorMessage(error));
   })
 };
 
@@ -1118,155 +1243,10 @@ export const MotoristaService = {
   
   deleteMotorista: (id) => api.delete(`/motoristas/${id}`).catch(error => {
     throw new Error('Erro ao excluir motorista: ' + getErrorMessage(error));
-  }),
-  
-  getMotoristaViagens: (id) => api.get(`/motoristas/${id}/viagens`).catch(error => {
-    throw new Error('Erro ao buscar viagens do motorista: ' + getErrorMessage(error));
   })
 };
 
-export const HorarioService = {
-  getHorarios: () => api.get('/horarios').catch(error => {
-    throw new Error('Erro ao buscar horários: ' + getErrorMessage(error));
-  }),
-  
-  getHorarioById: (id) => api.get(`/horarios/${id}`).catch(error => {
-    throw new Error('Erro ao buscar detalhes do horário: ' + getErrorMessage(error));
-  }),
-  
-  createHorario: (data) => {
-    // Format time fields for API
-    const formattedData = { ...data };
-    if (formattedData.hora_inicio) {
-      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
-    }
-    if (formattedData.hora_fim) {
-      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
-    }
-    
-    return api.post('/horarios', formattedData).catch(error => {
-      throw new Error('Erro ao criar horário: ' + getErrorMessage(error));
-    });
-  },
-  
-  updateHorario: (id, data) => {
-    // Format time fields for API
-    const formattedData = { ...data };
-    if (formattedData.hora_inicio) {
-      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
-    }
-    if (formattedData.hora_fim) {
-      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
-    }
-    
-    return api.put(`/horarios/${id}`, formattedData).catch(error => {
-      throw new Error('Erro ao atualizar horário: ' + getErrorMessage(error));
-    });
-  },
-  
-  deleteHorario: (id) => api.delete(`/horarios/${id}`).catch(error => {
-    throw new Error('Erro ao excluir horário: ' + getErrorMessage(error));
-  }),
-  
-  getHorarioViagens: (id) => api.get(`/horarios/${id}/viagens`).catch(error => {
-    throw new Error('Erro ao buscar viagens do horário: ' + getErrorMessage(error));
-  })
-};
-
-export const ParadaService = {
-  getParadas: () => api.get('/paradas').catch(error => {
-    throw new Error('Erro ao buscar paradas: ' + getErrorMessage(error));
-  }),
-  
-  getParadaById: (id) => api.get(`/paradas/${id}`).catch(error => {
-    throw new Error('Erro ao buscar detalhes da parada: ' + getErrorMessage(error));
-  }),
-  
-  createParada: (data) => api.post('/paradas', data).catch(error => {
-    throw new Error('Erro ao criar parada: ' + getErrorMessage(error));
-  }),
-  
-  updateParada: (id, data) => api.put(`/paradas/${id}`, data).catch(error => {
-    throw new Error('Erro ao atualizar parada: ' + getErrorMessage(error));
-  }),
-  
-  deleteParada: (id) => api.delete(`/paradas/${id}`).catch(error => {
-    throw new Error('Erro ao excluir parada: ' + getErrorMessage(error));
-  })
-};
-
-export const PresencaService = {
-  getPresencas: () => api.get('/presencas').catch(error => {
-    throw new Error('Erro ao buscar presenças: ' + getErrorMessage(error));
-  }),
-  
-  getPresencaById: (id) => api.get(`/presencas/${id}`).catch(error => {
-    throw new Error('Erro ao buscar detalhes da presença: ' + getErrorMessage(error));
-  }),
-  
-  createPresenca: (data) => {
-    // Format time field for API
-    const formattedData = { ...data };
-    if (formattedData.hora_registro) {
-      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
-    }
-    
-    return api.post('/presencas', formattedData).catch(error => {
-      throw new Error('Erro ao criar presença: ' + getErrorMessage(error));
-    });
-  },
-  
-  updatePresenca: (id, data) => {
-    // Format time field for API
-    const formattedData = { ...data };
-    if (formattedData.hora_registro) {
-      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
-    }
-    
-    return api.put(`/presencas/${id}`, formattedData).catch(error => {
-      throw new Error('Erro ao atualizar presença: ' + getErrorMessage(error));
-    });
-  },
-  
-  deletePresenca: (id) => api.delete(`/presencas/${id}`).catch(error => {
-    throw new Error('Erro ao excluir presença: ' + getErrorMessage(error));
-  }),
-  
-  getPresencasByViagem: (viagemId) => api.get(`/presencas/viagem/${viagemId}`).catch(error => {
-    throw new Error('Erro ao buscar presenças da viagem: ' + getErrorMessage(error));
-  }),
-  
-  getPresencasByAluno: (alunoId) => api.get(`/presencas/aluno/${alunoId}`).catch(error => {
-    throw new Error('Erro ao buscar presenças do aluno: ' + getErrorMessage(error));
-  })
-};
-
-// Função auxiliar para extrair mensagens amigáveis de erros
-function getErrorMessage(error) {
-  if (error.response) {
-    // Respostas do servidor com status de erro
-    if (error.response.data && error.response.data.message) {
-      return error.response.data.message;
-    }
-    
-    // Tratamento específico para erros de validação do Laravel
-    if (error.response.data && error.response.data.errors) {
-      const errorMessages = Object.entries(error.response.data.errors)
-        .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-        .join('; ');
-      
-      return errorMessages;
-    }
-    
-    return `Erro ${error.response.status}: ${error.response.statusText}`;
-  } else if (error.request) {
-    // Sem resposta do servidor
-    return 'Sem resposta do servidor. Verifique sua conexão.';
-  } else {
-    // Erro na configuração da requisição
-    return error.message || 'Erro desconhecido';
-  }
-}
+export default api;
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Alunos.jsx ===
 
 import React, { useState, useEffect } from 'react';
@@ -1310,28 +1290,24 @@ export default function Alunos() {
       setLoading(true);
       const response = await AlunoService.getAlunos();
       
-      // Tratamento melhorado dos dados recebidos da API
+      // Process the API response
       let alunosData = [];
       
       if (response?.data) {
-        // Caso 1: Resposta padrão com 'data' dentro de response.data (formato comum no Laravel)
+        // Case 1: Standard response with 'data' inside response.data (common in Laravel)
         if (response.data.data && Array.isArray(response.data.data)) {
           alunosData = response.data.data;
         } 
-        // Caso 2: Resposta é um array diretamente (para fallback)
+        // Case 2: Response is a direct array (fallback)
         else if (Array.isArray(response.data)) {
           alunosData = response.data;
         }
-        // Caso 3: Resposta paginada do Laravel via items()
+        // Case 3: Paginated Laravel response via items()
         else if (response.data.meta && Array.isArray(response.data.data)) {
           alunosData = response.data.data;
         }
-        // Caso 4: Dados vazios mas com estrutura válida
-        else if (response.data.meta && response.data.meta.total === 0) {
-          alunosData = [];
-        }
         
-        // Formato final dos dados para a UI
+        // Format data for UI
         const formattedData = alunosData.map(aluno => ({
           ...aluno,
           status: processStatus(aluno.status)
@@ -1340,22 +1316,21 @@ export default function Alunos() {
         setAlunos(formattedData);
         setError(null);
       } else {
-        // Caso 5: Sem dados - usar mock data como fallback
-        console.warn('API returned unexpected format, using mock data');
-        const mockData = getMockData();
-        setAlunos(mockData);
+        // Case 4: No valid data from API
+        console.warn('API returned unexpected format');
+        setAlunos([]);
+        setError('Nenhum dado de aluno encontrado no servidor.');
       }
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Erro ao carregar alunos: ' + (err.response?.data?.message || err.message));
-      // Fallback para mock data em caso de erro
-      setAlunos(getMockData());
+      setAlunos([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Função para processar diferentes formatos de status
+  // Function to process different status formats
   const processStatus = (status) => {
     if (typeof status === 'boolean') {
       return status ? 'active' : 'inactive';
@@ -1366,49 +1341,8 @@ export default function Alunos() {
       return lowercaseStatus === 'true' || lowercaseStatus === 'ativo' || lowercaseStatus === '1' 
         ? 'active' : 'inactive';
     } else {
-      return 'inactive'; // valor padrão
+      return 'inactive'; // default value
     }
-  };
-
-  // Mock data como fallback
-  const getMockData = () => {
-    return [
-      {
-        id: 1,
-        nome: 'Pedro Souza',
-        responsavel: 'Marta Souza',
-        endereco: 'Rua dos Lírios, 45 - Escalvados',
-        status: 'active'
-      },
-      {
-        id: 2,
-        nome: 'Mariana Costa',
-        responsavel: 'Carlos Costa',
-        endereco: 'Avenida das Pedras, 78 - Pedreiras',
-        status: 'active'
-      },
-      {
-        id: 3,
-        nome: 'Lucas Ferreira',
-        responsavel: 'Fernanda Ferreira',
-        endereco: 'Rua das Oliveiras, 123 - Volta Grande',
-        status: 'active'
-      },
-      {
-        id: 4,
-        nome: 'Julia Lima',
-        responsavel: 'Marcos Lima',
-        endereco: 'Travessa dos Ipês, 56 - Escalvados',
-        status: 'active'
-      },
-      {
-        id: 5,
-        nome: 'Gabriel Santos',
-        responsavel: 'Patricia Santos',
-        endereco: 'Alameda dos Cedros, 89 - Pedreiras',
-        status: 'inactive'
-      }
-    ];
   };
 
   // Search and filter function
@@ -1439,10 +1373,10 @@ export default function Alunos() {
 
   const openModal = (aluno = null) => {
     if (aluno) {
-      // Converter status de string para boolean para o formulário
+      // Convert status string to boolean for the form
       const statusBool = aluno.status === 'active' || aluno.status === true || aluno.status === 1;
       
-      // Setar dados do aluno para edição
+      // Set aluno data for editing
       setFormData({
         nome: aluno.nome || '',
         descricao: aluno.descricao || '',
@@ -1455,7 +1389,7 @@ export default function Alunos() {
       });
       setCurrentAluno(aluno);
     } else {
-      // Resetar formulário para um novo aluno
+      // Reset form for a new aluno
       setFormData({
         nome: '',
         descricao: '',
@@ -1710,7 +1644,7 @@ export default function Alunos() {
           <div>
             <div className="text-sm text-gray-500">Alunos Ativos</div>
             <div className="text-xl font-bold">
-              {alunos.filter(aluno => aluno.status === 'active' || aluno.status === true).length}
+              {alunos.filter(aluno => aluno.status === 'active').length}
             </div>
           </div>
         </div>
@@ -1724,7 +1658,7 @@ export default function Alunos() {
           <div>
             <div className="text-sm text-gray-500">Alunos Inativos</div>
             <div className="text-xl font-bold">
-              {alunos.filter(aluno => aluno.status === 'inactive' || aluno.status === false).length}
+              {alunos.filter(aluno => aluno.status === 'inactive').length}
             </div>
           </div>
         </div>
@@ -1739,6 +1673,7 @@ import { RotaService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import { useNotification } from '../contexts/NotificationContext';
 
 const Rotas = () => {
   const [rotas, setRotas] = useState([]);
@@ -1748,6 +1683,10 @@ const Rotas = () => {
   const [currentRota, setCurrentRota] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showSuccess, showError } = useNotification ? useNotification() : { 
+    showSuccess: () => {}, 
+    showError: () => {} 
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -1773,12 +1712,17 @@ const Rotas = () => {
       const response = await RotaService.getRotas();
       
       if (response?.data?.data && Array.isArray(response.data.data)) {
-        // Add boolean status if needed
+        // Process data - ensure status is standardized
         const formattedData = response.data.data.map(rota => ({
           ...rota,
-          status: typeof rota.status === 'boolean' ? (rota.status ? 'active' : 'inactive') :
-                 typeof rota.status === 'number' ? (rota.status === 1 ? 'active' : 'inactive') :
-                 rota.status === 'Ativo' ? 'active' : 'inactive'
+          status: convertStatus(rota.status)
+        }));
+        setRotas(formattedData);
+      } else if (Array.isArray(response?.data)) {
+        // Alternative API response format
+        const formattedData = response.data.map(rota => ({
+          ...rota,
+          status: convertStatus(rota.status)
         }));
         setRotas(formattedData);
       } else {
@@ -1791,6 +1735,24 @@ const Rotas = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Convert various status formats to a standardized format
+  const convertStatus = (status) => {
+    if (typeof status === 'boolean') {
+      return status ? 'active' : 'inactive';
+    } else if (typeof status === 'number') {
+      return status === 1 ? 'active' : 'inactive';
+    } else if (typeof status === 'string') {
+      const statusLower = status.toLowerCase();
+      if (statusLower === 'true' || statusLower === 'ativo' || statusLower === '1' || statusLower === 'active' || statusLower === 'ativa') {
+        return 'active';
+      } else if (statusLower === 'false' || statusLower === 'inativo' || statusLower === '0' || statusLower === 'inactive' || statusLower === 'inativa') {
+        return 'inactive';
+      }
+      return status; // Keep original if no match
+    }
+    return 'inactive'; // Default value
   };
 
   const handleInputChange = (e) => {
@@ -1851,15 +1813,19 @@ const Rotas = () => {
       if (currentRota) {
         // Update
         await RotaService.updateRota(currentRota.id, apiData);
+        showSuccess('Rota atualizada com sucesso!');
       } else {
         // Create
         await RotaService.createRota(apiData);
+        showSuccess('Rota criada com sucesso!');
       }
       setIsModalOpen(false);
       fetchRotas();
     } catch (err) {
       console.error('Error saving rota:', err);
-      setError('Erro ao salvar rota: ' + (err.response?.data?.message || err.message));
+      const errorMsg = err.response?.data?.message || err.message;
+      setError('Erro ao salvar rota: ' + errorMsg);
+      showError('Erro ao salvar rota: ' + errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -1901,9 +1867,12 @@ const Rotas = () => {
     if(window.confirm(`Deseja excluir a rota ${rota.nome}?`)) {
       try {
         await RotaService.deleteRota(rota.id);
+        showSuccess('Rota excluída com sucesso!');
         fetchRotas();
       } catch (err) {
-        setError('Erro ao excluir rota: ' + (err.response?.data?.message || err.message));
+        const errorMsg = err.response?.data?.message || err.message;
+        setError('Erro ao excluir rota: ' + errorMsg);
+        showError('Erro ao excluir rota: ' + errorMsg);
       }
     }
   };
@@ -2133,7 +2102,7 @@ const Rotas = () => {
           <div>
             <div className="text-sm text-gray-500">Rotas Ativas</div>
             <div className="text-xl font-bold">
-              {rotas.filter(rota => rota.status === 'active' || rota.status === true).length}
+              {rotas.filter(rota => rota.status === 'active').length}
             </div>
           </div>
         </div>
@@ -2147,7 +2116,7 @@ const Rotas = () => {
           <div>
             <div className="text-sm text-gray-500">Rotas Inativas</div>
             <div className="text-xl font-bold">
-              {rotas.filter(rota => rota.status === 'inactive' || rota.status === false).length}
+              {rotas.filter(rota => rota.status === 'inactive').length}
             </div>
           </div>
         </div>
@@ -2159,57 +2128,127 @@ const Rotas = () => {
 export default Rotas;
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Dashboard.jsx ===
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { OnibusService, AlunoService, RotaService, ViagemService } from '../api/services';
+import { useNotification } from '../contexts/NotificationContext';
 
 export default function Dashboard() {
-  const [loading, setLoading] = React.useState(false);
+  const { showError } = useNotification();
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [stats, setStats] = React.useState({
+    onibusAtivos: 0,
+    totalAlunos: 0,
+    rotasAtivas: 0,
+    viagensHoje: 0
+  });
+  const [viagensData, setViagensData] = React.useState([]);
+  const [rotasData, setRotasData] = React.useState([]);
 
-  // Mock data for dashboard
-  const stats = {
-    onibusAtivos: 2,
-    totalAlunos: 5,
-    rotasAtivas: 4,
-    viagensHoje: 2
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch all data in parallel
+      const [onibusResponse, alunosResponse, rotasResponse, viagensResponse] = await Promise.all([
+        OnibusService.getOnibus(),
+        AlunoService.getAlunos(),
+        RotaService.getRotas(),
+        ViagemService.getViagens()
+      ]);
+
+      // Process onibus data
+      const onibusAtivos = onibusResponse.data?.data?.filter(onibus => 
+        onibus.status === 'active' || onibus.status === true || onibus.status === 1
+      ).length || 0;
+
+      // Process alunos data
+      const totalAlunos = alunosResponse.data?.data?.length || 0;
+
+      // console.log('Rotas response:', rotasResponse.data);
+      // Process rotas data
+      const rotasData = rotasResponse.data?.data || [];
+      const rotasAtivas = rotasData.filter(rota => 
+        rota.status === 'active' || rota.status === 'ativa' || rota.status === true || rota.status === 1
+      ).length;
+      
+      // console.log('Viagens response:', viagensResponse.data);
+      // Process viagens data
+      const viagensData = viagensResponse.data?.data || [];
+      const today = new Date().toISOString().split('T')[0];
+      const viagensHoje = viagensData.filter(viagem => 
+        viagem.data_viagem === today
+      ).length;
+
+      // Format and enhance data for display
+      const formattedRotasData = rotasData.map(rota => ({
+        ...rota,
+        status: rota.status === true || rota.status === 1 || rota.status === 'active' || rota.status === 'ativa' ? 'Ativa' : 'Inativa'
+      }));
+
+      const formattedViagensData = viagensData.map(viagem => {
+        const date = new Date(viagem.data_viagem);
+        const data_formatada = date.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        // Find the corresponding route name
+        const rota = rotasData.find(r => r.id === viagem.rota_id);
+        return {
+          ...viagem,
+          data_formatada,
+          rota: rota ? rota.nome : 'Rota não encontrada',
+          status: viagem.status === true || viagem.status === 1 ? 'Programada' : viagem.status || 'Pendente'
+        };
+      });
+
+      // Update stats
+      setStats({
+        onibusAtivos,
+        totalAlunos,
+        rotasAtivas,
+        viagensHoje
+      });
+
+      // Update tables data with formatted data
+      setRotasData(formattedRotasData.slice(0, 3));
+      setViagensData(formattedViagensData.slice(0, 3));
+      
+      //console.log('Formatted rotas data:', formattedRotasData);
+      //console.log('Formatted viagens data:', formattedViagensData);
+
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      const errorMessage = 'Erro ao carregar dados do dashboard: ' + (err.response?.data?.message || err.message);
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock data for tables
-  const viagensData = [
-    {
-      id: 8,
-      data_viagem: '2025-03-12',
-      rota: 'Rota Escalvados - Manhã',
-      status: 'Programada'
-    },
-    {
-      id: 9,
-      data_viagem: '2025-03-12',
-      rota: 'Rota Pedreiras - Manhã',
-      status: 'Programada'
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-  const rotasData = [
-    {
-      id: 1,
-      nome: 'Rota Escalvados - Manhã',
-      tipo: 'Escalvados e Escalvadinhos',
-      status: 'Ativa'
-    },
-    {
-      id: 2,
-      nome: 'Rota Pedreiras - Manhã',
-      tipo: 'Pedreiras',
-      status: 'Ativa'
-    },
-    {
-      id: 3,
-      nome: 'Rota Volta Grande - Manhã',
-      tipo: 'Volta Grande',
-      status: 'Ativa'
-    }
-  ];
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-700">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -2304,10 +2343,10 @@ export default function Dashboard() {
               <tbody className="divide-y divide-gray-200">
                 {viagensData.map((viagem, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="py-3 px-4 whitespace-nowrap">{viagem.data_viagem}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{viagem.data_formatada}</td>
                     <td className="py-3 px-4">{viagem.rota}</td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${viagem.status === 'Programada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                         {viagem.status}
                       </span>
                     </td>
@@ -2324,11 +2363,11 @@ export default function Dashboard() {
                 <div className="font-medium mb-1">{viagem.rota}</div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Data:</span>
-                  <span>{viagem.data_viagem}</span>
+                  <span>{viagem.data_formatada}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
                   <span className="text-gray-500">Status:</span>
-                  <span className="px-2 py-0.5 text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                  <span className={`px-2 py-0.5 text-xs leading-5 font-semibold rounded-full ${viagem.status === 'Programada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                     {viagem.status}
                   </span>
                 </div>
@@ -2363,7 +2402,7 @@ export default function Dashboard() {
                     <td className="py-3 px-4">{rota.nome}</td>
                     <td className="py-3 px-4">{rota.tipo}</td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${rota.status === 'Ativa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {rota.status}
                       </span>
                     </td>
@@ -2709,12 +2748,10 @@ const Viagens = () => {
       const response = await ViagemService.getViagens();
 
       if (response?.data?.data && Array.isArray(response.data.data)) {
-        // Add status conversion if needed
+        // Convert status to match UI requirements
         const formattedData = response.data.data.map(viagem => ({
           ...viagem,
-          status: typeof viagem.status === 'boolean' ? (viagem.status ? 'completed' : 'pending') :
-            typeof viagem.status === 'number' ? (viagem.status === 1 ? 'completed' : 'pending') :
-              viagem.status
+          status: viagem.status ? 'completed' : 'pending'
         }));
         setViagens(formattedData);
       } else {
@@ -2848,25 +2885,12 @@ const Viagens = () => {
       // Format the data for API
       const apiData = {
         ...formData,
-        hora_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
-        hora_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
-        hora_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
-        hora_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null,
+        hora_saida_prevista: formData.hora_saida_prevista,
+        hora_chegada_prevista: formData.hora_chegada_prevista,
+        hora_saida_real: formData.hora_saida_real || null,
+        hora_chegada_real: formData.hora_chegada_real || null,
         status: formData.status
       };
-
-      console.log('Original form data:', formData);
-      console.log('Formatted data for API:', apiData);
-      console.log('Time formats:', {
-        original_saida_prevista: formData.hora_saida_prevista,
-        formatted_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
-        original_chegada_prevista: formData.hora_chegada_prevista,
-        formatted_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
-        original_saida_real: formData.hora_saida_real,
-        formatted_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
-        original_chegada_real: formData.hora_chegada_real,
-        formatted_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null
-      });
 
       if (currentViagem) {
         // Update
@@ -2892,7 +2916,6 @@ const Viagens = () => {
           showError(`Erro de validação:\n${errorMessages}`);
         }
       } else {
-        // Generic error handling
         showError('Erro ao salvar viagem: ' + (err.response?.data?.message || err.message));
       }
     } finally {
@@ -2915,14 +2938,6 @@ const Viagens = () => {
     const motorista = motoristas.find(m => m.id === id);
     return motorista ? motorista.nome : 'Desconhecido';
   };
-
-  // Search and filter function
-  const filteredViagens = viagens.filter(viagem =>
-    viagem.data_viagem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (viagem.rota && viagem.rota.nome?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (viagem.onibus && viagem.onibus.placa?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (viagem.motorista && viagem.motorista.nome?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
 
   // Format a date from ISO to local date format
   const formatDate = (dateString) => {
@@ -2982,6 +2997,16 @@ const Viagens = () => {
       }
     }
   };
+
+  const filteredViagens = viagens.filter(viagem => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      viagem.data_viagem.toLowerCase().includes(searchLower) ||
+      formatNestedName(viagem, 'rota', getRotaName).toLowerCase().includes(searchLower) ||
+      formatNestedName(viagem, 'onibus', getOnibusName).toLowerCase().includes(searchLower) ||
+      formatNestedName(viagem, 'motorista', getMotoristaName).toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -3289,11 +3314,13 @@ export default function PageHeader({
 }
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Onibus.jsx ===
 
+// src/pages/Onibus.jsx
 import React, { useState, useEffect } from 'react';
 import { OnibusService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import { useNotification } from '../contexts/NotificationContext';
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
@@ -3303,6 +3330,10 @@ const Onibus = () => {
   const [currentOnibus, setCurrentOnibus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showSuccess, showError } = useNotification ? useNotification() : { 
+    showSuccess: () => {}, 
+    showError: () => {} 
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -3323,12 +3354,17 @@ const Onibus = () => {
       const response = await OnibusService.getOnibus();
       
       if (response?.data?.data && Array.isArray(response.data.data)) {
-        // Convert numeric or string status to string representation for the UI
+        // Process data - ensure status is standardized
         const formattedData = response.data.data.map(bus => ({
           ...bus,
-          status: typeof bus.status === 'boolean' ? (bus.status ? 'active' : 'inactive') :
-                 typeof bus.status === 'number' ? (bus.status === 1 ? 'active' : 'inactive') :
-                 bus.status === 'Ativo' ? 'active' : 'inactive'
+          status: convertStatus(bus.status)
+        }));
+        setOnibus(formattedData);
+      } else if (Array.isArray(response?.data)) {
+        // Alternative API response format
+        const formattedData = response.data.map(bus => ({
+          ...bus,
+          status: convertStatus(bus.status)
         }));
         setOnibus(formattedData);
       } else {
@@ -3341,6 +3377,26 @@ const Onibus = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Convert various status formats to a standardized format
+  const convertStatus = (status) => {
+    if (typeof status === 'boolean') {
+      return status ? 'active' : 'inactive';
+    } else if (typeof status === 'number') {
+      return status === 1 ? 'active' : 'inactive';
+    } else if (typeof status === 'string') {
+      const statusLower = status.toLowerCase();
+      if (statusLower === 'true' || statusLower === 'ativo' || statusLower === '1' || statusLower === 'active') {
+        return 'active';
+      } else if (statusLower === 'false' || statusLower === 'inativo' || statusLower === '0' || statusLower === 'inactive') {
+        return 'inactive';
+      } else if (statusLower === 'manutenção' || statusLower === 'manutencao' || statusLower === 'em manutenção' || statusLower === 'em manutencao') {
+        return 'maintenance';
+      }
+      return status; // Keep original if no match
+    }
+    return 'inactive'; // Default value
   };
 
   const handleInputChange = (e) => {
@@ -3391,15 +3447,19 @@ const Onibus = () => {
       if (currentOnibus) {
         // Update
         await OnibusService.updateOnibus(currentOnibus.id, apiData);
+        showSuccess('Ônibus atualizado com sucesso!');
       } else {
         // Create
         await OnibusService.createOnibus(apiData);
+        showSuccess('Ônibus cadastrado com sucesso!');
       }
       setIsModalOpen(false);
       fetchOnibus();
     } catch (err) {
       console.error('Error saving onibus:', err);
-      setError('Erro ao salvar ônibus: ' + (err.response?.data?.message || err.message));
+      const errorMsg = err.response?.data?.message || err.message;
+      setError('Erro ao salvar ônibus: ' + errorMsg);
+      showError('Erro ao salvar ônibus: ' + errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -3431,9 +3491,12 @@ const Onibus = () => {
     if(window.confirm(`Deseja excluir o ônibus de placa ${bus.placa}?`)) {
       try {
         await OnibusService.deleteOnibus(bus.id);
+        showSuccess('Ônibus excluído com sucesso!');
         fetchOnibus();
       } catch (err) {
-        setError('Erro ao excluir ônibus: ' + (err.response?.data?.message || err.message));
+        const errorMsg = err.response?.data?.message || err.message;
+        setError('Erro ao excluir ônibus: ' + errorMsg);
+        showError('Erro ao excluir ônibus: ' + errorMsg);
       }
     }
   };
@@ -3596,7 +3659,7 @@ const Onibus = () => {
           <div>
             <div className="text-sm text-gray-500">Ônibus Ativos</div>
             <div className="text-xl font-bold">
-              {onibus.filter(bus => bus.status === 'active' || bus.status === true).length}
+              {onibus.filter(bus => bus.status === 'active').length}
             </div>
           </div>
         </div>
@@ -3610,7 +3673,7 @@ const Onibus = () => {
           <div>
             <div className="text-sm text-gray-500">Ônibus Inativos</div>
             <div className="text-xl font-bold">
-              {onibus.filter(bus => bus.status === 'inactive' || bus.status === false).length}
+              {onibus.filter(bus => bus.status === 'inactive' || bus.status === 'maintenance').length}
             </div>
           </div>
         </div>

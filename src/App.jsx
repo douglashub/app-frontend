@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, useLocation, BrowserRouter } from 'react-router-dom'
 import { NotificationProvider } from './contexts/NotificationContext.jsx'
 import Dashboard from './pages/Dashboard'
 import Alunos from './pages/Alunos'
@@ -9,7 +9,23 @@ import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
 import Monitores from './pages/Monitores'
 
+// The App component is the only one using BrowserRouter now
 const App = () => {
+  return (
+    <BrowserRouter future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true
+    }}>
+      <AppContent />
+    </BrowserRouter>
+  );
+}
+
+// The main app content extracted into a separate component
+const AppContent = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
   

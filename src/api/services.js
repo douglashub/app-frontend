@@ -12,12 +12,14 @@ const api = axios.create({
 
 // Request interceptor for logging
 api.interceptors.request.use(request => {
-  console.log('API Request:', request.method, request.url);
+  // console.log('API Request:', request.method, request.url);
   return request;
 }, error => {
   console.error('API Request Error:', error);
   return Promise.reject(error);
 });
+
+import { getErrorMessage, formatErrorForLogging } from '../utils/errorHandler';
 
 // Response interceptor for error handling
 api.interceptors.response.use(
@@ -26,28 +28,17 @@ api.interceptors.response.use(
     return response;
   },
   error => {
-    // Centralized error handling
-    if (error.response) {
-      // Server returned an error status
-      console.error('API Error:', error.response.status, error.response.data);
-      
-      // Handle specific errors
-      if (error.response.status === 401) {
-        // Redirect to login if unauthorized
-        window.location.href = '/login';
-      }
-      
-      if (error.response.status === 422) {
-        // Transform validation errors into a friendly format
-        console.warn('Validation errors:', error.response.data.errors);
-      }
-    } else if (error.request) {
-      // No response from server
-      console.error('No response from server', error.request);
-    } else {
-      // Request configuration error
-      console.error('Request error:', error.message);
+    // Log error details for debugging
+    console.error('API Error:', formatErrorForLogging(error));
+    
+    // Handle specific errors
+    if (error.response?.status === 401) {
+      // Redirect to login if unauthorized
+      window.location.href = '/login';
     }
+    
+    // Get user-friendly error message
+    error.userMessage = getErrorMessage(error);
     
     return Promise.reject(error);
   }
@@ -296,32 +287,5 @@ export const MotoristaService = {
     throw new Error('Erro ao excluir motorista: ' + getErrorMessage(error));
   })
 };
-
-// Helper function to extract friendly error messages
-function getErrorMessage(error) {
-  if (error.response) {
-    // Server responses with error status
-    if (error.response.data && error.response.data.message) {
-      return error.response.data.message;
-    }
-    
-    // Specific handling for Laravel validation errors
-    if (error.response.data && error.response.data.errors) {
-      const errorMessages = Object.entries(error.response.data.errors)
-        .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-        .join('; ');
-      
-      return errorMessages;
-    }
-    
-    return `Erro ${error.response.status}: ${error.response.statusText}`;
-  } else if (error.request) {
-    // No response from server
-    return 'Sem resposta do servidor. Verifique sua conexão.';
-  } else {
-    // Request configuration error
-    return error.message || 'Erro desconhecido';
-  }
-}
 
 export default api;

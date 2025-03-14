@@ -7,17 +7,28 @@ export default function Notification({
   onClose
 }) {
   const [isVisible, setIsVisible] = useState(true);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
     if (!message) return;
     
+    setIsVisible(true);
+    setIsLeaving(false);
+    
     const timer = setTimeout(() => {
-      setIsVisible(false);
-      if (onClose) onClose();
+      handleClose();
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [message, duration, onClose]);
+  }, [message, duration]);
+
+  const handleClose = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      setIsVisible(false);
+      if (onClose) onClose();
+    }, 300); // Match animation duration
+  };
 
   if (!message || !isVisible) return null;
 
@@ -52,20 +63,26 @@ export default function Notification({
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 animate-slide-in-right">
-      <div className={`px-4 py-3 rounded-md shadow-md border ${typeClasses[type]} flex items-start max-w-md`}>
+    <div 
+      className={`fixed bottom-5 right-5 z-50 transition-all duration-300 ease-in-out
+        ${isLeaving ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'}`}
+    >
+      <div className={`
+        px-4 py-3 rounded-md shadow-lg border ${typeClasses[type]}
+        flex items-start max-w-md
+        transform transition-transform duration-200 hover:scale-102
+        ${message.includes('\n') ? 'whitespace-pre-line' : ''}
+      `}>
         <div className="flex-shrink-0 mr-3">
           {iconMap[type]}
         </div>
-        <div>
+        <div className="flex-grow">
           {message}
         </div>
         <button 
-          className="ml-3 text-gray-500 hover:text-gray-700"
-          onClick={() => {
-            setIsVisible(false);
-            if (onClose) onClose();
-          }}
+          className="ml-3 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+          onClick={handleClose}
+          aria-label="Close notification"
         >
           <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -74,4 +91,5 @@ export default function Notification({
       </div>
     </div>
   );
+
 }

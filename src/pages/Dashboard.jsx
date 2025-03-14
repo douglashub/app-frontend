@@ -41,14 +41,14 @@ export default function Dashboard() {
       // Process alunos data
       const totalAlunos = alunosResponse.data?.data?.length || 0;
 
-      console.log('Rotas response:', rotasResponse.data);
+      // console.log('Rotas response:', rotasResponse.data);
       // Process rotas data
       const rotasData = rotasResponse.data?.data || [];
       const rotasAtivas = rotasData.filter(rota => 
         rota.status === 'active' || rota.status === 'ativa' || rota.status === true || rota.status === 1
       ).length;
-
-      console.log('Viagens response:', viagensResponse.data);
+      
+      // console.log('Viagens response:', viagensResponse.data);
       // Process viagens data
       const viagensData = viagensResponse.data?.data || [];
       const today = new Date().toISOString().split('T')[0];
@@ -91,8 +91,8 @@ export default function Dashboard() {
       setRotasData(formattedRotasData.slice(0, 3));
       setViagensData(formattedViagensData.slice(0, 3));
       
-      console.log('Formatted rotas data:', formattedRotasData);
-      console.log('Formatted viagens data:', formattedViagensData);
+      //console.log('Formatted rotas data:', formattedRotasData);
+      //console.log('Formatted viagens data:', formattedViagensData);
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
