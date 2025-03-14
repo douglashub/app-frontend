@@ -3,6 +3,7 @@ import { ViagemService, RotaService, OnibusService, MotoristaService, MonitorSer
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 
 const Viagens = () => {
@@ -12,6 +13,7 @@ const Viagens = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Added missing state
   const [currentViagem, setCurrentViagem] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -288,15 +290,22 @@ const Viagens = () => {
     openModal(viagem);
   };
 
-  const handleDelete = async (viagem) => {
-    if (window.confirm(`Deseja excluir a viagem de ${formatDate(viagem.data_viagem)}?`)) {
-      try {
-        await ViagemService.deleteViagem(viagem.id);
-        showSuccess('Viagem excluída com sucesso!');
-        fetchViagens();
-      } catch (err) {
-        showError('Erro ao excluir viagem: ' + (err.response?.data?.message || err.message));
-      }
+  const handleDelete = (viagem) => {
+    setCurrentViagem(viagem);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await ViagemService.deleteViagem(currentViagem.id);
+      showSuccess('Viagem excluída com sucesso!');
+      setIsDeleteModalOpen(false);
+      setCurrentViagem(null);
+      fetchViagens();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message;
+      setError('Erro ao excluir viagem: ' + errorMsg);
+      showError('Erro ao excluir viagem: ' + errorMsg);
     }
   };
 
@@ -542,6 +551,16 @@ const Viagens = () => {
           </div>
         </div>
       </FormModal>
+
+      {/* Delete Confirmation Modal - moved outside of FormModal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirmar Exclusão"
+        message={`Tem certeza que deseja excluir a viagem de ${currentViagem?.data_viagem}?`}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
