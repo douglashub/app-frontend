@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import brasaoLogo from '../assets/images/Brasao.png'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -28,11 +29,18 @@ export default function Login() {
       {/* Left side - Login Form */}
       <div className="flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 w-full md:w-1/2">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <h1 className="text-center text-3xl font-bold text-gray-900 mb-1">Coracao</h1>
-          <h2 className="text-center text-xl font-semibold text-gray-900">Login</h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sistema de Gerenciamento de Transporte
-          </p>
+          <div className="flex flex-col items-center">
+            <img 
+              src={brasaoLogo} 
+              alt="Brasão de Navegantes" 
+              className="h-24 w-auto mb-4 drop-shadow-md" 
+            />
+            <h1 className="text-center text-3xl font-bold text-gray-900 mb-1">Coracao</h1>
+            <h2 className="text-center text-xl font-semibold text-gray-900">Login</h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Sistema de Gerenciamento de Transporte
+            </p>
+          </div>
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -121,7 +129,10 @@ export default function Login() {
       <div className="hidden md:block md:w-1/2 bg-blue-600">
         <div className="h-full flex items-center justify-center p-8 text-white">
           <div className="max-w-lg">
-            <h2 className="text-3xl font-bold mb-4">Sistema de Gerenciamento de Transporte Escolar</h2>
+            <div className="flex items-center mb-6">
+              <img src={brasaoLogo} alt="Brasão de Navegantes" className="h-16 w-auto mr-4" />
+              <h2 className="text-3xl font-bold">Sistema de Gerenciamento de Transporte Escolar</h2>
+            </div>
             <p className="text-lg text-blue-100 mb-6">
               Uma plataforma completa para gerenciar ônibus, rotas e alunos com eficiência e segurança.
             </p>

@@ -8,6 +8,7 @@ import Onibus from './pages/Onibus'
 import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
 import Monitores from './pages/Monitores'
+import brasaoLogo from './assets/images/Brasao.png'
 
 // The App component is the only one using BrowserRouter now
 const App = () => {
@@ -59,14 +60,30 @@ const AppContent = () => {
           {/* Sidebar Header with Toggle Button */}
           <div className="flex items-center justify-between p-4 border-b border-gray-700">
             {!sidebarCollapsed && (
-              <div>
-                <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
-                <p className="text-sm text-gray-400">Sistema de Transporte</p>
+              <div className="flex items-center">
+                <img 
+                  src={brasaoLogo}
+                  alt="Brasão de Navegantes" 
+                  className="h-10 w-auto mr-3"
+                />
+                <div>
+                  <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
+                  <p className="text-sm text-gray-400">Sistema de Transporte</p>
+                </div>
+              </div>
+            )}
+            {sidebarCollapsed && (
+              <div className="flex justify-center w-full">
+                <img 
+                  src={brasaoLogo}
+                  alt="Brasão de Navegantes" 
+                  className="h-8 w-auto"
+                />
               </div>
             )}
             <button 
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="text-gray-400 hover:text-white p-1 rounded-md"
+              className={`text-gray-400 hover:text-white p-1 rounded-md ${sidebarCollapsed ? 'mx-auto' : ''}`}
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? (
