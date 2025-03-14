@@ -234,6 +234,7 @@ class OnibusController extends Controller
                 'placa' => 'required|string|max:10',
                 'modelo' => 'required|string|max:255',
                 'capacidade' => 'required|integer',
+                'ano_fabricacao' => 'required|integer',
                 'status' => 'required|boolean'
             ]);
 
@@ -255,6 +256,7 @@ class OnibusController extends Controller
             $this->loggingService->logError('Server error: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Server error',
+                'error_details' => $e->getMessage(),
                 '_links' => $this->hateoasService->generateCollectionLinks('onibus')
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -285,6 +287,7 @@ class OnibusController extends Controller
                 'placa' => 'sometimes|string|max:10',
                 'modelo' => 'sometimes|string|max:255',
                 'capacidade' => 'sometimes|integer',
+                'ano_fabricacao' => 'sometimes|integer',
                 'status' => 'sometimes|boolean'
             ]);
 
@@ -313,6 +316,7 @@ class OnibusController extends Controller
             $this->loggingService->logError('Server error: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Server error',
+                'error_details' => $e->getMessage(),
                 '_links' => $this->hateoasService->generateCollectionLinks('onibus')
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -337,6 +341,7 @@ class OnibusController extends Controller
             $this->loggingService->logError('Deletion error: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Server error',
+                'error_details' => $e->getMessage(),
                 '_links' => $this->hateoasService->generateCollectionLinks('onibus')
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -399,13 +404,17 @@ class ViagemController extends Controller
     {
         try {
             $this->loggingService->logInfo('Creating new viagem');
+            
+            // Formatar campos de hora antes da validação
+            $this->formatTimeFields($request);
+            
             $validatedData = $request->validate([
                 'data_viagem' => 'required|date',
                 'rota_id' => 'required|integer|exists:rotas,id',
                 'onibus_id' => 'required|integer|exists:onibus,id',
                 'motorista_id' => 'required|integer|exists:motoristas,id',
                 'monitor_id' => 'nullable|integer|exists:monitores,id',
-                'horario_id' => 'required|integer|exists:horarios,id', // Make sure horario_id is required
+                'horario_id' => 'required|integer|exists:horarios,id',
                 'hora_saida_prevista' => 'required|date_format:H:i',
                 'hora_chegada_prevista' => 'nullable|date_format:H:i|after:hora_saida_prevista',
                 'hora_saida_real' => 'nullable|date_format:H:i',
@@ -473,6 +482,10 @@ class ViagemController extends Controller
     {
         try {
             $this->loggingService->logInfo('Updating viagem', ['id' => $id]);
+            
+            // Formatar campos de hora antes da validação
+            $this->formatTimeFields($request);
+            
             $validatedData = $request->validate([
                 'data_viagem' => 'sometimes|date',
                 'rota_id' => 'sometimes|integer|exists:rotas,id',
@@ -480,14 +493,17 @@ class ViagemController extends Controller
                 'motorista_id' => 'sometimes|integer|exists:motoristas,id',
                 'monitor_id' => 'nullable|integer|exists:monitores,id',
                 'horario_id' => 'sometimes|integer|exists:horarios,id',
-                'hora_saida_prevista' => 'sometimes|date_format:H:i',
-                'hora_chegada_prevista' => 'sometimes|date_format:H:i|after:hora_saida_prevista',
+                
+                // Modificar validação de campos de hora
+                'hora_saida_prevista' => 'nullable|date_format:H:i',
+                'hora_chegada_prevista' => 'nullable|date_format:H:i',
                 'hora_saida_real' => 'nullable|date_format:H:i',
                 'hora_chegada_real' => 'nullable|date_format:H:i',
+                
                 'status' => 'sometimes|boolean',
                 'observacoes' => 'nullable|string'
             ]);
-
+    
             $viagem = $this->service->updateViagem($id, $validatedData);
             if (!$viagem) {
                 $this->loggingService->logError('Viagem update failed', ['id' => $id]);
@@ -496,7 +512,7 @@ class ViagemController extends Controller
                     '_links' => $this->hateoasService->generateCollectionLinks('viagens')
                 ], Response::HTTP_NOT_FOUND);
             }
-
+    
             $this->loggingService->logInfo('Viagem updated successfully', ['id' => $id]);
             
             $relationships = [
@@ -548,6 +564,34 @@ class ViagemController extends Controller
                 'message' => 'Server error',
                 '_links' => $this->hateoasService->generateCollectionLinks('viagens')
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    /**
+     * Formata os campos de hora para garantir que estejam no padrão H:i
+     * 
+     * @param Request $request
+     * @return void
+     */
+    private function formatTimeFields(Request $request): void
+    {
+        $timeFields = [
+            'hora_saida_prevista',
+            'hora_chegada_prevista',
+            'hora_saida_real',
+            'hora_chegada_real'
+        ];
+        
+        foreach ($timeFields as $field) {
+            if ($request->has($field) && $request->input($field)) {
+                $time = $request->input($field);
+                // Verifica se o formato precisa ser ajustado (se tem apenas um dígito para hora)
+                if (preg_match('/^(\d{1}):(\d{2})$/', $time, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $request->merge([$field => "{$hours}:{$matches[2]}"]);
+                    $this->loggingService->logInfo("Formatted time field {$field} from {$time} to {$hours}:{$matches[2]}");
+                }
+            }
         }
     }
 }
@@ -1392,21 +1436,57 @@ class AlunoController extends Controller
     public function index(): JsonResponse
     {
         $this->loggingService->logInfo('Fetching all alunos');
-        $alunos = $this->alunoService->getAllAlunos();
-        $response = [
-            'data' => $alunos,
-            '_links' => $this->hateoasService->generateCollectionLinks('alunos')
-        ];
-        return response()->json($response);
+        try {
+            $alunos = $this->alunoService->getAllAlunos();
+            
+            // Verificação explícita para garantir que temos um objeto de paginação válido
+            if (!$alunos) {
+                throw new \Exception("Falha ao recuperar os dados de alunos");
+            }
+            
+            // Assegurar que items() retorna um array, mesmo que vazio
+            $data = method_exists($alunos, 'items') ? $alunos->items() : [];
+            
+            $response = [
+                'data' => $data,
+                'meta' => [
+                    'current_page' => method_exists($alunos, 'currentPage') ? $alunos->currentPage() : 1,
+                    'per_page' => method_exists($alunos, 'perPage') ? $alunos->perPage() : count($data),
+                    'total' => method_exists($alunos, 'total') ? $alunos->total() : count($data),
+                    'last_page' => method_exists($alunos, 'lastPage') ? $alunos->lastPage() : 1
+                ],
+                '_links' => $this->hateoasService->generateCollectionLinks('alunos', $alunos)
+            ];
+            
+            return response()->json($response);
+        } catch (\Exception $e) {
+            $this->loggingService->logError('Error fetching alunos: ' . $e->getMessage());
+            
+            // Em caso de erro, ainda retorna uma estrutura JSON válida
+            return response()->json([
+                'data' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'per_page' => 10,
+                    'total' => 0,
+                    'last_page' => 1
+                ],
+                '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                'error' => 'Erro ao recuperar alunos: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
-
+    
     public function show(int $id): JsonResponse
     {
         $this->loggingService->logInfo('Fetching aluno', ['id' => $id]);
         $aluno = $this->alunoService->getAlunoById($id);
         if (!$aluno) {
             $this->loggingService->logError('Aluno not found', ['id' => $id]);
-            return response()->json(['message' => 'Aluno não encontrado'], Response::HTTP_NOT_FOUND);
+            return response()->json([
+                'message' => 'Aluno não encontrado',
+                'status' => 'error'
+            ], Response::HTTP_NOT_FOUND);
         }
 
         $response = [
@@ -1437,20 +1517,24 @@ class AlunoController extends Controller
 
             return response()->json([
                 'data' => $aluno,
-                '_links' => $this->hateoasService->generateLinks('alunos', $aluno->id)
+                '_links' => $this->hateoasService->generateLinks('alunos', $aluno->id),
+                'message' => 'Aluno criado com sucesso',
+                'status' => 'success'
             ], Response::HTTP_CREATED);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->loggingService->logError('Validation failed: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Validation error',
+                'message' => 'Erro de validação',
                 'errors' => $e->errors(),
-                '_links' => $this->hateoasService->generateCollectionLinks('alunos')
+                '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                'status' => 'error'
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
             $this->loggingService->logError('Server error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Server error',
-                '_links' => $this->hateoasService->generateCollectionLinks('alunos')
+                'message' => 'Erro no servidor: ' . $e->getMessage(),
+                '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                'status' => 'error'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -1475,27 +1559,32 @@ class AlunoController extends Controller
                 $this->loggingService->logError('Aluno update failed', ['id' => $id]);
                 return response()->json([
                     'message' => 'Aluno não encontrado',
-                    '_links' => $this->hateoasService->generateCollectionLinks('alunos')
+                    '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                    'status' => 'error'
                 ], Response::HTTP_NOT_FOUND);
             }
 
             $this->loggingService->logInfo('Aluno updated successfully', ['id' => $id]);
             return response()->json([
                 'data' => $aluno,
-                '_links' => $this->hateoasService->generateLinks('alunos', $id)
+                '_links' => $this->hateoasService->generateLinks('alunos', $id),
+                'message' => 'Aluno atualizado com sucesso',
+                'status' => 'success'
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->loggingService->logError('Validation error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Validation error',
+                'message' => 'Erro de validação',
                 'errors' => $e->errors(),
-                '_links' => $this->hateoasService->generateCollectionLinks('alunos')
+                '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                'status' => 'error'
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
             $this->loggingService->logError('Server error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Server error',
-                '_links' => $this->hateoasService->generateCollectionLinks('alunos')
+                'message' => 'Erro no servidor: ' . $e->getMessage(),
+                '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                'status' => 'error'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -1509,17 +1598,22 @@ class AlunoController extends Controller
                 $this->loggingService->logError('Aluno deletion failed', ['id' => $id]);
                 return response()->json([
                     'message' => 'Aluno não encontrado',
-                    '_links' => $this->hateoasService->generateCollectionLinks('alunos')
+                    '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                    'status' => 'error'
                 ], Response::HTTP_NOT_FOUND);
             }
 
             $this->loggingService->logInfo('Aluno deleted successfully', ['id' => $id]);
-            return response()->json(null, Response::HTTP_NO_CONTENT);
+            return response()->json([
+                'message' => 'Aluno excluído com sucesso',
+                'status' => 'success'
+            ], Response::HTTP_OK);
         } catch (\Exception $e) {
             $this->loggingService->logError('Deletion error: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Server error',
-                '_links' => $this->hateoasService->generateCollectionLinks('alunos')
+                'message' => 'Erro ao excluir: ' . $e->getMessage(),
+                '_links' => $this->hateoasService->generateCollectionLinks('alunos'),
+                'status' => 'error'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -1530,13 +1624,17 @@ class AlunoController extends Controller
         $aluno = $this->alunoService->getAlunoById($id);
         if (!$aluno) {
             $this->loggingService->logError('Aluno not found', ['id' => $id]);
-            return response()->json(['message' => 'Aluno não encontrado'], Response::HTTP_NOT_FOUND);
+            return response()->json([
+                'message' => 'Aluno não encontrado', 
+                'status' => 'error'
+            ], Response::HTTP_NOT_FOUND);
         }
 
         $presencas = $this->alunoService->getAlunoPresencas($id);
         return response()->json([
             'data' => $presencas,
-            '_links' => $this->hateoasService->generateLinks('alunos', $id)
+            '_links' => $this->hateoasService->generateLinks('alunos', $id),
+            'status' => 'success'
         ]);
     }
 }
@@ -1598,6 +1696,10 @@ class RotaController extends Controller
     {
         try {
             $this->loggingService->logInfo('Creating new rota');
+            
+            // Formatar campos de hora antes da validação
+            $this->formatTimeFields($request);
+            
             $validatedData = $request->validate([
                 'nome' => 'required|string|max:255',
                 'descricao' => 'nullable|string',
@@ -1638,6 +1740,10 @@ class RotaController extends Controller
     {
         try {
             $this->loggingService->logInfo('Updating rota', ['id' => $id]);
+            
+            // Formatar campos de hora antes da validação
+            $this->formatTimeFields($request);
+            
             $validatedData = $request->validate([
                 'nome' => 'sometimes|string|max:255',
                 'descricao' => 'nullable|string',
@@ -1732,6 +1838,32 @@ class RotaController extends Controller
             'data' => $viagens,
             '_links' => $this->hateoasService->generateLinks('rotas', $id)
         ]);
+    }
+    
+    /**
+     * Formata os campos de hora para garantir que estejam no padrão H:i
+     * 
+     * @param Request $request
+     * @return void
+     */
+    private function formatTimeFields(Request $request): void
+    {
+        $timeFields = [
+            'horario_inicio',
+            'horario_fim'
+        ];
+        
+        foreach ($timeFields as $field) {
+            if ($request->has($field) && $request->input($field)) {
+                $time = $request->input($field);
+                // Verifica se o formato precisa ser ajustado (se tem apenas um dígito para hora)
+                if (preg_match('/^(\d{1}):(\d{2})$/', $time, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $request->merge([$field => "{$hours}:{$matches[2]}"]);
+                    $this->loggingService->logInfo("Formatted time field {$field} from {$time} to {$hours}:{$matches[2]}");
+                }
+            }
+        }
     }
 }
 === /Users/micaelsantana/Documents/app-backend/app/Models/User.php ===
@@ -2270,9 +2402,8 @@ class ViagemService
                 'rota_id',
                 'onibus_id',
                 'motorista_id',
-                'horario_id',  // Ensure horario_id is in the required fields list
+                'horario_id',
                 'hora_saida_prevista',
-                'hora_chegada_prevista',
                 'status'
             ];
             
@@ -2281,6 +2412,9 @@ class ViagemService
                     throw new \InvalidArgumentException("Missing required field: {$field}");
                 }
             }
+            
+            // Certifique-se de que todos os campos de hora estão corretamente formatados
+            $data = $this->ensureTimeFormat($data);
             
             return Viagem::create($data);
         } catch (\Exception $e) {
@@ -2294,9 +2428,17 @@ class ViagemService
         if (!$viagem) {
             return null;
         }
-
+    
         try {
-            $viagem->update($data);
+            // Remove null values to prevent overwriting existing data
+            $filteredData = array_filter($data, function($value) {
+                return $value !== null;
+            });
+    
+            // Certifique-se de que todos os campos de hora estão corretamente formatados
+            $filteredData = $this->ensureTimeFormat($filteredData);
+    
+            $viagem->update($filteredData);
             return $viagem->fresh();
         } catch (\Exception $e) {
             throw new \RuntimeException('Failed to update viagem: ' . $e->getMessage());
@@ -2321,6 +2463,34 @@ class ViagemService
         }
 
         return $viagem->presencas;
+    }
+    
+    /**
+     * Garante que todos os campos de hora estejam no formato correto
+     *
+     * @param array $data
+     * @return array
+     */
+    private function ensureTimeFormat(array $data): array
+    {
+        $timeFields = [
+            'hora_saida_prevista',
+            'hora_chegada_prevista',
+            'hora_saida_real',
+            'hora_chegada_real'
+        ];
+        
+        foreach ($timeFields as $field) {
+            if (isset($data[$field]) && $data[$field]) {
+                $time = $data[$field];
+                if (preg_match('/^(\d{1,2}):(\d{2})$/', $time, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $data[$field] = "{$hours}:{$matches[2]}";
+                }
+            }
+        }
+        
+        return $data;
     }
 }
 === /Users/micaelsantana/Documents/app-backend/app/Services/HateoasService.php ===
@@ -2808,6 +2978,9 @@ class RotaService
         // Set default values if not provided
         $data['tipo'] = $data['tipo'] ?? '';
         $data['status'] = $data['status'] ?? true;
+        
+        // Garante que os campos de hora estão no formato correto
+        $data = $this->ensureTimeFormat($data);
     
         return Rota::create($data);
     }
@@ -2818,6 +2991,9 @@ class RotaService
         if (!$rota) {
             return null;
         }
+        
+        // Garante que os campos de hora estão no formato correto
+        $data = $this->ensureTimeFormat($data);
 
         $rota->update($data);
         return $rota->fresh();
@@ -2851,6 +3027,32 @@ class RotaService
         }
 
         return $rota->viagens;
+    }
+    
+    /**
+     * Garante que todos os campos de hora estejam no formato correto
+     *
+     * @param array $data
+     * @return array
+     */
+    private function ensureTimeFormat(array $data): array
+    {
+        $timeFields = [
+            'horario_inicio',
+            'horario_fim'
+        ];
+        
+        foreach ($timeFields as $field) {
+            if (isset($data[$field]) && $data[$field]) {
+                $time = $data[$field];
+                if (preg_match('/^(\d{1,2}):(\d{2})$/', $time, $matches)) {
+                    $hours = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                    $data[$field] = "{$hours}:{$matches[2]}";
+                }
+            }
+        }
+        
+        return $data;
     }
 }
 === /Users/micaelsantana/Documents/app-backend/app/Services/ParadaService.php ===
@@ -2933,7 +3135,26 @@ class OnibusService
 
     public function createOnibus(array $data): Onibus
     {
-        return Onibus::create($data);
+        try {
+            // Certifique-se de que todos os campos obrigatórios estão presentes
+            $requiredFields = [
+                'placa',
+                'modelo',
+                'capacidade',
+                'ano_fabricacao',
+                'status'
+            ];
+            
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field])) {
+                    throw new \InvalidArgumentException("Campo obrigatório ausente: {$field}");
+                }
+            }
+            
+            return Onibus::create($data);
+        } catch (\Exception $e) {
+            throw new \RuntimeException('Falha ao criar ônibus: ' . $e->getMessage());
+        }
     }
 
     public function updateOnibus(int $id, array $data): ?Onibus
@@ -2943,8 +3164,12 @@ class OnibusService
             return null;
         }
 
-        $onibus->update($data);
-        return $onibus->fresh();
+        try {
+            $onibus->update($data);
+            return $onibus->fresh();
+        } catch (\Exception $e) {
+            throw new \RuntimeException('Falha ao atualizar ônibus: ' . $e->getMessage());
+        }
     }
 
     public function deleteOnibus(int $id): bool
@@ -3663,9 +3888,21 @@ return new class extends Migration
                 if (Schema::hasColumn('horarios', 'hora_chegada') && !Schema::hasColumn('horarios', 'hora_fim')) {
                     $table->renameColumn('hora_chegada', 'hora_fim');
                 }
+                // Adicionar hora_inicio se não existir
+                if (!Schema::hasColumn('horarios', 'hora_inicio') && !Schema::hasColumn('horarios', 'hora_saida')) {
+                    $table->time('hora_inicio');
+                }
+                // Adicionar hora_fim se não existir
+                if (!Schema::hasColumn('horarios', 'hora_fim') && !Schema::hasColumn('horarios', 'hora_chegada')) {
+                    $table->time('hora_fim');
+                }
                 // Rename ativo to status if needed
                 if (Schema::hasColumn('horarios', 'ativo') && !Schema::hasColumn('horarios', 'status')) {
                     $table->renameColumn('ativo', 'status');
+                }
+                // Adicionar status se não existir
+                if (!Schema::hasColumn('horarios', 'status') && !Schema::hasColumn('horarios', 'ativo')) {
+                    $table->boolean('status')->default(true);
                 }
             });
         }
@@ -3725,7 +3962,6 @@ return new class extends Migration
         // No easy way to revert these changes, since they are adapting schema to match existing code
     }
 };
-
 === /Users/micaelsantana/Documents/app-backend/database/migrations/2024_01_01_000001_create_onibus_table.php ===
 
 <?php
@@ -3958,7 +4194,6 @@ class HorarioSeeder extends Seeder
         ]);
     }
 }
-
 === /Users/micaelsantana/Documents/app-backend/database/seeders/RotaSeeder.php ===
 
 <?php
@@ -4164,7 +4399,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
-class ViagemSeeder extends Seeder
+class ViagemSeeder extends Seeder // Aqui estava incorreto como HorarioSeeder
 {
     public function run(): void
     {
@@ -4183,7 +4418,7 @@ class ViagemSeeder extends Seeder
                 'onibus_id' => 1,
                 'motorista_id' => 1,
                 'monitor_id' => 1,
-                'horario_id' => 1,
+                'horario_id' => 1, // Ensure this matches an existing horario in the horarios table
                 'hora_saida_prevista' => '07:00',
                 'hora_chegada_prevista' => '07:45',
                 'hora_saida_real' => '07:05',
@@ -4199,7 +4434,7 @@ class ViagemSeeder extends Seeder
                 'onibus_id' => 2,
                 'motorista_id' => 2,
                 'monitor_id' => 2,
-                'horario_id' => 3,
+                'horario_id' => 3, // Ensure this matches an existing horario in the horarios table
                 'hora_saida_prevista' => '06:45',
                 'hora_chegada_prevista' => '07:30',
                 'hora_saida_real' => '06:50',
@@ -4215,7 +4450,7 @@ class ViagemSeeder extends Seeder
                 'onibus_id' => 1,
                 'motorista_id' => 1,
                 'monitor_id' => 1,
-                'horario_id' => 1,
+                'horario_id' => 1, // Ensure this matches an existing horario in the horarios table
                 'hora_saida_prevista' => '07:00',
                 'hora_chegada_prevista' => '07:45',
                 'hora_saida_real' => null,
@@ -4231,7 +4466,7 @@ class ViagemSeeder extends Seeder
                 'onibus_id' => 3,
                 'motorista_id' => 3,
                 'monitor_id' => 3,
-                'horario_id' => 4,
+                'horario_id' => 4, // Ensure this matches an existing horario in the horarios table
                 'hora_saida_prevista' => '06:30',
                 'hora_chegada_prevista' => '07:15',
                 'hora_saida_real' => null,
@@ -4244,7 +4479,6 @@ class ViagemSeeder extends Seeder
         ]);
     }
 }
-
 === /Users/micaelsantana/Documents/app-backend/database/seeders/RotaParadaSeeder.php ===
 
 <?php

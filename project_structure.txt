@@ -1,4 +1,64 @@
 
+=== /Users/micaelsantana/Documents/app-frontend/src/contexts/NotificationContext.jsx ===
+
+import React, { createContext, useState, useContext } from 'react';
+import Notification from '../components/common/Notification';
+
+// Create context
+const NotificationContext = createContext();
+
+// Custom hook to use the notification context
+export const useNotification = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotification must be used within a NotificationProvider');
+  }
+  return context;
+};
+
+// Provider component
+export const NotificationProvider = ({ children }) => {
+  const [notification, setNotification] = useState({
+    message: '',
+    type: 'success',
+    duration: 4000
+  });
+
+  const showNotification = ({ message, type = 'success', duration = 4000 }) => {
+    setNotification({ message, type, duration });
+  };
+
+  const clearNotification = () => {
+    setNotification({ ...notification, message: '' });
+  };
+
+  // Shorthand methods for different notification types
+  const showSuccess = (message, duration) => showNotification({ message, type: 'success', duration });
+  const showError = (message, duration) => showNotification({ message, type: 'error', duration });
+  const showWarning = (message, duration) => showNotification({ message, type: 'warning', duration });
+  const showInfo = (message, duration) => showNotification({ message, type: 'info', duration });
+
+  return (
+    <NotificationContext.Provider 
+      value={{ 
+        showNotification,
+        clearNotification,
+        showSuccess,
+        showError,
+        showWarning,
+        showInfo
+      }}
+    >
+      {children}
+      <Notification 
+        message={notification.message}
+        type={notification.type}
+        duration={notification.duration}
+        onClose={clearNotification}
+      />
+    </NotificationContext.Provider>
+  );
+};
 === /Users/micaelsantana/Documents/app-frontend/src/index.css ===
 
 @tailwind base;
@@ -308,6 +368,228 @@ export default function StatusBadge({ status, type = 'default', size = 'md' }) {
     </span>
   )
 }
+=== /Users/micaelsantana/Documents/app-frontend/src/components/common/ConfirmationModal.jsx ===
+
+import React from 'react';
+
+export default function ConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title,
+  message,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  isDeleting = false
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        {/* Background overlay */}
+        <div 
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+          aria-hidden="true"
+          onClick={onClose}
+        ></div>
+
+        {/* Modal panel */}
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div className="sm:flex sm:items-start">
+              <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${isDeleting ? 'bg-red-100' : 'bg-blue-100'} sm:mx-0 sm:h-10 sm:w-10`}>
+                {isDeleting ? (
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                ) : (
+                  <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </div>
+              <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                  {title}
+                </h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">
+                    {message}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button
+              type="button"
+              className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 ${isDeleting ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'} text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm`}
+              onClick={onConfirm}
+            >
+              {confirmText}
+            </button>
+            <button
+              type="button"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              onClick={onClose}
+            >
+              {cancelText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+=== /Users/micaelsantana/Documents/app-frontend/src/components/common/FormModal.jsx ===
+
+import React from 'react';
+
+export default function FormModal({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children, 
+  onSubmit,
+  isSubmitting = false
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        {/* Background overlay */}
+        <div 
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+          aria-hidden="true"
+          onClick={onClose}
+        ></div>
+
+        {/* Modal panel */}
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div className="sm:flex sm:items-start">
+              <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                  {title}
+                </h3>
+                
+                <div className="mt-4">
+                  <form onSubmit={onSubmit}>
+                    {children}
+                    
+                    <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm"
+                      >
+                        {isSubmitting ? (
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : null}
+                        Salvar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+=== /Users/micaelsantana/Documents/app-frontend/src/components/common/Notification.jsx ===
+
+import React, { useState, useEffect } from 'react';
+
+export default function Notification({ 
+  message, 
+  type = 'success', // 'success', 'error', 'warning', 'info'
+  duration = 4000,
+  onClose
+}) {
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    if (!message) return;
+    
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      if (onClose) onClose();
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [message, duration, onClose]);
+
+  if (!message || !isVisible) return null;
+
+  const typeClasses = {
+    success: 'bg-green-100 text-green-800 border-green-300',
+    error: 'bg-red-100 text-red-800 border-red-300',
+    warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    info: 'bg-blue-100 text-blue-800 border-blue-300'
+  };
+
+  const iconMap = {
+    success: (
+      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+      </svg>
+    ),
+    error: (
+      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+    ),
+    warning: (
+      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+    ),
+    info: (
+      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+    )
+  };
+
+  return (
+    <div className="fixed bottom-5 right-5 z-50 animate-slide-in-right">
+      <div className={`px-4 py-3 rounded-md shadow-md border ${typeClasses[type]} flex items-start max-w-md`}>
+        <div className="flex-shrink-0 mr-3">
+          {iconMap[type]}
+        </div>
+        <div>
+          {message}
+        </div>
+        <button 
+          className="ml-3 text-gray-500 hover:text-gray-700"
+          onClick={() => {
+            setIsVisible(false);
+            if (onClose) onClose();
+          }}
+        >
+          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
 === /Users/micaelsantana/Documents/app-frontend/src/components/common/StatCard.jsx ===
 
 import React from 'react'
@@ -354,12 +636,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 import React, { useState } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { NotificationProvider } from './contexts/NotificationContext.jsx'
 import Dashboard from './pages/Dashboard'
 import Alunos from './pages/Alunos'
 import Login from './pages/Login'
 import Onibus from './pages/Onibus'
 import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
+import Monitores from './pages/Monitores'
 
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -374,139 +658,144 @@ const App = () => {
   // Don't render sidebar on login page
   if (location.pathname === '/login') {
     return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Login />} />
-      </Routes>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Login />} />
+        </Routes>
+      </NotificationProvider>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col md:flex-row w-full bg-blue-50 overflow-hidden">
-      {/* Sidebar - Always visible but collapsible on smaller screens */}
-      <div className={`
-        bg-gray-800 text-white transition-all duration-300 
-        ${sidebarCollapsed ? 'w-16' : 'w-64'} 
-        flex-shrink-0 sticky top-0 h-screen z-30
-      `}>
-        {/* Sidebar Header with Toggle Button */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          {!sidebarCollapsed && (
-            <div>
-              <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
-              <p className="text-sm text-gray-400">Sistema de Transporte</p>
-            </div>
-          )}
-          <button 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="text-gray-400 hover:text-white p-1 rounded-md"
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {sidebarCollapsed ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              </svg>
+    <NotificationProvider>
+      <div className="h-screen flex flex-col md:flex-row w-full bg-blue-50 overflow-hidden">
+        {/* Sidebar - Always visible but collapsible on smaller screens */}
+        <div className={`
+          bg-gray-800 text-white transition-all duration-300 
+          ${sidebarCollapsed ? 'w-16' : 'w-64'} 
+          flex-shrink-0 sticky top-0 h-screen z-30
+        `}>
+          {/* Sidebar Header with Toggle Button */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+            {!sidebarCollapsed && (
+              <div>
+                <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
+                <p className="text-sm text-gray-400">Sistema de Transporte</p>
+              </div>
             )}
-          </button>
+            <button 
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="text-gray-400 hover:text-white p-1 rounded-md"
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              )}
+            </button>
+          </div>
+          
+          {/* Navigation Links */}
+          <nav className="mt-4 overflow-y-auto h-[calc(100%-4rem)]">
+            <ul>
+              <li>
+                <Link 
+                  to="/dashboard"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/dashboard') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Dashboard"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Dashboard</span>}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/onibus"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/onibus') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Ônibus"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 5h8m-4 6v-4m4 4v-4" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Ônibus</span>}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/alunos"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/alunos') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Alunos"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Alunos</span>}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/rotas"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/rotas') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Rotas"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Rotas</span>}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/viagens"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/viagens') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Viagens"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Viagens</span>}
+                </Link>
+              </li>
+              <li className="mt-6 border-t border-gray-700 pt-4">
+                <Link 
+                  to="/login"
+                  className="flex items-center py-3 px-4 w-full text-left text-gray-300 hover:bg-gray-700"
+                  title="Sair"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Sair</span>}
+                </Link>
+              </li>
+            </ul>
+          </nav>
         </div>
         
-        {/* Navigation Links */}
-        <nav className="mt-4 overflow-y-auto h-[calc(100%-4rem)]">
-          <ul>
-            <li>
-              <Link 
-                to="/dashboard"
-                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/dashboard') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-                title="Dashboard"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                {!sidebarCollapsed && <span className="ml-3">Dashboard</span>}
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/onibus"
-                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/onibus') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-                title="Ônibus"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 5h8m-4 6v-4m4 4v-4" />
-                </svg>
-                {!sidebarCollapsed && <span className="ml-3">Ônibus</span>}
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/alunos"
-                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/alunos') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-                title="Alunos"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                {!sidebarCollapsed && <span className="ml-3">Alunos</span>}
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/rotas"
-                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/rotas') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-                title="Rotas"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                {!sidebarCollapsed && <span className="ml-3">Rotas</span>}
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/viagens"
-                className={`flex items-center py-3 px-4 w-full text-left ${isActive('/viagens') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-                title="Viagens"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                {!sidebarCollapsed && <span className="ml-3">Viagens</span>}
-              </Link>
-            </li>
-            <li className="mt-6 border-t border-gray-700 pt-4">
-              <Link 
-                to="/login"
-                className="flex items-center py-3 px-4 w-full text-left text-gray-300 hover:bg-gray-700"
-                title="Sair"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                {!sidebarCollapsed && <span className="ml-3">Sair</span>}
-              </Link>
-            </li>
-          </ul>
-        </nav>
+        {/* Main Content */}
+        <div className="flex-1 h-full bg-blue-50 overflow-auto">
+          <main className="px-6 py-4 w-full h-full">
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/alunos" element={<Alunos />} />
+              <Route path="/onibus" element={<Onibus />} />
+              <Route path="/monitores" element={<Monitores />} />
+              <Route path="/rotas" element={<Rotas />} />
+              <Route path="/viagens" element={<Viagens />} />
+            </Routes>
+          </main>
+        </div>
       </div>
-      
-      {/* Main Content */}
-      <div className="flex-1 h-full bg-blue-50 overflow-auto">
-        <main className="px-6 py-4 w-full h-full">
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/alunos" element={<Alunos />} />
-            <Route path="/onibus" element={<Onibus />} />
-            <Route path="/rotas" element={<Rotas />} />
-            <Route path="/viagens" element={<Viagens />} />
-          </Routes>
-        </main>
-      </div>
-    </div>
+    </NotificationProvider>
   );
 }
 
@@ -515,107 +804,502 @@ export default App;
 
 import axios from 'axios';
 
+// Configuração do Axios
 const api = axios.create({
   baseURL: '/api',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  timeout: 15000 // 15 segundos
 });
 
+// Interceptor para logs de requisição (debug)
+api.interceptors.request.use(request => {
+  console.log('API Request:', request.method, request.url);
+  return request;
+}, error => {
+  console.error('API Request Error:', error);
+  return Promise.reject(error);
+});
+
+// Interceptor para tratamento de respostas
+api.interceptors.response.use(
+  response => {
+    // Processamento de sucesso
+    return response;
+  },
+  error => {
+    // Processamento de erro centralizado
+    if (error.response) {
+      // Servidor respondeu com status de erro
+      console.error('API Error:', error.response.status, error.response.data);
+      
+      // Processar erros específicos
+      if (error.response.status === 401) {
+        // Redirecionar para login
+        // window.location.href = '/login';
+      }
+      
+      if (error.response.status === 422) {
+        // Transformar erros de validação em formato amigável
+        console.warn('Validation errors:', error.response.data.errors);
+      }
+    } else if (error.request) {
+      // Sem resposta do servidor
+      console.error('No response from server', error.request);
+    } else {
+      // Erro na configuração da requisição
+      console.error('Request error:', error.message);
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Formatação comum para horários em formato H:i (exigido pela API Laravel)
+ * @param {string} time - Time in HH:mm format 
+ * @returns {string} - Time in H:i format or null if input is empty
+ */
+function formatTimeForApi(time) {
+  if (!time) return null;
+  
+  try {
+    // Split the time string into hours and minutes
+    const [hours, minutes] = time.split(':');
+    
+    // Convert hours to integer to remove leading zeros
+    const hour = parseInt(hours, 10);
+    
+    // Return the formatted time string (H:i format exactly as Laravel expects)
+    return `${hour}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return null;
+  }
+}
+
+/**
+ * Converte horários do formato da API (H:i) para o formato HTML (HH:mm)
+ * @param {string} time - Time in H:i format
+ * @returns {string} - Time in HH:mm format
+ */
+function formatTimeForDisplay(time) {
+  if (!time) return '';
+  
+  try {
+    // Handle different time formats that might come from the API
+    const timeParts = time.split(':');
+    
+    if (timeParts.length < 2) return time; // Return as is if not a valid time format
+    
+    const hours = timeParts[0].padStart(2, '0');
+    const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
+    
+    return `${hours}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting time for display:', error);
+    return time || '';
+  }
+}
+
+// Serviços para API - com tratamentos de erros e mensagens amigáveis
 export const AlunoService = {
-  getAlunos: () => api.get('/alunos'),
-  createAluno: (data) => api.post('/alunos', data),
-  updateAluno: (id, data) => api.put(`/alunos/${id}`, data),
-  deleteAluno: (id) => api.delete(`/alunos/${id}`)
+  getAlunos: () => api.get('/alunos').catch(error => {
+    throw new Error('Erro ao buscar alunos: ' + getErrorMessage(error));
+  }),
+  
+  getAlunoById: (id) => api.get(`/alunos/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes do aluno: ' + getErrorMessage(error));
+  }),
+  
+  createAluno: (data) => api.post('/alunos', data).catch(error => {
+    throw new Error('Erro ao criar aluno: ' + getErrorMessage(error));
+  }),
+  
+  updateAluno: (id, data) => api.put(`/alunos/${id}`, data).catch(error => {
+    throw new Error('Erro ao atualizar aluno: ' + getErrorMessage(error));
+  }),
+  
+  deleteAluno: (id) => api.delete(`/alunos/${id}`).catch(error => {
+    throw new Error('Erro ao excluir aluno: ' + getErrorMessage(error));
+  }),
+  
+  getAlunoPresencas: (id) => api.get(`/alunos/${id}/presencas`).catch(error => {
+    throw new Error('Erro ao buscar presenças do aluno: ' + getErrorMessage(error));
+  })
 };
 
 export const OnibusService = {
-  getOnibus: () => api.get('/onibus'),
-  createOnibus: (data) => api.post('/onibus', data),
-  updateOnibus: (id, data) => api.put(`/onibus/${id}`, data),
-  deleteOnibus: (id) => api.delete(`/onibus/${id}`)
+  getOnibus: () => api.get('/onibus').catch(error => {
+    throw new Error('Erro ao buscar ônibus: ' + getErrorMessage(error));
+  }),
+  
+  getOnibusById: (id) => api.get(`/onibus/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes do ônibus: ' + getErrorMessage(error));
+  }),
+  
+  createOnibus: (data) => api.post('/onibus', data).catch(error => {
+    throw new Error('Erro ao criar ônibus: ' + getErrorMessage(error));
+  }),
+  
+  updateOnibus: (id, data) => api.put(`/onibus/${id}`, data).catch(error => {
+    throw new Error('Erro ao atualizar ônibus: ' + getErrorMessage(error));
+  }),
+  
+  deleteOnibus: (id) => api.delete(`/onibus/${id}`).catch(error => {
+    throw new Error('Erro ao excluir ônibus: ' + getErrorMessage(error));
+  }),
+  
+  getOnibusViagens: (id) => api.get(`/onibus/${id}/viagens`).catch(error => {
+    throw new Error('Erro ao buscar viagens do ônibus: ' + getErrorMessage(error));
+  })
 };
 
 export const RotaService = {
-  getRotas: () => api.get('/rotas'),
-  createRota: (data) => api.post('/rotas', data),
-  updateRota: (id, data) => api.put(`/rotas/${id}`, data),
-  deleteRota: (id) => api.delete(`/rotas/${id}`)
+  getRotas: () => api.get('/rotas').catch(error => {
+    throw new Error('Erro ao buscar rotas: ' + getErrorMessage(error));
+  }),
+  
+  getRotaById: (id) => api.get(`/rotas/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes da rota: ' + getErrorMessage(error));
+  }),
+  
+  createRota: (data) => {
+    // Format time fields
+    const formattedData = { ...data };
+    if (formattedData.horario_inicio) {
+      formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
+    }
+    if (formattedData.horario_fim) {
+      formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
+    }
+    
+    return api.post('/rotas', formattedData).catch(error => {
+      throw new Error('Erro ao criar rota: ' + getErrorMessage(error));
+    });
+  },
+  
+  updateRota: (id, data) => {
+    // Format time fields
+    const formattedData = { ...data };
+    if (formattedData.horario_inicio) {
+      formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
+    }
+    if (formattedData.horario_fim) {
+      formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
+    }
+    
+    return api.put(`/rotas/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar rota: ' + getErrorMessage(error));
+    });
+  },
+  
+  deleteRota: (id) => api.delete(`/rotas/${id}`).catch(error => {
+    throw new Error('Erro ao excluir rota: ' + getErrorMessage(error));
+  }),
+  
+  getRotaParadas: (id) => api.get(`/rotas/${id}/paradas`).catch(error => {
+    throw new Error('Erro ao buscar paradas da rota: ' + getErrorMessage(error));
+  }),
+  
+  getRotaViagens: (id) => api.get(`/rotas/${id}/viagens`).catch(error => {
+    throw new Error('Erro ao buscar viagens da rota: ' + getErrorMessage(error));
+  })
 };
 
 export const ViagemService = {
-  getViagens: () => api.get('/viagens'),
-  createViagem: (data) => api.post('/viagens', data),
-  updateViagem: (id, data) => api.put(`/viagens/${id}`, data),
-  deleteViagem: (id) => api.delete(`/viagens/${id}`)
+  getViagens: () => api.get('/viagens').catch(error => {
+    throw new Error('Erro ao buscar viagens: ' + getErrorMessage(error));
+  }),
+  
+  getViagemById: (id) => api.get(`/viagens/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes da viagem: ' + getErrorMessage(error));
+  }),
+  
+  createViagem: (data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    
+    // Handle all time fields
+    const timeFields = ['hora_saida_prevista', 'hora_chegada_prevista', 'hora_saida_real', 'hora_chegada_real'];
+    timeFields.forEach(field => {
+      if (formattedData[field]) {
+        formattedData[field] = formatTimeForApi(formattedData[field]);
+      }
+    });
+    
+    console.log('Formatted data for API:', formattedData);
+    console.log('Time fields after formatting:', {
+      hora_saida_prevista: formattedData.hora_saida_prevista,
+      hora_chegada_prevista: formattedData.hora_chegada_prevista,
+      hora_saida_real: formattedData.hora_saida_real,
+      hora_chegada_real: formattedData.hora_chegada_real
+    });
+    
+    return api.post('/viagens', formattedData).catch(error => {
+      throw new Error('Erro ao criar viagem: ' + getErrorMessage(error));
+    });
+  },
+  
+  updateViagem: (id, data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    
+    // Handle all time fields
+    const timeFields = ['hora_saida_prevista', 'hora_chegada_prevista', 'hora_saida_real', 'hora_chegada_real'];
+    timeFields.forEach(field => {
+      if (formattedData[field]) {
+        formattedData[field] = formatTimeForApi(formattedData[field]);
+      }
+    });
+    
+    console.log('Formatted data for API update:', formattedData);
+    console.log('Time fields after formatting:', {
+      hora_saida_prevista: formattedData.hora_saida_prevista,
+      hora_chegada_prevista: formattedData.hora_chegada_prevista,
+      hora_saida_real: formattedData.hora_saida_real,
+      hora_chegada_real: formattedData.hora_chegada_real
+    });
+    
+    return api.put(`/viagens/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar viagem: ' + getErrorMessage(error));
+    });
+  },
+  
+  deleteViagem: (id) => api.delete(`/viagens/${id}`).catch(error => {
+    throw new Error('Erro ao excluir viagem: ' + getErrorMessage(error));
+  })
 };
 
 export const MonitorService = {
-  getMonitores: () => api.get('/monitores'),
-  createMonitor: (data) => api.post('/monitores', data),
-  updateMonitor: (id, data) => api.put(`/monitores/${id}`, data),
-  deleteMonitor: (id) => api.delete(`/monitores/${id}`)
+  getMonitores: (page = 1) => api.get('/monitores', { params: { page } }).catch(error => {
+    throw new Error('Erro ao buscar monitores: ' + getErrorMessage(error));
+  }),
+  
+  getMonitorById: (id) => api.get(`/monitores/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes do monitor: ' + getErrorMessage(error));
+  }),
+  
+  createMonitor: (data) => api.post('/monitores', data).catch(error => {
+    throw new Error('Erro ao criar monitor: ' + getErrorMessage(error));
+  }),
+  
+  updateMonitor: (id, data) => api.put(`/monitores/${id}`, data).catch(error => {
+    throw new Error('Erro ao atualizar monitor: ' + getErrorMessage(error));
+  }),
+  
+  deleteMonitor: (id) => api.delete(`/monitores/${id}`).catch(error => {
+    throw new Error('Erro ao excluir monitor: ' + getErrorMessage(error));
+  }),
+  
+  getMonitorViagens: (id) => api.get(`/monitores/${id}/viagens`).catch(error => {
+    throw new Error('Erro ao buscar viagens do monitor: ' + getErrorMessage(error));
+  })
 };
 
 export const MotoristaService = {
-  getMotoristas: () => api.get('/motoristas'),
-  createMotorista: (data) => api.post('/motoristas', data),
-  updateMotorista: (id, data) => api.put(`/motoristas/${id}`, data),
-  deleteMotorista: (id) => api.delete(`/motoristas/${id}`)
+  getMotoristas: () => api.get('/motoristas').catch(error => {
+    throw new Error('Erro ao buscar motoristas: ' + getErrorMessage(error));
+  }),
+  
+  getMotoristaById: (id) => api.get(`/motoristas/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes do motorista: ' + getErrorMessage(error));
+  }),
+  
+  createMotorista: (data) => api.post('/motoristas', data).catch(error => {
+    throw new Error('Erro ao criar motorista: ' + getErrorMessage(error));
+  }),
+  
+  updateMotorista: (id, data) => api.put(`/motoristas/${id}`, data).catch(error => {
+    throw new Error('Erro ao atualizar motorista: ' + getErrorMessage(error));
+  }),
+  
+  deleteMotorista: (id) => api.delete(`/motoristas/${id}`).catch(error => {
+    throw new Error('Erro ao excluir motorista: ' + getErrorMessage(error));
+  }),
+  
+  getMotoristaViagens: (id) => api.get(`/motoristas/${id}/viagens`).catch(error => {
+    throw new Error('Erro ao buscar viagens do motorista: ' + getErrorMessage(error));
+  })
 };
+
+export const HorarioService = {
+  getHorarios: () => api.get('/horarios').catch(error => {
+    throw new Error('Erro ao buscar horários: ' + getErrorMessage(error));
+  }),
+  
+  getHorarioById: (id) => api.get(`/horarios/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes do horário: ' + getErrorMessage(error));
+  }),
+  
+  createHorario: (data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    if (formattedData.hora_inicio) {
+      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
+    }
+    if (formattedData.hora_fim) {
+      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
+    }
+    
+    return api.post('/horarios', formattedData).catch(error => {
+      throw new Error('Erro ao criar horário: ' + getErrorMessage(error));
+    });
+  },
+  
+  updateHorario: (id, data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    if (formattedData.hora_inicio) {
+      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
+    }
+    if (formattedData.hora_fim) {
+      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
+    }
+    
+    return api.put(`/horarios/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar horário: ' + getErrorMessage(error));
+    });
+  },
+  
+  deleteHorario: (id) => api.delete(`/horarios/${id}`).catch(error => {
+    throw new Error('Erro ao excluir horário: ' + getErrorMessage(error));
+  }),
+  
+  getHorarioViagens: (id) => api.get(`/horarios/${id}/viagens`).catch(error => {
+    throw new Error('Erro ao buscar viagens do horário: ' + getErrorMessage(error));
+  })
+};
+
+export const ParadaService = {
+  getParadas: () => api.get('/paradas').catch(error => {
+    throw new Error('Erro ao buscar paradas: ' + getErrorMessage(error));
+  }),
+  
+  getParadaById: (id) => api.get(`/paradas/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes da parada: ' + getErrorMessage(error));
+  }),
+  
+  createParada: (data) => api.post('/paradas', data).catch(error => {
+    throw new Error('Erro ao criar parada: ' + getErrorMessage(error));
+  }),
+  
+  updateParada: (id, data) => api.put(`/paradas/${id}`, data).catch(error => {
+    throw new Error('Erro ao atualizar parada: ' + getErrorMessage(error));
+  }),
+  
+  deleteParada: (id) => api.delete(`/paradas/${id}`).catch(error => {
+    throw new Error('Erro ao excluir parada: ' + getErrorMessage(error));
+  })
+};
+
+export const PresencaService = {
+  getPresencas: () => api.get('/presencas').catch(error => {
+    throw new Error('Erro ao buscar presenças: ' + getErrorMessage(error));
+  }),
+  
+  getPresencaById: (id) => api.get(`/presencas/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes da presença: ' + getErrorMessage(error));
+  }),
+  
+  createPresenca: (data) => {
+    // Format time field for API
+    const formattedData = { ...data };
+    if (formattedData.hora_registro) {
+      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
+    }
+    
+    return api.post('/presencas', formattedData).catch(error => {
+      throw new Error('Erro ao criar presença: ' + getErrorMessage(error));
+    });
+  },
+  
+  updatePresenca: (id, data) => {
+    // Format time field for API
+    const formattedData = { ...data };
+    if (formattedData.hora_registro) {
+      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
+    }
+    
+    return api.put(`/presencas/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar presença: ' + getErrorMessage(error));
+    });
+  },
+  
+  deletePresenca: (id) => api.delete(`/presencas/${id}`).catch(error => {
+    throw new Error('Erro ao excluir presença: ' + getErrorMessage(error));
+  }),
+  
+  getPresencasByViagem: (viagemId) => api.get(`/presencas/viagem/${viagemId}`).catch(error => {
+    throw new Error('Erro ao buscar presenças da viagem: ' + getErrorMessage(error));
+  }),
+  
+  getPresencasByAluno: (alunoId) => api.get(`/presencas/aluno/${alunoId}`).catch(error => {
+    throw new Error('Erro ao buscar presenças do aluno: ' + getErrorMessage(error));
+  })
+};
+
+// Função auxiliar para extrair mensagens amigáveis de erros
+function getErrorMessage(error) {
+  if (error.response) {
+    // Respostas do servidor com status de erro
+    if (error.response.data && error.response.data.message) {
+      return error.response.data.message;
+    }
+    
+    // Tratamento específico para erros de validação do Laravel
+    if (error.response.data && error.response.data.errors) {
+      const errorMessages = Object.entries(error.response.data.errors)
+        .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+        .join('; ');
+      
+      return errorMessages;
+    }
+    
+    return `Erro ${error.response.status}: ${error.response.statusText}`;
+  } else if (error.request) {
+    // Sem resposta do servidor
+    return 'Sem resposta do servidor. Verifique sua conexão.';
+  } else {
+    // Erro na configuração da requisição
+    return error.message || 'Erro desconhecido';
+  }
+}
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Alunos.jsx ===
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
+import FormModal from '../components/common/FormModal';
 import { AlunoService } from '../api/services';
+import { useNotification } from '../contexts/NotificationContext';
 
 export default function Alunos() {
   const [alunos, setAlunos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const navigate = useNavigate();
-
-  // Mock data for when API fails
-  const mockAlunosData = [
-    {
-      id: 1,
-      nome: 'Pedro Souza',
-      responsavel: 'Marta Souza',
-      endereco: 'Rua dos Lírios, 45 - Escalvados',
-      status: 'active'
-    },
-    {
-      id: 2,
-      nome: 'Mariana Costa',
-      responsavel: 'Carlos Costa',
-      endereco: 'Avenida das Pedras, 78 - Pedreiras',
-      status: 'active'
-    },
-    {
-      id: 3,
-      nome: 'Lucas Ferreira',
-      responsavel: 'Fernanda Ferreira',
-      endereco: 'Rua das Oliveiras, 123 - Volta Grande',
-      status: 'active'
-    },
-    {
-      id: 4,
-      nome: 'Julia Lima',
-      responsavel: 'Marcos Lima',
-      endereco: 'Travessa dos Ipês, 56 - Escalvados',
-      status: 'active'
-    },
-    {
-      id: 5,
-      nome: 'Gabriel Santos',
-      responsavel: 'Patricia Santos',
-      endereco: 'Alameda dos Cedros, 89 - Pedreiras',
-      status: 'inactive'
-    }
-  ];
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentAluno, setCurrentAluno] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showSuccess, showError } = useNotification ? useNotification() : { 
+    showSuccess: () => {}, 
+    showError: () => {} 
+  };
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    nome: '',
+    descricao: '',
+    data_nascimento: '',
+    responsavel: '',
+    telefone_responsavel: '',
+    endereco: '',
+    ponto_referencia: '',
+    status: true
+  });
 
   useEffect(() => {
     fetchAlunos();
@@ -626,27 +1310,112 @@ export default function Alunos() {
       setLoading(true);
       const response = await AlunoService.getAlunos();
       
-      // Check if response has the expected structure
-      if (response?.data?.data && Array.isArray(response.data.data)) {
-        setAlunos(response.data.data);
+      // Tratamento melhorado dos dados recebidos da API
+      let alunosData = [];
+      
+      if (response?.data) {
+        // Caso 1: Resposta padrão com 'data' dentro de response.data (formato comum no Laravel)
+        if (response.data.data && Array.isArray(response.data.data)) {
+          alunosData = response.data.data;
+        } 
+        // Caso 2: Resposta é um array diretamente (para fallback)
+        else if (Array.isArray(response.data)) {
+          alunosData = response.data;
+        }
+        // Caso 3: Resposta paginada do Laravel via items()
+        else if (response.data.meta && Array.isArray(response.data.data)) {
+          alunosData = response.data.data;
+        }
+        // Caso 4: Dados vazios mas com estrutura válida
+        else if (response.data.meta && response.data.meta.total === 0) {
+          alunosData = [];
+        }
+        
+        // Formato final dos dados para a UI
+        const formattedData = alunosData.map(aluno => ({
+          ...aluno,
+          status: processStatus(aluno.status)
+        }));
+        
+        setAlunos(formattedData);
+        setError(null);
       } else {
-        console.log('API returned unexpected data format, using mock data');
-        setAlunos(mockAlunosData);
+        // Caso 5: Sem dados - usar mock data como fallback
+        console.warn('API returned unexpected format, using mock data');
+        const mockData = getMockData();
+        setAlunos(mockData);
       }
     } catch (err) {
-      console.error('Error fetching data, using mock data instead:', err);
-      setAlunos(mockAlunosData);
+      console.error('Error fetching data:', err);
       setError('Erro ao carregar alunos: ' + (err.response?.data?.message || err.message));
+      // Fallback para mock data em caso de erro
+      setAlunos(getMockData());
     } finally {
       setLoading(false);
     }
   };
 
+  // Função para processar diferentes formatos de status
+  const processStatus = (status) => {
+    if (typeof status === 'boolean') {
+      return status ? 'active' : 'inactive';
+    } else if (typeof status === 'number') {
+      return status === 1 ? 'active' : 'inactive';
+    } else if (typeof status === 'string') {
+      const lowercaseStatus = status.toLowerCase();
+      return lowercaseStatus === 'true' || lowercaseStatus === 'ativo' || lowercaseStatus === '1' 
+        ? 'active' : 'inactive';
+    } else {
+      return 'inactive'; // valor padrão
+    }
+  };
+
+  // Mock data como fallback
+  const getMockData = () => {
+    return [
+      {
+        id: 1,
+        nome: 'Pedro Souza',
+        responsavel: 'Marta Souza',
+        endereco: 'Rua dos Lírios, 45 - Escalvados',
+        status: 'active'
+      },
+      {
+        id: 2,
+        nome: 'Mariana Costa',
+        responsavel: 'Carlos Costa',
+        endereco: 'Avenida das Pedras, 78 - Pedreiras',
+        status: 'active'
+      },
+      {
+        id: 3,
+        nome: 'Lucas Ferreira',
+        responsavel: 'Fernanda Ferreira',
+        endereco: 'Rua das Oliveiras, 123 - Volta Grande',
+        status: 'active'
+      },
+      {
+        id: 4,
+        nome: 'Julia Lima',
+        responsavel: 'Marcos Lima',
+        endereco: 'Travessa dos Ipês, 56 - Escalvados',
+        status: 'active'
+      },
+      {
+        id: 5,
+        nome: 'Gabriel Santos',
+        responsavel: 'Patricia Santos',
+        endereco: 'Alameda dos Cedros, 89 - Pedreiras',
+        status: 'inactive'
+      }
+    ];
+  };
+
   // Search and filter function
   const filteredAlunos = alunos.filter(aluno => 
-    aluno.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    aluno.responsavel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    aluno.endereco.toLowerCase().includes(searchTerm.toLowerCase())
+    aluno.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    aluno.responsavel?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    aluno.endereco?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [
@@ -660,17 +1429,91 @@ export default function Alunos() {
     }
   ];
 
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const openModal = (aluno = null) => {
+    if (aluno) {
+      // Converter status de string para boolean para o formulário
+      const statusBool = aluno.status === 'active' || aluno.status === true || aluno.status === 1;
+      
+      // Setar dados do aluno para edição
+      setFormData({
+        nome: aluno.nome || '',
+        descricao: aluno.descricao || '',
+        data_nascimento: aluno.data_nascimento || '',
+        responsavel: aluno.responsavel || '',
+        telefone_responsavel: aluno.telefone_responsavel || '',
+        endereco: aluno.endereco || '',
+        ponto_referencia: aluno.ponto_referencia || '',
+        status: statusBool
+      });
+      setCurrentAluno(aluno);
+    } else {
+      // Resetar formulário para um novo aluno
+      setFormData({
+        nome: '',
+        descricao: '',
+        data_nascimento: '',
+        responsavel: '',
+        telefone_responsavel: '',
+        endereco: '',
+        ponto_referencia: '',
+        status: true
+      });
+      setCurrentAluno(null);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      if (currentAluno) {
+        // Update
+        await AlunoService.updateAluno(currentAluno.id, formData);
+        showSuccess('Aluno atualizado com sucesso!');
+      } else {
+        // Create
+        await AlunoService.createAluno(formData);
+        showSuccess('Aluno criado com sucesso!');
+      }
+      setIsModalOpen(false);
+      fetchAlunos();
+    } catch (err) {
+      console.error('Error saving aluno:', err);
+      const errorMsg = err.response?.data?.errors ? 
+        Object.values(err.response.data.errors).flat().join(', ') : 
+        (err.response?.data?.message || err.message);
+      
+      showError('Erro ao salvar aluno: ' + errorMsg);
+      setError('Erro ao salvar aluno: ' + errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleEdit = (aluno) => {
-    console.log('Editar aluno:', aluno);
+    openModal(aluno);
   };
 
   const handleDelete = async (aluno) => {
     if(window.confirm(`Deseja excluir ${aluno.nome}?`)) {
       try {
         await AlunoService.deleteAluno(aluno.id);
+        showSuccess('Aluno excluído com sucesso!');
         fetchAlunos();
       } catch (err) {
-        setError('Erro ao excluir aluno: ' + err.message);
+        const errorMsg = err.response?.data?.message || err.message;
+        showError('Erro ao excluir aluno: ' + errorMsg);
+        setError('Erro ao excluir aluno: ' + errorMsg);
       }
     }
   };
@@ -680,7 +1523,7 @@ export default function Alunos() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold">Gerenciamento de Alunos</h1>
         <button
-          onClick={() => navigate('/alunos/novo')}
+          onClick={() => openModal()}
           className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
@@ -690,7 +1533,7 @@ export default function Alunos() {
         </button>
       </div>
 
-      <div className="bg-white overflow-hidden">
+      <div className="bg-white overflow-hidden rounded-lg shadow">
         <div className="px-4 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50 border-b">
           <h2 className="font-bold text-lg">Alunos Cadastrados</h2>
           
@@ -732,6 +1575,118 @@ export default function Alunos() {
         </div>
       </div>
 
+      {/* Modal Form */}
+      <FormModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={currentAluno ? "Editar Aluno" : "Novo Aluno"}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      >
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome</label>
+            <input
+              type="text"
+              name="nome"
+              id="nome"
+              required
+              value={formData.nome}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="responsavel" className="block text-sm font-medium text-gray-700">Responsável</label>
+            <input
+              type="text"
+              name="responsavel"
+              id="responsavel"
+              required
+              value={formData.responsavel}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="telefone_responsavel" className="block text-sm font-medium text-gray-700">Telefone do Responsável</label>
+            <input
+              type="tel"
+              name="telefone_responsavel"
+              id="telefone_responsavel"
+              required
+              value={formData.telefone_responsavel}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="data_nascimento" className="block text-sm font-medium text-gray-700">Data de Nascimento</label>
+            <input
+              type="date"
+              name="data_nascimento"
+              id="data_nascimento"
+              required
+              value={formData.data_nascimento}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="endereco" className="block text-sm font-medium text-gray-700">Endereço</label>
+            <input
+              type="text"
+              name="endereco"
+              id="endereco"
+              required
+              value={formData.endereco}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="ponto_referencia" className="block text-sm font-medium text-gray-700">Ponto de Referência</label>
+            <input
+              type="text"
+              name="ponto_referencia"
+              id="ponto_referencia"
+              value={formData.ponto_referencia}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descrição</label>
+            <textarea
+              name="descricao"
+              id="descricao"
+              rows="3"
+              value={formData.descricao}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            ></textarea>
+          </div>
+          
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              name="status"
+              id="status"
+              checked={formData.status}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="status" className="ml-2 block text-sm text-gray-900">Ativo</label>
+          </div>
+        </div>
+      </FormModal>
+
       {/* Quick Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
@@ -755,7 +1710,7 @@ export default function Alunos() {
           <div>
             <div className="text-sm text-gray-500">Alunos Ativos</div>
             <div className="text-xl font-bold">
-              {alunos.filter(aluno => aluno.status === 'active').length}
+              {alunos.filter(aluno => aluno.status === 'active' || aluno.status === true).length}
             </div>
           </div>
         </div>
@@ -769,69 +1724,44 @@ export default function Alunos() {
           <div>
             <div className="text-sm text-gray-500">Alunos Inativos</div>
             <div className="text-xl font-bold">
-              {alunos.filter(aluno => aluno.status === 'inactive').length}
+              {alunos.filter(aluno => aluno.status === 'inactive' || aluno.status === false).length}
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Rotas.jsx ===
 
 import React, { useState, useEffect } from 'react';
 import { RotaService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
+import FormModal from '../components/common/FormModal';
 
 const Rotas = () => {
   const [rotas, setRotas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Mock data for when API fails
-  const mockRotasData = [
-    {
-      id: 1,
-      nome: 'Rota Escalvados - Manhã',
-      tipo: 'Escalvados e Escalvadinhos',
-      distancia_km: 15.5,
-      tempo_estimado_minutos: 45,
-      status: 'active'
-    },
-    {
-      id: 2,
-      nome: 'Rota Pedreiras - Manhã',
-      tipo: 'Pedreiras',
-      distancia_km: 18.2,
-      tempo_estimado_minutos: 55,
-      status: 'active'
-    },
-    {
-      id: 3,
-      nome: 'Rota Volta Grande - Manhã',
-      tipo: 'Volta Grande',
-      distancia_km: 22.7,
-      tempo_estimado_minutos: 65,
-      status: 'active'
-    },
-    {
-      id: 4,
-      nome: 'Rota Escalvados - Tarde',
-      tipo: 'Escalvados e Escalvadinhos',
-      distancia_km: 15.5,
-      tempo_estimado_minutos: 50,
-      status: 'active'
-    },
-    {
-      id: 5,
-      nome: 'Rota Pedreiras - Tarde',
-      tipo: 'Pedreiras',
-      distancia_km: 18.2,
-      tempo_estimado_minutos: 60,
-      status: 'inactive'
-    }
-  ];
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentRota, setCurrentRota] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    nome: '',
+    descricao: '',
+    tipo: 'Escolar',
+    origem: '',
+    destino: '',
+    horario_inicio: '',
+    horario_fim: '',
+    distancia_km: '',
+    tempo_estimado_minutos: '',
+    status: true
+  });
 
   useEffect(() => {
     fetchRotas();
@@ -841,40 +1771,130 @@ const Rotas = () => {
     try {
       setLoading(true);
       const response = await RotaService.getRotas();
-      setRotas(response.data.data);
+      
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        // Add boolean status if needed
+        const formattedData = response.data.data.map(rota => ({
+          ...rota,
+          status: typeof rota.status === 'boolean' ? (rota.status ? 'active' : 'inactive') :
+                 typeof rota.status === 'number' ? (rota.status === 1 ? 'active' : 'inactive') :
+                 rota.status === 'Ativo' ? 'active' : 'inactive'
+        }));
+        setRotas(formattedData);
+      } else {
+        console.error('API returned unexpected data format');
+        setError('Formato de dados inesperado. Contate o suporte.');
+      }
     } catch (err) {
-      console.error('Error fetching data, using mock data instead:', err);
-      setRotas(mockRotasData);
+      console.error('Error fetching data:', err);
       setError('Erro ao carregar rotas: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
   };
 
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const openModal = (rota = null) => {
+    if (rota) {
+      // Edit mode
+      setFormData({
+        nome: rota.nome || '',
+        descricao: rota.descricao || '',
+        tipo: rota.tipo || 'Escolar',
+        origem: rota.origem || '',
+        destino: rota.destino || '',
+        horario_inicio: rota.horario_inicio || '',
+        horario_fim: rota.horario_fim || '',
+        distancia_km: rota.distancia_km || '',
+        tempo_estimado_minutos: rota.tempo_estimado_minutos || '',
+        status: rota.status === 'active' || rota.status === true || rota.status === 1
+      });
+      setCurrentRota(rota);
+    } else {
+      // Create mode
+      setFormData({
+        nome: '',
+        descricao: '',
+        tipo: 'Escolar',
+        origem: '',
+        destino: '',
+        horario_inicio: '',
+        horario_fim: '',
+        distancia_km: '',
+        tempo_estimado_minutos: '',
+        status: true
+      });
+      setCurrentRota(null);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Prepare data for API - converting to expected format
+      const apiData = {
+        ...formData,
+        distancia_km: formData.distancia_km ? parseFloat(formData.distancia_km) : null,
+        tempo_estimado_minutos: formData.tempo_estimado_minutos ? parseInt(formData.tempo_estimado_minutos) : null
+      };
+      
+      if (currentRota) {
+        // Update
+        await RotaService.updateRota(currentRota.id, apiData);
+      } else {
+        // Create
+        await RotaService.createRota(apiData);
+      }
+      setIsModalOpen(false);
+      fetchRotas();
+    } catch (err) {
+      console.error('Error saving rota:', err);
+      setError('Erro ao salvar rota: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Search and filter function
+  const filteredRotas = rotas.filter(rota => 
+    rota.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    rota.tipo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    rota.origem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    rota.destino?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const columns = [
     { key: 'nome', header: 'Nome' },
     { key: 'tipo', header: 'Tipo' },
-    { key: 'distancia_km', header: 'Distância', format: (item) => `${item.distancia_km} km` },
-    { key: 'tempo_estimado_minutos', header: 'Tempo Est.', format: (item) => `${item.tempo_estimado_minutos} min` },
+    { 
+      key: 'origem_destino', 
+      header: 'Origem / Destino',
+      format: (item) => `${item.origem || '-'} → ${item.destino || '-'}`
+    },
+    { 
+      key: 'distancia', 
+      header: 'Distância', 
+      format: (item) => item.distancia_km ? `${item.distancia_km} km` : '-' 
+    },
     { 
       key: 'status', 
       header: 'Status',
-      format: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          item.status === 'active' 
-            ? 'bg-green-100 text-green-800' 
-            : item.status === 'inactive'
-              ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-red-100 text-red-800'
-        }`}>
-          {item.status === 'active' ? 'Ativa' : item.status === 'inactive' ? 'Temporária' : 'Inativa'}
-        </span>
-      )
+      format: (item) => <StatusBadge status={item.status} type="rota" />
     }
   ];
 
   const handleEdit = (rota) => {
-    console.log('Editar rota:', rota);
+    openModal(rota);
   };
 
   const handleDelete = async (rota) => {
@@ -883,16 +1903,19 @@ const Rotas = () => {
         await RotaService.deleteRota(rota.id);
         fetchRotas();
       } catch (err) {
-        setError('Erro ao excluir rota: ' + err.message);
+        setError('Erro ao excluir rota: ' + (err.response?.data?.message || err.message));
       }
     }
   };
 
   return (
-    <div className="space-y-6 flex-1 bg-white">
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Rotas</h1>
-        <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center">
+        <button 
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
+          onClick={() => openModal()}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
@@ -901,18 +1924,232 @@ const Rotas = () => {
       </div>
       
       <div className="bg-white rounded-lg shadow mb-6">
-        <div className="border-b px-6 py-4">
+        <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="font-bold text-lg">Rotas Cadastradas</h2>
+          
+          {/* Search box */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar rotas..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
+        
         <div className="p-4">
+          {error && (
+            <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+          
           <DataTable
             columns={columns}
-            data={rotas}
+            data={filteredRotas}
             onEdit={handleEdit}
             onDelete={handleDelete}
             loading={loading}
-            error={error}
+            error={null} // Error is already shown above
           />
+        </div>
+      </div>
+      
+      {/* Modal Form */}
+      <FormModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={currentRota ? "Editar Rota" : "Nova Rota"}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      >
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome da Rota</label>
+            <input
+              type="text"
+              name="nome"
+              id="nome"
+              required
+              value={formData.nome}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descrição</label>
+            <textarea
+              name="descricao"
+              id="descricao"
+              rows="2"
+              value={formData.descricao}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            ></textarea>
+          </div>
+          
+          <div>
+            <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">Tipo de Rota</label>
+            <select
+              name="tipo"
+              id="tipo"
+              required
+              value={formData.tipo}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="Escolar">Escolar</option>
+              <option value="Regular">Regular</option>
+              <option value="Especial">Especial</option>
+            </select>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="origem" className="block text-sm font-medium text-gray-700">Origem</label>
+              <input
+                type="text"
+                name="origem"
+                id="origem"
+                value={formData.origem}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="destino" className="block text-sm font-medium text-gray-700">Destino</label>
+              <input
+                type="text"
+                name="destino"
+                id="destino"
+                value={formData.destino}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="horario_inicio" className="block text-sm font-medium text-gray-700">Horário de Início</label>
+              <input
+                type="time"
+                name="horario_inicio"
+                id="horario_inicio"
+                value={formData.horario_inicio}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="horario_fim" className="block text-sm font-medium text-gray-700">Horário de Fim</label>
+              <input
+                type="time"
+                name="horario_fim"
+                id="horario_fim"
+                value={formData.horario_fim}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="distancia_km" className="block text-sm font-medium text-gray-700">Distância (km)</label>
+              <input
+                type="number"
+                name="distancia_km"
+                id="distancia_km"
+                min="0"
+                step="0.1"
+                value={formData.distancia_km}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="tempo_estimado_minutos" className="block text-sm font-medium text-gray-700">Tempo Estimado (minutos)</label>
+              <input
+                type="number"
+                name="tempo_estimado_minutos"
+                id="tempo_estimado_minutos"
+                min="0"
+                value={formData.tempo_estimado_minutos}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              name="status"
+              id="status"
+              checked={formData.status}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="status" className="ml-2 block text-sm text-gray-900">Ativa</label>
+          </div>
+        </div>
+      </FormModal>
+      
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Total de Rotas</div>
+            <div className="text-xl font-bold">{rotas.length}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Rotas Ativas</div>
+            <div className="text-xl font-bold">
+              {rotas.filter(rota => rota.status === 'active' || rota.status === true).length}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Rotas Inativas</div>
+            <div className="text-xl font-bold">
+              {rotas.filter(rota => rota.status === 'inactive' || rota.status === false).length}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1314,149 +2551,711 @@ export default function Login() {
     </div>
   )
 }
+=== /Users/micaelsantana/Documents/app-frontend/src/pages/Monitores.jsx ===
+
+import React, { useState, useEffect } from 'react';
+import DataTable from '../components/common/DataTable';
+import { MonitorService } from '../api/services';
+import { useNotification } from '../contexts/NotificationContext';
+
+export const Monitores = () => {
+  const [monitores, setMonitores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    perPage: 10,
+    totalItems: 0
+  });
+  const { showNotification } = useNotification();
+
+  const columns = [
+    { key: 'id', header: 'ID' },
+    { key: 'nome', header: 'Nome' },
+    { key: 'email', header: 'Email' },
+    { key: 'telefone', header: 'Telefone' },
+    { key: 'disponivel', header: 'Disponível', format: (item) => item.disponivel ? 'Sim' : 'Não' },
+    { key: 'actions', header: 'Ações' }
+  ];
+
+  const fetchMonitores = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await MonitorService.getMonitores(page);
+      const { data, meta } = response.data;
+      setMonitores(data);
+      setPagination({
+        currentPage: meta.current_page,
+        totalPages: meta.last_page,
+        perPage: meta.per_page,
+        totalItems: meta.total
+      });
+    } catch (error) {
+      console.error('Error fetching monitores:', error);
+      showNotification('error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMonitores();
+  }, []);
+
+  const handlePageChange = (newPage) => {
+    fetchMonitores(newPage);
+  };
+
+  const handleCreate = async (formData) => {
+    try {
+      await MonitorService.createMonitor(formData);
+      showNotification('success', 'Monitor criado com sucesso');
+      fetchMonitores();
+    } catch (error) {
+      showNotification('error', error.message);
+    }
+  };
+
+  const handleUpdate = async (id, formData) => {
+    try {
+      await MonitorService.updateMonitor(id, formData);
+      showNotification('success', 'Monitor atualizado com sucesso');
+      fetchMonitores(pagination.currentPage);
+    } catch (error) {
+      showNotification('error', error.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await MonitorService.deleteMonitor(id);
+      showNotification('success', 'Monitor removido com sucesso');
+      fetchMonitores(pagination.currentPage);
+    } catch (error) {
+      showNotification('error', error.message);
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Gerenciamento de Monitores</h1>
+      <DataTable
+        columns={columns}
+        data={monitores}
+        loading={loading}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onCreate={handleCreate}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+        searchPlaceholder="Buscar monitores..."
+      />
+    </div>
+  );
+};
+
+export default Monitores;
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Viagens.jsx ===
 
 import React, { useState, useEffect } from 'react';
-import { ViagemService } from '../api/services';
+import { ViagemService, RotaService, OnibusService, MotoristaService, MonitorService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
+import FormModal from '../components/common/FormModal';
+import { useNotification } from '../contexts/NotificationContext';
 
 const Viagens = () => {
+  const { showError, showSuccess } = useNotification();
+
   const [viagens, setViagens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentViagem, setCurrentViagem] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock data for when API fails
-  const mockViagensData = [
-    {
-      id: 1,
-      data_viagem: '2025-03-10',
-      rota: 'Rota Escalvados - Manhã',
-      motorista: 'José da Silva',
-      onibus: 'ABC-1234',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      data_viagem: '2025-03-10',
-      rota: 'Rota Pedreiras - Manhã',
-      motorista: 'Maria Oliveira',
-      onibus: 'DEF-5678',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      data_viagem: '2025-03-10',
-      rota: 'Rota Volta Grande - Manhã',
-      motorista: 'Carlos Pereira',
-      onibus: 'GHI-9012',
-      status: 'completed'
-    },
-    {
-      id: 8,
-      data_viagem: '2025-03-12',
-      rota: 'Rota Escalvados - Manhã',
-      motorista: 'José da Silva',
-      onibus: 'ABC-1234',
-      status: 'pending'
-    },
-    {
-      id: 9,
-      data_viagem: '2025-03-12',
-      rota: 'Rota Pedreiras - Manhã',
-      motorista: 'Maria Oliveira',
-      onibus: 'DEF-5678',
-      status: 'pending'
-    }
-  ];
+  // Related data for dropdown selects
+  const [rotas, setRotas] = useState([]);
+  const [onibus, setOnibus] = useState([]);
+  const [motoristas, setMotoristas] = useState([]);
+  const [monitores, setMonitores] = useState([]);
+  const [relatedDataLoading, setRelatedDataLoading] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    data_viagem: '',
+    rota_id: '',
+    onibus_id: '',
+    motorista_id: '',
+    monitor_id: '',
+    horario_id: '1', // Default value, will be replaced with actual data
+    hora_saida_prevista: '',
+    hora_chegada_prevista: '',
+    hora_saida_real: '',
+    hora_chegada_real: '',
+    observacoes: '',
+    status: true
+  });
 
   useEffect(() => {
     fetchViagens();
+    fetchRelatedData();
   }, []);
 
   const fetchViagens = async () => {
     try {
       setLoading(true);
       const response = await ViagemService.getViagens();
-      setViagens(response.data.data);
+
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        // Add status conversion if needed
+        const formattedData = response.data.data.map(viagem => ({
+          ...viagem,
+          status: typeof viagem.status === 'boolean' ? (viagem.status ? 'completed' : 'pending') :
+            typeof viagem.status === 'number' ? (viagem.status === 1 ? 'completed' : 'pending') :
+              viagem.status
+        }));
+        setViagens(formattedData);
+      } else {
+        console.error('API returned unexpected data format');
+        showError('Formato de dados inesperado. Contate o suporte.');
+      }
     } catch (err) {
-      console.error('Error fetching data, using mock data instead:', err);
-      setViagens(mockViagensData);
-      setError('Erro ao carregar viagens: ' + (err.response?.data?.message || err.message));
+      console.error('Error fetching data:', err);
+      showError('Erro ao carregar viagens: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchRelatedData = async () => {
+    setRelatedDataLoading(true);
+    try {
+      // Fetch related data for dropdowns
+      const [rotasRes, onibusRes, motoristasRes, monitoresRes] = await Promise.all([
+        RotaService.getRotas(),
+        OnibusService.getOnibus(),
+        MotoristaService.getMotoristas(),
+        MonitorService.getMonitores()
+      ]);
+
+      setRotas(rotasRes.data.data || []);
+      setOnibus(onibusRes.data.data || []);
+      setMotoristas(motoristasRes.data.data || []);
+      setMonitores(monitoresRes.data.data || []);
+    } catch (err) {
+      console.error('Error fetching related data:', err);
+      showError('Erro ao carregar dados relacionados: ' + err.message);
+    } finally {
+      setRelatedDataLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const openModal = (viagem = null) => {
+    if (viagem) {
+      // Edit mode
+      const data = {
+        data_viagem: viagem.data_viagem || '',
+        rota_id: viagem.rota_id || '',
+        onibus_id: viagem.onibus_id || '',
+        motorista_id: viagem.motorista_id || '',
+        monitor_id: viagem.monitor_id || '',
+        horario_id: viagem.horario_id || '1',
+        hora_saida_prevista: viagem.hora_saida_prevista ? formatTimeForDisplay(viagem.hora_saida_prevista) : '',
+        hora_chegada_prevista: viagem.hora_chegada_prevista ? formatTimeForDisplay(viagem.hora_chegada_prevista) : '',
+        hora_saida_real: viagem.hora_saida_real ? formatTimeForDisplay(viagem.hora_saida_real) : '',
+        hora_chegada_real: viagem.hora_chegada_real ? formatTimeForDisplay(viagem.hora_chegada_real) : '',
+        observacoes: viagem.observacoes || '',
+        status: viagem.status === 'completed' || viagem.status === true || viagem.status === 1
+      };
+      setFormData(data);
+      setCurrentViagem(viagem);
+    } else {
+      // Create mode - set default values
+      const today = new Date().toISOString().split('T')[0];
+      setFormData({
+        data_viagem: today,
+        rota_id: '',
+        onibus_id: '',
+        motorista_id: '',
+        monitor_id: '',
+        horario_id: '1', // Default value
+        hora_saida_prevista: '07:00',
+        hora_chegada_prevista: '08:00',
+        hora_saida_real: '',
+        hora_chegada_real: '',
+        observacoes: '',
+        status: true
+      });
+      setCurrentViagem(null);
+    }
+    setIsModalOpen(true);
+  };
+
+  // Format time values from API format (H:i) to HTML time input format (HH:mm)
+  const formatTimeForDisplay = (time) => {
+    if (!time) return '';
+    
+    try {
+      // Handle different time formats that might come from the API
+      const timeParts = time.split(':');
+      
+      if (timeParts.length < 2) return time; // Return as is if not a valid time format
+      
+      const hours = timeParts[0].padStart(2, '0');
+      const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
+      
+      return `${hours}:${minutes}`;
+    } catch (error) {
+      console.error('Error formatting time for display:', error);
+      return time || '';
+    }
+  };
+
+  // Format time values from HTML time input format (HH:mm) to API format (H:i)
+  const formatTimeForApi = (time) => {
+    if (!time) return '';
+    
+    try {
+      // Extract hours and minutes
+      const [hours, minutes] = time.split(':');
+      
+      // Convert hours to integer to remove leading zeros
+      const hour = parseInt(hours, 10);
+      
+      // Return exactly in the format expected by the API (H:i)
+      return `${hour}:${minutes}`;
+    } catch (error) {
+      console.error('Error formatting time for API:', error);
+      return '';
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Format the data for API
+      const apiData = {
+        ...formData,
+        hora_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
+        hora_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
+        hora_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
+        hora_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null,
+        status: formData.status
+      };
+
+      console.log('Original form data:', formData);
+      console.log('Formatted data for API:', apiData);
+      console.log('Time formats:', {
+        original_saida_prevista: formData.hora_saida_prevista,
+        formatted_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
+        original_chegada_prevista: formData.hora_chegada_prevista,
+        formatted_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
+        original_saida_real: formData.hora_saida_real,
+        formatted_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
+        original_chegada_real: formData.hora_chegada_real,
+        formatted_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null
+      });
+
+      if (currentViagem) {
+        // Update
+        await ViagemService.updateViagem(currentViagem.id, apiData);
+        showSuccess('Viagem atualizada com sucesso!');
+      } else {
+        // Create
+        await ViagemService.createViagem(apiData);
+        showSuccess('Viagem criada com sucesso!');
+      }
+      setIsModalOpen(false);
+      fetchViagens();
+    } catch (err) {
+      console.error('Error saving viagem:', err);
+
+      if (err.response && err.response.status === 422) {
+        const validationErrors = err.response.data.errors;
+        if (validationErrors) {
+          const errorMessages = Object.entries(validationErrors)
+            .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+            .join('\n');
+
+          showError(`Erro de validação:\n${errorMessages}`);
+        }
+      } else {
+        // Generic error handling
+        showError('Erro ao salvar viagem: ' + (err.response?.data?.message || err.message));
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Get the name of a linked entity based on its ID
+  const getRotaName = (id) => {
+    const rota = rotas.find(r => r.id === id);
+    return rota ? rota.nome : 'Desconhecida';
+  };
+
+  const getOnibusName = (id) => {
+    const bus = onibus.find(o => o.id === id);
+    return bus ? bus.placa : 'Desconhecido';
+  };
+
+  const getMotoristaName = (id) => {
+    const motorista = motoristas.find(m => m.id === id);
+    return motorista ? motorista.nome : 'Desconhecido';
+  };
+
+  // Search and filter function
+  const filteredViagens = viagens.filter(viagem =>
+    viagem.data_viagem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (viagem.rota && viagem.rota.nome?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (viagem.onibus && viagem.onibus.placa?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (viagem.motorista && viagem.motorista.nome?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Format a date from ISO to local date format
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  // Format nested object or use ID to lookup name
+  const formatNestedName = (item, field, nameFn) => {
+    if (item[field] && typeof item[field] === 'object') {
+      return item[field].nome || item[field].placa || 'Desconhecido';
+    }
+    return nameFn(item[`${field}_id`]);
+  };
+
   const columns = [
-    { key: 'data_viagem', header: 'Data' },
-    { key: 'rota', header: 'Rota' },
-    { key: 'motorista', header: 'Motorista' },
-    { key: 'onibus', header: 'Ônibus' },
-    { 
-      key: 'status', 
+    {
+      key: 'data_viagem',
+      header: 'Data',
+      format: (item) => formatDate(item.data_viagem)
+    },
+    {
+      key: 'rota',
+      header: 'Rota',
+      format: (item) => formatNestedName(item, 'rota', getRotaName)
+    },
+    {
+      key: 'onibus',
+      header: 'Ônibus',
+      format: (item) => formatNestedName(item, 'onibus', getOnibusName)
+    },
+    {
+      key: 'motorista',
+      header: 'Motorista',
+      format: (item) => formatNestedName(item, 'motorista', getMotoristaName)
+    },
+    {
+      key: 'status',
       header: 'Status',
-      format: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          item.status === 'completed' 
-            ? 'bg-green-100 text-green-800' 
-            : item.status === 'pending'
-              ? 'bg-yellow-100 text-yellow-800'
-              : item.status === 'in_progress'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-red-100 text-red-800'
-        }`}>
-          {
-            item.status === 'completed' ? 'Concluída' : 
-            item.status === 'pending' ? 'Programada' : 
-            item.status === 'in_progress' ? 'Em andamento' : 
-            'Cancelada'
-          }
-        </span>
-      )
+      format: (item) => <StatusBadge status={item.status} type="viagem" />
     }
   ];
 
   const handleEdit = (viagem) => {
-    console.log('Editar viagem:', viagem);
+    openModal(viagem);
   };
 
   const handleDelete = async (viagem) => {
-    if(window.confirm(`Deseja excluir a viagem de ${viagem.data_viagem}?`)) {
+    if (window.confirm(`Deseja excluir a viagem de ${formatDate(viagem.data_viagem)}?`)) {
       try {
         await ViagemService.deleteViagem(viagem.id);
+        showSuccess('Viagem excluída com sucesso!');
         fetchViagens();
       } catch (err) {
-        setError('Erro ao excluir viagem: ' + err.message);
+        showError('Erro ao excluir viagem: ' + (err.response?.data?.message || err.message));
       }
     }
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Viagens</h1>
-        <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center">
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
+          onClick={() => openModal()}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Nova Viagem
         </button>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow mb-6">
-        <div className="border-b px-6 py-4">
+        <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="font-bold text-lg">Viagens Programadas</h2>
+
+          {/* Search box */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar viagens..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
+
         <div className="p-4">
+          {error && (
+            <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
           <DataTable
             columns={columns}
-            data={viagens}
+            data={filteredViagens}
             onEdit={handleEdit}
             onDelete={handleDelete}
             loading={loading}
-            error={error}
+            error={null} // Error is already shown above
           />
+        </div>
+      </div>
+
+      {/* Modal Form */}
+      <FormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={currentViagem ? "Editar Viagem" : "Nova Viagem"}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      >
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label htmlFor="data_viagem" className="block text-sm font-medium text-gray-700">Data da Viagem</label>
+            <input
+              type="date"
+              name="data_viagem"
+              id="data_viagem"
+              required
+              value={formData.data_viagem}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="rota_id" className="block text-sm font-medium text-gray-700">Rota</label>
+            <select
+              name="rota_id"
+              id="rota_id"
+              required
+              value={formData.rota_id}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={relatedDataLoading}
+            >
+              <option value="">Selecione uma rota</option>
+              {rotas.map(rota => (
+                <option key={rota.id} value={rota.id}>{rota.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="onibus_id" className="block text-sm font-medium text-gray-700">Ônibus</label>
+            <select
+              name="onibus_id"
+              id="onibus_id"
+              required
+              value={formData.onibus_id}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={relatedDataLoading}
+            >
+              <option value="">Selecione um ônibus</option>
+              {onibus.map(bus => (
+                <option key={bus.id} value={bus.id}>{bus.placa} - {bus.modelo}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="motorista_id" className="block text-sm font-medium text-gray-700">Motorista</label>
+            <select
+              name="motorista_id"
+              id="motorista_id"
+              required
+              value={formData.motorista_id}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={relatedDataLoading}
+            >
+              <option value="">Selecione um motorista</option>
+              {motoristas.map(motorista => (
+                <option key={motorista.id} value={motorista.id}>{motorista.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="monitor_id" className="block text-sm font-medium text-gray-700">Monitor (opcional)</label>
+            <select
+              name="monitor_id"
+              id="monitor_id"
+              value={formData.monitor_id}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={relatedDataLoading}
+            >
+              <option value="">Nenhum monitor</option>
+              {monitores.map(monitor => (
+                <option key={monitor.id} value={monitor.id}>{monitor.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Hidden field for horario_id - required by API but handled separately */}
+          <input type="hidden" name="horario_id" value={formData.horario_id} />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="hora_saida_prevista" className="block text-sm font-medium text-gray-700">Hora Saída Prevista</label>
+              <input
+                type="time"
+                name="hora_saida_prevista"
+                id="hora_saida_prevista"
+                required
+                value={formData.hora_saida_prevista}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="hora_chegada_prevista" className="block text-sm font-medium text-gray-700">Hora Chegada Prevista</label>
+              <input
+                type="time"
+                name="hora_chegada_prevista"
+                id="hora_chegada_prevista"
+                required
+                value={formData.hora_chegada_prevista}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="hora_saida_real" className="block text-sm font-medium text-gray-700">Hora Saída Real</label>
+              <input
+                type="time"
+                name="hora_saida_real"
+                id="hora_saida_real"
+                value={formData.hora_saida_real}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="hora_chegada_real" className="block text-sm font-medium text-gray-700">Hora Chegada Real</label>
+              <input
+                type="time"
+                name="hora_chegada_real"
+                id="hora_chegada_real"
+                value={formData.hora_chegada_real}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="observacoes" className="block text-sm font-medium text-gray-700">Observações</label>
+            <textarea
+              name="observacoes"
+              id="observacoes"
+              rows="2"
+              value={formData.observacoes}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            ></textarea>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              name="status"
+              id="status"
+              checked={formData.status}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="status" className="ml-2 block text-sm text-gray-900">Ativa</label>
+          </div>
+        </div>
+      </FormModal>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Total de Viagens</div>
+            <div className="text-xl font-bold">{viagens.length}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Viagens Concluídas</div>
+            <div className="text-xl font-bold">
+              {viagens.filter(viagem => viagem.status === 'completed').length}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Viagens Pendentes</div>
+            <div className="text-xl font-bold">
+              {viagens.filter(viagem => viagem.status === 'pending').length}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1494,39 +3293,25 @@ import React, { useState, useEffect } from 'react';
 import { OnibusService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
+import FormModal from '../components/common/FormModal';
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Mock data for when API fails
-  const mockOnibusData = [
-    {
-      id: 1,
-      placa: 'ABC-1234',
-      capacidade: 48,
-      modelo: 'Mercedes-Benz OF-1721',
-      ano_fabricacao: 2018,
-      status: 'active'
-    },
-    {
-      id: 2,
-      placa: 'DEF-5678',
-      capacidade: 52,
-      modelo: 'Volkswagen 17.230 OD',
-      ano_fabricacao: 2019,
-      status: 'active'
-    },
-    {
-      id: 3,
-      placa: 'GHI-9012',
-      capacidade: 44,
-      modelo: 'Volvo B270F',
-      ano_fabricacao: 2017,
-      status: 'inactive'
-    }
-  ];
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentOnibus, setCurrentOnibus] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    placa: '',
+    modelo: '',
+    capacidade: '',
+    ano_fabricacao: '',
+    status: true
+  });
 
   useEffect(() => {
     fetchOnibus();
@@ -1536,15 +3321,95 @@ const Onibus = () => {
     try {
       setLoading(true);
       const response = await OnibusService.getOnibus();
-      setOnibus(response.data.data);
+      
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        // Convert numeric or string status to string representation for the UI
+        const formattedData = response.data.data.map(bus => ({
+          ...bus,
+          status: typeof bus.status === 'boolean' ? (bus.status ? 'active' : 'inactive') :
+                 typeof bus.status === 'number' ? (bus.status === 1 ? 'active' : 'inactive') :
+                 bus.status === 'Ativo' ? 'active' : 'inactive'
+        }));
+        setOnibus(formattedData);
+      } else {
+        console.error('API returned unexpected data format');
+        setError('Formato de dados inesperado. Contate o suporte.');
+      }
     } catch (err) {
-      console.error('Error fetching data, using mock data instead:', err);
-      setOnibus(mockOnibusData);
+      console.error('Error fetching data:', err);
       setError('Erro ao carregar ônibus: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
   };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const openModal = (bus = null) => {
+    if (bus) {
+      // Edit mode
+      setFormData({
+        placa: bus.placa || '',
+        modelo: bus.modelo || '',
+        capacidade: bus.capacidade || '',
+        ano_fabricacao: bus.ano_fabricacao || '',
+        status: bus.status === 'active' || bus.status === true || bus.status === 1
+      });
+      setCurrentOnibus(bus);
+    } else {
+      // Create mode
+      setFormData({
+        placa: '',
+        modelo: '',
+        capacidade: '',
+        ano_fabricacao: new Date().getFullYear(),
+        status: true
+      });
+      setCurrentOnibus(null);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Prepare data for API - converting to expected format
+      const apiData = {
+        ...formData,
+        capacidade: parseInt(formData.capacidade),
+        ano_fabricacao: parseInt(formData.ano_fabricacao)
+      };
+      
+      if (currentOnibus) {
+        // Update
+        await OnibusService.updateOnibus(currentOnibus.id, apiData);
+      } else {
+        // Create
+        await OnibusService.createOnibus(apiData);
+      }
+      setIsModalOpen(false);
+      fetchOnibus();
+    } catch (err) {
+      console.error('Error saving onibus:', err);
+      setError('Erro ao salvar ônibus: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Search and filter function
+  const filteredOnibus = onibus.filter(bus => 
+    bus.placa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bus.modelo?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const columns = [
     { key: 'placa', header: 'Placa' },
@@ -1554,40 +3419,33 @@ const Onibus = () => {
     { 
       key: 'status', 
       header: 'Status',
-      format: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          item.status === 'active' 
-            ? 'bg-green-100 text-green-800' 
-            : item.status === 'inactive'
-              ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-red-100 text-red-800'
-        }`}>
-          {item.status === 'active' ? 'Ativo' : item.status === 'inactive' ? 'Manutenção' : 'Inativo'}
-        </span>
-      )
+      format: (item) => <StatusBadge status={item.status} type="onibus" />
     }
   ];
 
-  const handleEdit = (onibus) => {
-    console.log('Editar ônibus:', onibus);
+  const handleEdit = (bus) => {
+    openModal(bus);
   };
 
-  const handleDelete = async (onibus) => {
-    if(window.confirm(`Deseja excluir o ônibus de placa ${onibus.placa}?`)) {
+  const handleDelete = async (bus) => {
+    if(window.confirm(`Deseja excluir o ônibus de placa ${bus.placa}?`)) {
       try {
-        await OnibusService.deleteOnibus(onibus.id);
+        await OnibusService.deleteOnibus(bus.id);
         fetchOnibus();
       } catch (err) {
-        setError('Erro ao excluir ônibus: ' + err.message);
+        setError('Erro ao excluir ônibus: ' + (err.response?.data?.message || err.message));
       }
     }
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Ônibus</h1>
-        <button className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center">
+        <button 
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
+          onClick={() => openModal()}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
@@ -1596,18 +3454,165 @@ const Onibus = () => {
       </div>
       
       <div className="bg-white rounded-lg shadow mb-6">
-        <div className="border-b px-6 py-4">
+        <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="font-bold text-lg">Frota de Ônibus</h2>
+          
+          {/* Search box */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar ônibus..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
+        
         <div className="p-4">
+          {error && (
+            <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+          
           <DataTable
             columns={columns}
-            data={onibus}
+            data={filteredOnibus}
             onEdit={handleEdit}
             onDelete={handleDelete}
             loading={loading}
-            error={error}
+            error={null} // Error is already shown above
           />
+        </div>
+      </div>
+      
+      {/* Modal Form */}
+      <FormModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={currentOnibus ? "Editar Ônibus" : "Novo Ônibus"}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      >
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label htmlFor="placa" className="block text-sm font-medium text-gray-700">Placa</label>
+            <input
+              type="text"
+              name="placa"
+              id="placa"
+              required
+              value={formData.placa}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="modelo" className="block text-sm font-medium text-gray-700">Modelo</label>
+            <input
+              type="text"
+              name="modelo"
+              id="modelo"
+              required
+              value={formData.modelo}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="capacidade" className="block text-sm font-medium text-gray-700">Capacidade</label>
+            <input
+              type="number"
+              name="capacidade"
+              id="capacidade"
+              required
+              min="1"
+              value={formData.capacidade}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="ano_fabricacao" className="block text-sm font-medium text-gray-700">Ano de Fabricação</label>
+            <input
+              type="number"
+              name="ano_fabricacao"
+              id="ano_fabricacao"
+              required
+              min="1990"
+              max={new Date().getFullYear()}
+              value={formData.ano_fabricacao}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              name="status"
+              id="status"
+              checked={formData.status}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="status" className="ml-2 block text-sm text-gray-900">Ativo</label>
+          </div>
+        </div>
+      </FormModal>
+      
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Total de Ônibus</div>
+            <div className="text-xl font-bold">{onibus.length}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Ônibus Ativos</div>
+            <div className="text-xl font-bold">
+              {onibus.filter(bus => bus.status === 'active' || bus.status === true).length}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Ônibus Inativos</div>
+            <div className="text-xl font-bold">
+              {onibus.filter(bus => bus.status === 'inactive' || bus.status === false).length}
+            </div>
+          </div>
         </div>
       </div>
     </div>
