@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Onibus from './pages/Onibus'
 import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
+import Monitores from './pages/Monitores'
 
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -151,6 +152,7 @@ const App = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/alunos" element={<Alunos />} />
               <Route path="/onibus" element={<Onibus />} />
+              <Route path="/monitores" element={<Monitores />} />
               <Route path="/rotas" element={<Rotas />} />
               <Route path="/viagens" element={<Viagens />} />
             </Routes>

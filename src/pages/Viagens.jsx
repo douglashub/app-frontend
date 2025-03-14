@@ -3,8 +3,11 @@ import { ViagemService, RotaService, OnibusService, MotoristaService, MonitorSer
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import { useNotification } from '../contexts/NotificationContext';
 
 const Viagens = () => {
+  const { showError, showSuccess } = useNotification();
+
   const [viagens, setViagens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,14 +15,14 @@ const Viagens = () => {
   const [currentViagem, setCurrentViagem] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Related data for dropdown selects
   const [rotas, setRotas] = useState([]);
   const [onibus, setOnibus] = useState([]);
   const [motoristas, setMotoristas] = useState([]);
   const [monitores, setMonitores] = useState([]);
   const [relatedDataLoading, setRelatedDataLoading] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     data_viagem: '',
@@ -45,23 +48,23 @@ const Viagens = () => {
     try {
       setLoading(true);
       const response = await ViagemService.getViagens();
-      
+
       if (response?.data?.data && Array.isArray(response.data.data)) {
         // Add status conversion if needed
         const formattedData = response.data.data.map(viagem => ({
           ...viagem,
           status: typeof viagem.status === 'boolean' ? (viagem.status ? 'completed' : 'pending') :
-                 typeof viagem.status === 'number' ? (viagem.status === 1 ? 'completed' : 'pending') :
-                 viagem.status
+            typeof viagem.status === 'number' ? (viagem.status === 1 ? 'completed' : 'pending') :
+              viagem.status
         }));
         setViagens(formattedData);
       } else {
         console.error('API returned unexpected data format');
-        setError('Formato de dados inesperado. Contate o suporte.');
+        showError('Formato de dados inesperado. Contate o suporte.');
       }
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Erro ao carregar viagens: ' + (err.response?.data?.message || err.message));
+      showError('Erro ao carregar viagens: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -77,14 +80,14 @@ const Viagens = () => {
         MotoristaService.getMotoristas(),
         MonitorService.getMonitores()
       ]);
-      
+
       setRotas(rotasRes.data.data || []);
       setOnibus(onibusRes.data.data || []);
       setMotoristas(motoristasRes.data.data || []);
       setMonitores(monitoresRes.data.data || []);
     } catch (err) {
       console.error('Error fetching related data:', err);
-      setError('Erro ao carregar dados relacionados: ' + err.message);
+      showError('Erro ao carregar dados relacionados: ' + err.message);
     } finally {
       setRelatedDataLoading(false);
     }
@@ -108,10 +111,10 @@ const Viagens = () => {
         motorista_id: viagem.motorista_id || '',
         monitor_id: viagem.monitor_id || '',
         horario_id: viagem.horario_id || '1',
-        hora_saida_prevista: viagem.hora_saida_prevista || '',
-        hora_chegada_prevista: viagem.hora_chegada_prevista || '',
-        hora_saida_real: viagem.hora_saida_real || '',
-        hora_chegada_real: viagem.hora_chegada_real || '',
+        hora_saida_prevista: viagem.hora_saida_prevista ? formatTimeForDisplay(viagem.hora_saida_prevista) : '',
+        hora_chegada_prevista: viagem.hora_chegada_prevista ? formatTimeForDisplay(viagem.hora_chegada_prevista) : '',
+        hora_saida_real: viagem.hora_saida_real ? formatTimeForDisplay(viagem.hora_saida_real) : '',
+        hora_chegada_real: viagem.hora_chegada_real ? formatTimeForDisplay(viagem.hora_chegada_real) : '',
         observacoes: viagem.observacoes || '',
         status: viagem.status === 'completed' || viagem.status === true || viagem.status === 1
       };
@@ -139,29 +142,100 @@ const Viagens = () => {
     setIsModalOpen(true);
   };
 
+  // Format time values from API format (H:i) to HTML time input format (HH:mm)
+  const formatTimeForDisplay = (time) => {
+    if (!time) return '';
+    
+    try {
+      // Handle different time formats that might come from the API
+      const timeParts = time.split(':');
+      
+      if (timeParts.length < 2) return time; // Return as is if not a valid time format
+      
+      const hours = timeParts[0].padStart(2, '0');
+      const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
+      
+      return `${hours}:${minutes}`;
+    } catch (error) {
+      console.error('Error formatting time for display:', error);
+      return time || '';
+    }
+  };
+
+  // Format time values from HTML time input format (HH:mm) to API format (H:i)
+  const formatTimeForApi = (time) => {
+    if (!time) return '';
+    
+    try {
+      // Extract hours and minutes
+      const [hours, minutes] = time.split(':');
+      
+      // Convert hours to integer to remove leading zeros
+      const hour = parseInt(hours, 10);
+      
+      // Return exactly in the format expected by the API (H:i)
+      return `${hour}:${minutes}`;
+    } catch (error) {
+      console.error('Error formatting time for API:', error);
+      return '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       // Format the data for API
       const apiData = {
         ...formData,
+        hora_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
+        hora_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
+        hora_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
+        hora_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null,
         status: formData.status
       };
-      
+
+      console.log('Original form data:', formData);
+      console.log('Formatted data for API:', apiData);
+      console.log('Time formats:', {
+        original_saida_prevista: formData.hora_saida_prevista,
+        formatted_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
+        original_chegada_prevista: formData.hora_chegada_prevista,
+        formatted_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
+        original_saida_real: formData.hora_saida_real,
+        formatted_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
+        original_chegada_real: formData.hora_chegada_real,
+        formatted_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null
+      });
+
       if (currentViagem) {
         // Update
         await ViagemService.updateViagem(currentViagem.id, apiData);
+        showSuccess('Viagem atualizada com sucesso!');
       } else {
         // Create
         await ViagemService.createViagem(apiData);
+        showSuccess('Viagem criada com sucesso!');
       }
       setIsModalOpen(false);
       fetchViagens();
     } catch (err) {
       console.error('Error saving viagem:', err);
-      setError('Erro ao salvar viagem: ' + (err.response?.data?.message || err.message));
+
+      if (err.response && err.response.status === 422) {
+        const validationErrors = err.response.data.errors;
+        if (validationErrors) {
+          const errorMessages = Object.entries(validationErrors)
+            .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+            .join('\n');
+
+          showError(`Erro de validação:\n${errorMessages}`);
+        }
+      } else {
+        // Generic error handling
+        showError('Erro ao salvar viagem: ' + (err.response?.data?.message || err.message));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -184,7 +258,7 @@ const Viagens = () => {
   };
 
   // Search and filter function
-  const filteredViagens = viagens.filter(viagem => 
+  const filteredViagens = viagens.filter(viagem =>
     viagem.data_viagem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (viagem.rota && viagem.rota.nome?.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (viagem.onibus && viagem.onibus.placa?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -207,28 +281,28 @@ const Viagens = () => {
   };
 
   const columns = [
-    { 
-      key: 'data_viagem', 
+    {
+      key: 'data_viagem',
       header: 'Data',
       format: (item) => formatDate(item.data_viagem)
     },
-    { 
-      key: 'rota', 
+    {
+      key: 'rota',
       header: 'Rota',
       format: (item) => formatNestedName(item, 'rota', getRotaName)
     },
-    { 
-      key: 'onibus', 
+    {
+      key: 'onibus',
       header: 'Ônibus',
       format: (item) => formatNestedName(item, 'onibus', getOnibusName)
     },
-    { 
-      key: 'motorista', 
+    {
+      key: 'motorista',
       header: 'Motorista',
       format: (item) => formatNestedName(item, 'motorista', getMotoristaName)
     },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       header: 'Status',
       format: (item) => <StatusBadge status={item.status} type="viagem" />
     }
@@ -239,12 +313,13 @@ const Viagens = () => {
   };
 
   const handleDelete = async (viagem) => {
-    if(window.confirm(`Deseja excluir a viagem de ${formatDate(viagem.data_viagem)}?`)) {
+    if (window.confirm(`Deseja excluir a viagem de ${formatDate(viagem.data_viagem)}?`)) {
       try {
         await ViagemService.deleteViagem(viagem.id);
+        showSuccess('Viagem excluída com sucesso!');
         fetchViagens();
       } catch (err) {
-        setError('Erro ao excluir viagem: ' + (err.response?.data?.message || err.message));
+        showError('Erro ao excluir viagem: ' + (err.response?.data?.message || err.message));
       }
     }
   };
@@ -253,7 +328,7 @@ const Viagens = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Viagens</h1>
-        <button 
+        <button
           className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
           onClick={() => openModal()}
         >
@@ -263,11 +338,11 @@ const Viagens = () => {
           Nova Viagem
         </button>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="font-bold text-lg">Viagens Programadas</h2>
-          
+
           {/* Search box */}
           <div className="relative w-full sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -284,7 +359,7 @@ const Viagens = () => {
             />
           </div>
         </div>
-        
+
         <div className="p-4">
           {error && (
             <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
@@ -294,7 +369,7 @@ const Viagens = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           <DataTable
             columns={columns}
             data={filteredViagens}
@@ -305,11 +380,11 @@ const Viagens = () => {
           />
         </div>
       </div>
-      
+
       {/* Modal Form */}
-      <FormModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <FormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={currentViagem ? "Editar Viagem" : "Nova Viagem"}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
@@ -327,7 +402,7 @@ const Viagens = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="rota_id" className="block text-sm font-medium text-gray-700">Rota</label>
             <select
@@ -345,7 +420,7 @@ const Viagens = () => {
               ))}
             </select>
           </div>
-          
+
           <div>
             <label htmlFor="onibus_id" className="block text-sm font-medium text-gray-700">Ônibus</label>
             <select
@@ -363,7 +438,7 @@ const Viagens = () => {
               ))}
             </select>
           </div>
-          
+
           <div>
             <label htmlFor="motorista_id" className="block text-sm font-medium text-gray-700">Motorista</label>
             <select
@@ -381,7 +456,7 @@ const Viagens = () => {
               ))}
             </select>
           </div>
-          
+
           <div>
             <label htmlFor="monitor_id" className="block text-sm font-medium text-gray-700">Monitor (opcional)</label>
             <select
@@ -398,10 +473,10 @@ const Viagens = () => {
               ))}
             </select>
           </div>
-          
+
           {/* Hidden field for horario_id - required by API but handled separately */}
           <input type="hidden" name="horario_id" value={formData.horario_id} />
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="hora_saida_prevista" className="block text-sm font-medium text-gray-700">Hora Saída Prevista</label>
@@ -415,7 +490,7 @@ const Viagens = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="hora_chegada_prevista" className="block text-sm font-medium text-gray-700">Hora Chegada Prevista</label>
               <input
@@ -429,7 +504,7 @@ const Viagens = () => {
               />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="hora_saida_real" className="block text-sm font-medium text-gray-700">Hora Saída Real</label>
@@ -442,7 +517,7 @@ const Viagens = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="hora_chegada_real" className="block text-sm font-medium text-gray-700">Hora Chegada Real</label>
               <input
@@ -455,7 +530,7 @@ const Viagens = () => {
               />
             </div>
           </div>
-          
+
           <div>
             <label htmlFor="observacoes" className="block text-sm font-medium text-gray-700">Observações</label>
             <textarea
@@ -467,7 +542,7 @@ const Viagens = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             ></textarea>
           </div>
-          
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -481,7 +556,7 @@ const Viagens = () => {
           </div>
         </div>
       </FormModal>
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">

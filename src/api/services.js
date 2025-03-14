@@ -53,6 +53,53 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Formatação comum para horários em formato H:i (exigido pela API Laravel)
+ * @param {string} time - Time in HH:mm format 
+ * @returns {string} - Time in H:i format or null if input is empty
+ */
+function formatTimeForApi(time) {
+  if (!time) return null;
+  
+  try {
+    // Split the time string into hours and minutes
+    const [hours, minutes] = time.split(':');
+    
+    // Convert hours to integer to remove leading zeros
+    const hour = parseInt(hours, 10);
+    
+    // Return the formatted time string (H:i format exactly as Laravel expects)
+    return `${hour}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return null;
+  }
+}
+
+/**
+ * Converte horários do formato da API (H:i) para o formato HTML (HH:mm)
+ * @param {string} time - Time in H:i format
+ * @returns {string} - Time in HH:mm format
+ */
+function formatTimeForDisplay(time) {
+  if (!time) return '';
+  
+  try {
+    // Handle different time formats that might come from the API
+    const timeParts = time.split(':');
+    
+    if (timeParts.length < 2) return time; // Return as is if not a valid time format
+    
+    const hours = timeParts[0].padStart(2, '0');
+    const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
+    
+    return `${hours}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting time for display:', error);
+    return time || '';
+  }
+}
+
 // Serviços para API - com tratamentos de erros e mensagens amigáveis
 export const AlunoService = {
   getAlunos: () => api.get('/alunos').catch(error => {
@@ -115,13 +162,35 @@ export const RotaService = {
     throw new Error('Erro ao buscar detalhes da rota: ' + getErrorMessage(error));
   }),
   
-  createRota: (data) => api.post('/rotas', data).catch(error => {
-    throw new Error('Erro ao criar rota: ' + getErrorMessage(error));
-  }),
+  createRota: (data) => {
+    // Format time fields
+    const formattedData = { ...data };
+    if (formattedData.horario_inicio) {
+      formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
+    }
+    if (formattedData.horario_fim) {
+      formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
+    }
+    
+    return api.post('/rotas', formattedData).catch(error => {
+      throw new Error('Erro ao criar rota: ' + getErrorMessage(error));
+    });
+  },
   
-  updateRota: (id, data) => api.put(`/rotas/${id}`, data).catch(error => {
-    throw new Error('Erro ao atualizar rota: ' + getErrorMessage(error));
-  }),
+  updateRota: (id, data) => {
+    // Format time fields
+    const formattedData = { ...data };
+    if (formattedData.horario_inicio) {
+      formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
+    }
+    if (formattedData.horario_fim) {
+      formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
+    }
+    
+    return api.put(`/rotas/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar rota: ' + getErrorMessage(error));
+    });
+  },
   
   deleteRota: (id) => api.delete(`/rotas/${id}`).catch(error => {
     throw new Error('Erro ao excluir rota: ' + getErrorMessage(error));
@@ -145,13 +214,55 @@ export const ViagemService = {
     throw new Error('Erro ao buscar detalhes da viagem: ' + getErrorMessage(error));
   }),
   
-  createViagem: (data) => api.post('/viagens', data).catch(error => {
-    throw new Error('Erro ao criar viagem: ' + getErrorMessage(error));
-  }),
+  createViagem: (data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    
+    // Handle all time fields
+    const timeFields = ['hora_saida_prevista', 'hora_chegada_prevista', 'hora_saida_real', 'hora_chegada_real'];
+    timeFields.forEach(field => {
+      if (formattedData[field]) {
+        formattedData[field] = formatTimeForApi(formattedData[field]);
+      }
+    });
+    
+    console.log('Formatted data for API:', formattedData);
+    console.log('Time fields after formatting:', {
+      hora_saida_prevista: formattedData.hora_saida_prevista,
+      hora_chegada_prevista: formattedData.hora_chegada_prevista,
+      hora_saida_real: formattedData.hora_saida_real,
+      hora_chegada_real: formattedData.hora_chegada_real
+    });
+    
+    return api.post('/viagens', formattedData).catch(error => {
+      throw new Error('Erro ao criar viagem: ' + getErrorMessage(error));
+    });
+  },
   
-  updateViagem: (id, data) => api.put(`/viagens/${id}`, data).catch(error => {
-    throw new Error('Erro ao atualizar viagem: ' + getErrorMessage(error));
-  }),
+  updateViagem: (id, data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    
+    // Handle all time fields
+    const timeFields = ['hora_saida_prevista', 'hora_chegada_prevista', 'hora_saida_real', 'hora_chegada_real'];
+    timeFields.forEach(field => {
+      if (formattedData[field]) {
+        formattedData[field] = formatTimeForApi(formattedData[field]);
+      }
+    });
+    
+    console.log('Formatted data for API update:', formattedData);
+    console.log('Time fields after formatting:', {
+      hora_saida_prevista: formattedData.hora_saida_prevista,
+      hora_chegada_prevista: formattedData.hora_chegada_prevista,
+      hora_saida_real: formattedData.hora_saida_real,
+      hora_chegada_real: formattedData.hora_chegada_real
+    });
+    
+    return api.put(`/viagens/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar viagem: ' + getErrorMessage(error));
+    });
+  },
   
   deleteViagem: (id) => api.delete(`/viagens/${id}`).catch(error => {
     throw new Error('Erro ao excluir viagem: ' + getErrorMessage(error));
@@ -159,7 +270,7 @@ export const ViagemService = {
 };
 
 export const MonitorService = {
-  getMonitores: () => api.get('/monitores').catch(error => {
+  getMonitores: (page = 1) => api.get('/monitores', { params: { page } }).catch(error => {
     throw new Error('Erro ao buscar monitores: ' + getErrorMessage(error));
   }),
   
@@ -219,13 +330,35 @@ export const HorarioService = {
     throw new Error('Erro ao buscar detalhes do horário: ' + getErrorMessage(error));
   }),
   
-  createHorario: (data) => api.post('/horarios', data).catch(error => {
-    throw new Error('Erro ao criar horário: ' + getErrorMessage(error));
-  }),
+  createHorario: (data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    if (formattedData.hora_inicio) {
+      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
+    }
+    if (formattedData.hora_fim) {
+      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
+    }
+    
+    return api.post('/horarios', formattedData).catch(error => {
+      throw new Error('Erro ao criar horário: ' + getErrorMessage(error));
+    });
+  },
   
-  updateHorario: (id, data) => api.put(`/horarios/${id}`, data).catch(error => {
-    throw new Error('Erro ao atualizar horário: ' + getErrorMessage(error));
-  }),
+  updateHorario: (id, data) => {
+    // Format time fields for API
+    const formattedData = { ...data };
+    if (formattedData.hora_inicio) {
+      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
+    }
+    if (formattedData.hora_fim) {
+      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
+    }
+    
+    return api.put(`/horarios/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar horário: ' + getErrorMessage(error));
+    });
+  },
   
   deleteHorario: (id) => api.delete(`/horarios/${id}`).catch(error => {
     throw new Error('Erro ao excluir horário: ' + getErrorMessage(error));
@@ -267,13 +400,29 @@ export const PresencaService = {
     throw new Error('Erro ao buscar detalhes da presença: ' + getErrorMessage(error));
   }),
   
-  createPresenca: (data) => api.post('/presencas', data).catch(error => {
-    throw new Error('Erro ao criar presença: ' + getErrorMessage(error));
-  }),
+  createPresenca: (data) => {
+    // Format time field for API
+    const formattedData = { ...data };
+    if (formattedData.hora_registro) {
+      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
+    }
+    
+    return api.post('/presencas', formattedData).catch(error => {
+      throw new Error('Erro ao criar presença: ' + getErrorMessage(error));
+    });
+  },
   
-  updatePresenca: (id, data) => api.put(`/presencas/${id}`, data).catch(error => {
-    throw new Error('Erro ao atualizar presença: ' + getErrorMessage(error));
-  }),
+  updatePresenca: (id, data) => {
+    // Format time field for API
+    const formattedData = { ...data };
+    if (formattedData.hora_registro) {
+      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
+    }
+    
+    return api.put(`/presencas/${id}`, formattedData).catch(error => {
+      throw new Error('Erro ao atualizar presença: ' + getErrorMessage(error));
+    });
+  },
   
   deletePresenca: (id) => api.delete(`/presencas/${id}`).catch(error => {
     throw new Error('Erro ao excluir presença: ' + getErrorMessage(error));
