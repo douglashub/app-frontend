@@ -3,6 +3,7 @@ import { RotaService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 
 const Rotas = () => {
@@ -10,6 +11,7 @@ const Rotas = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentRota, setCurrentRota] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -193,17 +195,22 @@ const Rotas = () => {
     openModal(rota);
   };
 
-  const handleDelete = async (rota) => {
-    if(window.confirm(`Deseja excluir a rota ${rota.nome}?`)) {
-      try {
-        await RotaService.deleteRota(rota.id);
-        showSuccess('Rota excluída com sucesso!');
-        fetchRotas();
-      } catch (err) {
-        const errorMsg = err.response?.data?.message || err.message;
-        setError('Erro ao excluir rota: ' + errorMsg);
-        showError('Erro ao excluir rota: ' + errorMsg);
-      }
+  const handleDelete = (rota) => {
+    setCurrentRota(rota);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await RotaService.deleteRota(currentRota.id);
+      showSuccess('Rota excluída com sucesso!');
+      setIsDeleteModalOpen(false);
+      setCurrentRota(null);
+      fetchRotas();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message;
+      setError('Erro ao excluir rota: ' + errorMsg);
+      showError('Erro ao excluir rota: ' + errorMsg);
     }
   };
 
@@ -408,6 +415,16 @@ const Rotas = () => {
           </div>
         </div>
       </FormModal>
+      
+      {/* Delete Confirmation Modal - moved outside of FormModal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirmar Exclusão"
+        message={`Tem certeza que deseja excluir a rota ${currentRota?.nome}?`}
+        isSubmitting={isSubmitting}
+      />
       
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
