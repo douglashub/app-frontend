@@ -1,8 +1,10 @@
+// src/pages/Onibus.jsx
 import React, { useState, useEffect } from 'react';
 import { OnibusService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import { useNotification } from '../contexts/NotificationContext';
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
@@ -12,6 +14,10 @@ const Onibus = () => {
   const [currentOnibus, setCurrentOnibus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showSuccess, showError } = useNotification ? useNotification() : { 
+    showSuccess: () => {}, 
+    showError: () => {} 
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -32,12 +38,17 @@ const Onibus = () => {
       const response = await OnibusService.getOnibus();
       
       if (response?.data?.data && Array.isArray(response.data.data)) {
-        // Convert numeric or string status to string representation for the UI
+        // Process data - ensure status is standardized
         const formattedData = response.data.data.map(bus => ({
           ...bus,
-          status: typeof bus.status === 'boolean' ? (bus.status ? 'active' : 'inactive') :
-                 typeof bus.status === 'number' ? (bus.status === 1 ? 'active' : 'inactive') :
-                 bus.status === 'Ativo' ? 'active' : 'inactive'
+          status: convertStatus(bus.status)
+        }));
+        setOnibus(formattedData);
+      } else if (Array.isArray(response?.data)) {
+        // Alternative API response format
+        const formattedData = response.data.map(bus => ({
+          ...bus,
+          status: convertStatus(bus.status)
         }));
         setOnibus(formattedData);
       } else {
@@ -50,6 +61,26 @@ const Onibus = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Convert various status formats to a standardized format
+  const convertStatus = (status) => {
+    if (typeof status === 'boolean') {
+      return status ? 'active' : 'inactive';
+    } else if (typeof status === 'number') {
+      return status === 1 ? 'active' : 'inactive';
+    } else if (typeof status === 'string') {
+      const statusLower = status.toLowerCase();
+      if (statusLower === 'true' || statusLower === 'ativo' || statusLower === '1' || statusLower === 'active') {
+        return 'active';
+      } else if (statusLower === 'false' || statusLower === 'inativo' || statusLower === '0' || statusLower === 'inactive') {
+        return 'inactive';
+      } else if (statusLower === 'manutenção' || statusLower === 'manutencao' || statusLower === 'em manutenção' || statusLower === 'em manutencao') {
+        return 'maintenance';
+      }
+      return status; // Keep original if no match
+    }
+    return 'inactive'; // Default value
   };
 
   const handleInputChange = (e) => {
@@ -100,15 +131,19 @@ const Onibus = () => {
       if (currentOnibus) {
         // Update
         await OnibusService.updateOnibus(currentOnibus.id, apiData);
+        showSuccess('Ônibus atualizado com sucesso!');
       } else {
         // Create
         await OnibusService.createOnibus(apiData);
+        showSuccess('Ônibus cadastrado com sucesso!');
       }
       setIsModalOpen(false);
       fetchOnibus();
     } catch (err) {
       console.error('Error saving onibus:', err);
-      setError('Erro ao salvar ônibus: ' + (err.response?.data?.message || err.message));
+      const errorMsg = err.response?.data?.message || err.message;
+      setError('Erro ao salvar ônibus: ' + errorMsg);
+      showError('Erro ao salvar ônibus: ' + errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -140,9 +175,12 @@ const Onibus = () => {
     if(window.confirm(`Deseja excluir o ônibus de placa ${bus.placa}?`)) {
       try {
         await OnibusService.deleteOnibus(bus.id);
+        showSuccess('Ônibus excluído com sucesso!');
         fetchOnibus();
       } catch (err) {
-        setError('Erro ao excluir ônibus: ' + (err.response?.data?.message || err.message));
+        const errorMsg = err.response?.data?.message || err.message;
+        setError('Erro ao excluir ônibus: ' + errorMsg);
+        showError('Erro ao excluir ônibus: ' + errorMsg);
       }
     }
   };
@@ -305,7 +343,7 @@ const Onibus = () => {
           <div>
             <div className="text-sm text-gray-500">Ônibus Ativos</div>
             <div className="text-xl font-bold">
-              {onibus.filter(bus => bus.status === 'active' || bus.status === true).length}
+              {onibus.filter(bus => bus.status === 'active').length}
             </div>
           </div>
         </div>
@@ -319,7 +357,7 @@ const Onibus = () => {
           <div>
             <div className="text-sm text-gray-500">Ônibus Inativos</div>
             <div className="text-xl font-bold">
-              {onibus.filter(bus => bus.status === 'inactive' || bus.status === false).length}
+              {onibus.filter(bus => bus.status === 'inactive' || bus.status === 'maintenance').length}
             </div>
           </div>
         </div>

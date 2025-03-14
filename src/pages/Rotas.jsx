@@ -3,6 +3,7 @@ import { RotaService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
+import { useNotification } from '../contexts/NotificationContext';
 
 const Rotas = () => {
   const [rotas, setRotas] = useState([]);
@@ -12,6 +13,10 @@ const Rotas = () => {
   const [currentRota, setCurrentRota] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showSuccess, showError } = useNotification ? useNotification() : { 
+    showSuccess: () => {}, 
+    showError: () => {} 
+  };
   
   // Form state
   const [formData, setFormData] = useState({
@@ -37,12 +42,17 @@ const Rotas = () => {
       const response = await RotaService.getRotas();
       
       if (response?.data?.data && Array.isArray(response.data.data)) {
-        // Add boolean status if needed
+        // Process data - ensure status is standardized
         const formattedData = response.data.data.map(rota => ({
           ...rota,
-          status: typeof rota.status === 'boolean' ? (rota.status ? 'active' : 'inactive') :
-                 typeof rota.status === 'number' ? (rota.status === 1 ? 'active' : 'inactive') :
-                 rota.status === 'Ativo' ? 'active' : 'inactive'
+          status: convertStatus(rota.status)
+        }));
+        setRotas(formattedData);
+      } else if (Array.isArray(response?.data)) {
+        // Alternative API response format
+        const formattedData = response.data.map(rota => ({
+          ...rota,
+          status: convertStatus(rota.status)
         }));
         setRotas(formattedData);
       } else {
@@ -55,6 +65,24 @@ const Rotas = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Convert various status formats to a standardized format
+  const convertStatus = (status) => {
+    if (typeof status === 'boolean') {
+      return status ? 'active' : 'inactive';
+    } else if (typeof status === 'number') {
+      return status === 1 ? 'active' : 'inactive';
+    } else if (typeof status === 'string') {
+      const statusLower = status.toLowerCase();
+      if (statusLower === 'true' || statusLower === 'ativo' || statusLower === '1' || statusLower === 'active' || statusLower === 'ativa') {
+        return 'active';
+      } else if (statusLower === 'false' || statusLower === 'inativo' || statusLower === '0' || statusLower === 'inactive' || statusLower === 'inativa') {
+        return 'inactive';
+      }
+      return status; // Keep original if no match
+    }
+    return 'inactive'; // Default value
   };
 
   const handleInputChange = (e) => {
@@ -115,15 +143,19 @@ const Rotas = () => {
       if (currentRota) {
         // Update
         await RotaService.updateRota(currentRota.id, apiData);
+        showSuccess('Rota atualizada com sucesso!');
       } else {
         // Create
         await RotaService.createRota(apiData);
+        showSuccess('Rota criada com sucesso!');
       }
       setIsModalOpen(false);
       fetchRotas();
     } catch (err) {
       console.error('Error saving rota:', err);
-      setError('Erro ao salvar rota: ' + (err.response?.data?.message || err.message));
+      const errorMsg = err.response?.data?.message || err.message;
+      setError('Erro ao salvar rota: ' + errorMsg);
+      showError('Erro ao salvar rota: ' + errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -165,9 +197,12 @@ const Rotas = () => {
     if(window.confirm(`Deseja excluir a rota ${rota.nome}?`)) {
       try {
         await RotaService.deleteRota(rota.id);
+        showSuccess('Rota excluída com sucesso!');
         fetchRotas();
       } catch (err) {
-        setError('Erro ao excluir rota: ' + (err.response?.data?.message || err.message));
+        const errorMsg = err.response?.data?.message || err.message;
+        setError('Erro ao excluir rota: ' + errorMsg);
+        showError('Erro ao excluir rota: ' + errorMsg);
       }
     }
   };
@@ -397,7 +432,7 @@ const Rotas = () => {
           <div>
             <div className="text-sm text-gray-500">Rotas Ativas</div>
             <div className="text-xl font-bold">
-              {rotas.filter(rota => rota.status === 'active' || rota.status === true).length}
+              {rotas.filter(rota => rota.status === 'active').length}
             </div>
           </div>
         </div>
@@ -411,7 +446,7 @@ const Rotas = () => {
           <div>
             <div className="text-sm text-gray-500">Rotas Inativas</div>
             <div className="text-xl font-bold">
-              {rotas.filter(rota => rota.status === 'inactive' || rota.status === false).length}
+              {rotas.filter(rota => rota.status === 'inactive').length}
             </div>
           </div>
         </div>

@@ -50,12 +50,10 @@ const Viagens = () => {
       const response = await ViagemService.getViagens();
 
       if (response?.data?.data && Array.isArray(response.data.data)) {
-        // Add status conversion if needed
+        // Convert status to match UI requirements
         const formattedData = response.data.data.map(viagem => ({
           ...viagem,
-          status: typeof viagem.status === 'boolean' ? (viagem.status ? 'completed' : 'pending') :
-            typeof viagem.status === 'number' ? (viagem.status === 1 ? 'completed' : 'pending') :
-              viagem.status
+          status: viagem.status ? 'completed' : 'pending'
         }));
         setViagens(formattedData);
       } else {
@@ -189,25 +187,12 @@ const Viagens = () => {
       // Format the data for API
       const apiData = {
         ...formData,
-        hora_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
-        hora_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
-        hora_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
-        hora_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null,
+        hora_saida_prevista: formData.hora_saida_prevista,
+        hora_chegada_prevista: formData.hora_chegada_prevista,
+        hora_saida_real: formData.hora_saida_real || null,
+        hora_chegada_real: formData.hora_chegada_real || null,
         status: formData.status
       };
-
-      console.log('Original form data:', formData);
-      console.log('Formatted data for API:', apiData);
-      console.log('Time formats:', {
-        original_saida_prevista: formData.hora_saida_prevista,
-        formatted_saida_prevista: formatTimeForApi(formData.hora_saida_prevista),
-        original_chegada_prevista: formData.hora_chegada_prevista,
-        formatted_chegada_prevista: formatTimeForApi(formData.hora_chegada_prevista),
-        original_saida_real: formData.hora_saida_real,
-        formatted_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
-        original_chegada_real: formData.hora_chegada_real,
-        formatted_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null
-      });
 
       if (currentViagem) {
         // Update
@@ -233,7 +218,6 @@ const Viagens = () => {
           showError(`Erro de validação:\n${errorMessages}`);
         }
       } else {
-        // Generic error handling
         showError('Erro ao salvar viagem: ' + (err.response?.data?.message || err.message));
       }
     } finally {
@@ -256,14 +240,6 @@ const Viagens = () => {
     const motorista = motoristas.find(m => m.id === id);
     return motorista ? motorista.nome : 'Desconhecido';
   };
-
-  // Search and filter function
-  const filteredViagens = viagens.filter(viagem =>
-    viagem.data_viagem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (viagem.rota && viagem.rota.nome?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (viagem.onibus && viagem.onibus.placa?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (viagem.motorista && viagem.motorista.nome?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
 
   // Format a date from ISO to local date format
   const formatDate = (dateString) => {
@@ -323,6 +299,16 @@ const Viagens = () => {
       }
     }
   };
+
+  const filteredViagens = viagens.filter(viagem => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      viagem.data_viagem.toLowerCase().includes(searchLower) ||
+      formatNestedName(viagem, 'rota', getRotaName).toLowerCase().includes(searchLower) ||
+      formatNestedName(viagem, 'onibus', getOnibusName).toLowerCase().includes(searchLower) ||
+      formatNestedName(viagem, 'motorista', getMotoristaName).toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div className="space-y-6">

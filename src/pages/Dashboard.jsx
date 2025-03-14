@@ -1,54 +1,124 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { OnibusService, AlunoService, RotaService, ViagemService } from '../api/services';
+import { useNotification } from '../contexts/NotificationContext';
 
 export default function Dashboard() {
-  const [loading, setLoading] = React.useState(false);
+  const { showError } = useNotification();
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [stats, setStats] = React.useState({
+    onibusAtivos: 0,
+    totalAlunos: 0,
+    rotasAtivas: 0,
+    viagensHoje: 0
+  });
+  const [viagensData, setViagensData] = React.useState([]);
+  const [rotasData, setRotasData] = React.useState([]);
 
-  // Mock data for dashboard
-  const stats = {
-    onibusAtivos: 2,
-    totalAlunos: 5,
-    rotasAtivas: 4,
-    viagensHoje: 2
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch all data in parallel
+      const [onibusResponse, alunosResponse, rotasResponse, viagensResponse] = await Promise.all([
+        OnibusService.getOnibus(),
+        AlunoService.getAlunos(),
+        RotaService.getRotas(),
+        ViagemService.getViagens()
+      ]);
+
+      // Process onibus data
+      const onibusAtivos = onibusResponse.data?.data?.filter(onibus => 
+        onibus.status === 'active' || onibus.status === true || onibus.status === 1
+      ).length || 0;
+
+      // Process alunos data
+      const totalAlunos = alunosResponse.data?.data?.length || 0;
+
+      console.log('Rotas response:', rotasResponse.data);
+      // Process rotas data
+      const rotasData = rotasResponse.data?.data || [];
+      const rotasAtivas = rotasData.filter(rota => 
+        rota.status === 'active' || rota.status === 'ativa' || rota.status === true || rota.status === 1
+      ).length;
+
+      console.log('Viagens response:', viagensResponse.data);
+      // Process viagens data
+      const viagensData = viagensResponse.data?.data || [];
+      const today = new Date().toISOString().split('T')[0];
+      const viagensHoje = viagensData.filter(viagem => 
+        viagem.data_viagem === today
+      ).length;
+
+      // Format and enhance data for display
+      const formattedRotasData = rotasData.map(rota => ({
+        ...rota,
+        status: rota.status === true || rota.status === 1 || rota.status === 'active' || rota.status === 'ativa' ? 'Ativa' : 'Inativa'
+      }));
+
+      const formattedViagensData = viagensData.map(viagem => {
+        const date = new Date(viagem.data_viagem);
+        const data_formatada = date.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        // Find the corresponding route name
+        const rota = rotasData.find(r => r.id === viagem.rota_id);
+        return {
+          ...viagem,
+          data_formatada,
+          rota: rota ? rota.nome : 'Rota não encontrada',
+          status: viagem.status === true || viagem.status === 1 ? 'Programada' : viagem.status || 'Pendente'
+        };
+      });
+
+      // Update stats
+      setStats({
+        onibusAtivos,
+        totalAlunos,
+        rotasAtivas,
+        viagensHoje
+      });
+
+      // Update tables data with formatted data
+      setRotasData(formattedRotasData.slice(0, 3));
+      setViagensData(formattedViagensData.slice(0, 3));
+      
+      console.log('Formatted rotas data:', formattedRotasData);
+      console.log('Formatted viagens data:', formattedViagensData);
+
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      const errorMessage = 'Erro ao carregar dados do dashboard: ' + (err.response?.data?.message || err.message);
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock data for tables
-  const viagensData = [
-    {
-      id: 8,
-      data_viagem: '2025-03-12',
-      rota: 'Rota Escalvados - Manhã',
-      status: 'Programada'
-    },
-    {
-      id: 9,
-      data_viagem: '2025-03-12',
-      rota: 'Rota Pedreiras - Manhã',
-      status: 'Programada'
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-  const rotasData = [
-    {
-      id: 1,
-      nome: 'Rota Escalvados - Manhã',
-      tipo: 'Escalvados e Escalvadinhos',
-      status: 'Ativa'
-    },
-    {
-      id: 2,
-      nome: 'Rota Pedreiras - Manhã',
-      tipo: 'Pedreiras',
-      status: 'Ativa'
-    },
-    {
-      id: 3,
-      nome: 'Rota Volta Grande - Manhã',
-      tipo: 'Volta Grande',
-      status: 'Ativa'
-    }
-  ];
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-700">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -143,10 +213,10 @@ export default function Dashboard() {
               <tbody className="divide-y divide-gray-200">
                 {viagensData.map((viagem, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="py-3 px-4 whitespace-nowrap">{viagem.data_viagem}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{viagem.data_formatada}</td>
                     <td className="py-3 px-4">{viagem.rota}</td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${viagem.status === 'Programada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                         {viagem.status}
                       </span>
                     </td>
@@ -163,11 +233,11 @@ export default function Dashboard() {
                 <div className="font-medium mb-1">{viagem.rota}</div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Data:</span>
-                  <span>{viagem.data_viagem}</span>
+                  <span>{viagem.data_formatada}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
                   <span className="text-gray-500">Status:</span>
-                  <span className="px-2 py-0.5 text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                  <span className={`px-2 py-0.5 text-xs leading-5 font-semibold rounded-full ${viagem.status === 'Programada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                     {viagem.status}
                   </span>
                 </div>
@@ -202,7 +272,7 @@ export default function Dashboard() {
                     <td className="py-3 px-4">{rota.nome}</td>
                     <td className="py-3 px-4">{rota.tipo}</td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${rota.status === 'Ativa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {rota.status}
                       </span>
                     </td>

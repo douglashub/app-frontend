@@ -39,28 +39,24 @@ export default function Alunos() {
       setLoading(true);
       const response = await AlunoService.getAlunos();
       
-      // Tratamento melhorado dos dados recebidos da API
+      // Process the API response
       let alunosData = [];
       
       if (response?.data) {
-        // Caso 1: Resposta padrão com 'data' dentro de response.data (formato comum no Laravel)
+        // Case 1: Standard response with 'data' inside response.data (common in Laravel)
         if (response.data.data && Array.isArray(response.data.data)) {
           alunosData = response.data.data;
         } 
-        // Caso 2: Resposta é um array diretamente (para fallback)
+        // Case 2: Response is a direct array (fallback)
         else if (Array.isArray(response.data)) {
           alunosData = response.data;
         }
-        // Caso 3: Resposta paginada do Laravel via items()
+        // Case 3: Paginated Laravel response via items()
         else if (response.data.meta && Array.isArray(response.data.data)) {
           alunosData = response.data.data;
         }
-        // Caso 4: Dados vazios mas com estrutura válida
-        else if (response.data.meta && response.data.meta.total === 0) {
-          alunosData = [];
-        }
         
-        // Formato final dos dados para a UI
+        // Format data for UI
         const formattedData = alunosData.map(aluno => ({
           ...aluno,
           status: processStatus(aluno.status)
@@ -69,22 +65,21 @@ export default function Alunos() {
         setAlunos(formattedData);
         setError(null);
       } else {
-        // Caso 5: Sem dados - usar mock data como fallback
-        console.warn('API returned unexpected format, using mock data');
-        const mockData = getMockData();
-        setAlunos(mockData);
+        // Case 4: No valid data from API
+        console.warn('API returned unexpected format');
+        setAlunos([]);
+        setError('Nenhum dado de aluno encontrado no servidor.');
       }
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Erro ao carregar alunos: ' + (err.response?.data?.message || err.message));
-      // Fallback para mock data em caso de erro
-      setAlunos(getMockData());
+      setAlunos([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Função para processar diferentes formatos de status
+  // Function to process different status formats
   const processStatus = (status) => {
     if (typeof status === 'boolean') {
       return status ? 'active' : 'inactive';
@@ -95,49 +90,8 @@ export default function Alunos() {
       return lowercaseStatus === 'true' || lowercaseStatus === 'ativo' || lowercaseStatus === '1' 
         ? 'active' : 'inactive';
     } else {
-      return 'inactive'; // valor padrão
+      return 'inactive'; // default value
     }
-  };
-
-  // Mock data como fallback
-  const getMockData = () => {
-    return [
-      {
-        id: 1,
-        nome: 'Pedro Souza',
-        responsavel: 'Marta Souza',
-        endereco: 'Rua dos Lírios, 45 - Escalvados',
-        status: 'active'
-      },
-      {
-        id: 2,
-        nome: 'Mariana Costa',
-        responsavel: 'Carlos Costa',
-        endereco: 'Avenida das Pedras, 78 - Pedreiras',
-        status: 'active'
-      },
-      {
-        id: 3,
-        nome: 'Lucas Ferreira',
-        responsavel: 'Fernanda Ferreira',
-        endereco: 'Rua das Oliveiras, 123 - Volta Grande',
-        status: 'active'
-      },
-      {
-        id: 4,
-        nome: 'Julia Lima',
-        responsavel: 'Marcos Lima',
-        endereco: 'Travessa dos Ipês, 56 - Escalvados',
-        status: 'active'
-      },
-      {
-        id: 5,
-        nome: 'Gabriel Santos',
-        responsavel: 'Patricia Santos',
-        endereco: 'Alameda dos Cedros, 89 - Pedreiras',
-        status: 'inactive'
-      }
-    ];
   };
 
   // Search and filter function
@@ -168,10 +122,10 @@ export default function Alunos() {
 
   const openModal = (aluno = null) => {
     if (aluno) {
-      // Converter status de string para boolean para o formulário
+      // Convert status string to boolean for the form
       const statusBool = aluno.status === 'active' || aluno.status === true || aluno.status === 1;
       
-      // Setar dados do aluno para edição
+      // Set aluno data for editing
       setFormData({
         nome: aluno.nome || '',
         descricao: aluno.descricao || '',
@@ -184,7 +138,7 @@ export default function Alunos() {
       });
       setCurrentAluno(aluno);
     } else {
-      // Resetar formulário para um novo aluno
+      // Reset form for a new aluno
       setFormData({
         nome: '',
         descricao: '',
@@ -439,7 +393,7 @@ export default function Alunos() {
           <div>
             <div className="text-sm text-gray-500">Alunos Ativos</div>
             <div className="text-xl font-bold">
-              {alunos.filter(aluno => aluno.status === 'active' || aluno.status === true).length}
+              {alunos.filter(aluno => aluno.status === 'active').length}
             </div>
           </div>
         </div>
@@ -453,7 +407,7 @@ export default function Alunos() {
           <div>
             <div className="text-sm text-gray-500">Alunos Inativos</div>
             <div className="text-xl font-bold">
-              {alunos.filter(aluno => aluno.status === 'inactive' || aluno.status === false).length}
+              {alunos.filter(aluno => aluno.status === 'inactive').length}
             </div>
           </div>
         </div>

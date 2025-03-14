@@ -1,16 +1,16 @@
 import axios from 'axios';
 
-// Configuração do Axios
+// Axios configuration
 const api = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  timeout: 15000 // 15 segundos
+  timeout: 15000 // 15 seconds
 });
 
-// Interceptor para logs de requisição (debug)
+// Request interceptor for logging
 api.interceptors.request.use(request => {
   console.log('API Request:', request.method, request.url);
   return request;
@@ -19,33 +19,33 @@ api.interceptors.request.use(request => {
   return Promise.reject(error);
 });
 
-// Interceptor para tratamento de respostas
+// Response interceptor for error handling
 api.interceptors.response.use(
   response => {
-    // Processamento de sucesso
+    // Success processing
     return response;
   },
   error => {
-    // Processamento de erro centralizado
+    // Centralized error handling
     if (error.response) {
-      // Servidor respondeu com status de erro
+      // Server returned an error status
       console.error('API Error:', error.response.status, error.response.data);
       
-      // Processar erros específicos
+      // Handle specific errors
       if (error.response.status === 401) {
-        // Redirecionar para login
-        // window.location.href = '/login';
+        // Redirect to login if unauthorized
+        window.location.href = '/login';
       }
       
       if (error.response.status === 422) {
-        // Transformar erros de validação em formato amigável
+        // Transform validation errors into a friendly format
         console.warn('Validation errors:', error.response.data.errors);
       }
     } else if (error.request) {
-      // Sem resposta do servidor
+      // No response from server
       console.error('No response from server', error.request);
     } else {
-      // Erro na configuração da requisição
+      // Request configuration error
       console.error('Request error:', error.message);
     }
     
@@ -54,7 +54,7 @@ api.interceptors.response.use(
 );
 
 /**
- * Formatação comum para horários em formato H:i (exigido pela API Laravel)
+ * Format time values for API (HH:mm to H:i)
  * @param {string} time - Time in HH:mm format 
  * @returns {string} - Time in H:i format or null if input is empty
  */
@@ -62,13 +62,13 @@ function formatTimeForApi(time) {
   if (!time) return null;
   
   try {
-    // Split the time string into hours and minutes
+    // Split time into hours and minutes
     const [hours, minutes] = time.split(':');
     
     // Convert hours to integer to remove leading zeros
     const hour = parseInt(hours, 10);
     
-    // Return the formatted time string (H:i format exactly as Laravel expects)
+    // Return formatted time (H:i format as Laravel expects)
     return `${hour}:${minutes}`;
   } catch (error) {
     console.error('Error formatting time:', error);
@@ -77,7 +77,7 @@ function formatTimeForApi(time) {
 }
 
 /**
- * Converte horários do formato da API (H:i) para o formato HTML (HH:mm)
+ * Format time values from API (H:i) to HTML time input format (HH:mm)
  * @param {string} time - Time in H:i format
  * @returns {string} - Time in HH:mm format
  */
@@ -85,13 +85,13 @@ function formatTimeForDisplay(time) {
   if (!time) return '';
   
   try {
-    // Handle different time formats that might come from the API
+    // Handle different time formats from API
     const timeParts = time.split(':');
     
-    if (timeParts.length < 2) return time; // Return as is if not a valid time format
+    if (timeParts.length < 2) return time; // Return as is if not valid
     
     const hours = timeParts[0].padStart(2, '0');
-    const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
+    const minutes = timeParts[1].substring(0, 2).padStart(2, '0');
     
     return `${hours}:${minutes}`;
   } catch (error) {
@@ -100,7 +100,7 @@ function formatTimeForDisplay(time) {
   }
 }
 
-// Serviços para API - com tratamentos de erros e mensagens amigáveis
+// API Services with error handling and friendly messages
 export const AlunoService = {
   getAlunos: () => api.get('/alunos').catch(error => {
     throw new Error('Erro ao buscar alunos: ' + getErrorMessage(error));
@@ -226,14 +226,6 @@ export const ViagemService = {
       }
     });
     
-    console.log('Formatted data for API:', formattedData);
-    console.log('Time fields after formatting:', {
-      hora_saida_prevista: formattedData.hora_saida_prevista,
-      hora_chegada_prevista: formattedData.hora_chegada_prevista,
-      hora_saida_real: formattedData.hora_saida_real,
-      hora_chegada_real: formattedData.hora_chegada_real
-    });
-    
     return api.post('/viagens', formattedData).catch(error => {
       throw new Error('Erro ao criar viagem: ' + getErrorMessage(error));
     });
@@ -249,14 +241,6 @@ export const ViagemService = {
       if (formattedData[field]) {
         formattedData[field] = formatTimeForApi(formattedData[field]);
       }
-    });
-    
-    console.log('Formatted data for API update:', formattedData);
-    console.log('Time fields after formatting:', {
-      hora_saida_prevista: formattedData.hora_saida_prevista,
-      hora_chegada_prevista: formattedData.hora_chegada_prevista,
-      hora_saida_real: formattedData.hora_saida_real,
-      hora_chegada_real: formattedData.hora_chegada_real
     });
     
     return api.put(`/viagens/${id}`, formattedData).catch(error => {
@@ -288,10 +272,6 @@ export const MonitorService = {
   
   deleteMonitor: (id) => api.delete(`/monitores/${id}`).catch(error => {
     throw new Error('Erro ao excluir monitor: ' + getErrorMessage(error));
-  }),
-  
-  getMonitorViagens: (id) => api.get(`/monitores/${id}/viagens`).catch(error => {
-    throw new Error('Erro ao buscar viagens do monitor: ' + getErrorMessage(error));
   })
 };
 
@@ -314,138 +294,18 @@ export const MotoristaService = {
   
   deleteMotorista: (id) => api.delete(`/motoristas/${id}`).catch(error => {
     throw new Error('Erro ao excluir motorista: ' + getErrorMessage(error));
-  }),
-  
-  getMotoristaViagens: (id) => api.get(`/motoristas/${id}/viagens`).catch(error => {
-    throw new Error('Erro ao buscar viagens do motorista: ' + getErrorMessage(error));
   })
 };
 
-export const HorarioService = {
-  getHorarios: () => api.get('/horarios').catch(error => {
-    throw new Error('Erro ao buscar horários: ' + getErrorMessage(error));
-  }),
-  
-  getHorarioById: (id) => api.get(`/horarios/${id}`).catch(error => {
-    throw new Error('Erro ao buscar detalhes do horário: ' + getErrorMessage(error));
-  }),
-  
-  createHorario: (data) => {
-    // Format time fields for API
-    const formattedData = { ...data };
-    if (formattedData.hora_inicio) {
-      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
-    }
-    if (formattedData.hora_fim) {
-      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
-    }
-    
-    return api.post('/horarios', formattedData).catch(error => {
-      throw new Error('Erro ao criar horário: ' + getErrorMessage(error));
-    });
-  },
-  
-  updateHorario: (id, data) => {
-    // Format time fields for API
-    const formattedData = { ...data };
-    if (formattedData.hora_inicio) {
-      formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
-    }
-    if (formattedData.hora_fim) {
-      formattedData.hora_fim = formatTimeForApi(formattedData.hora_fim);
-    }
-    
-    return api.put(`/horarios/${id}`, formattedData).catch(error => {
-      throw new Error('Erro ao atualizar horário: ' + getErrorMessage(error));
-    });
-  },
-  
-  deleteHorario: (id) => api.delete(`/horarios/${id}`).catch(error => {
-    throw new Error('Erro ao excluir horário: ' + getErrorMessage(error));
-  }),
-  
-  getHorarioViagens: (id) => api.get(`/horarios/${id}/viagens`).catch(error => {
-    throw new Error('Erro ao buscar viagens do horário: ' + getErrorMessage(error));
-  })
-};
-
-export const ParadaService = {
-  getParadas: () => api.get('/paradas').catch(error => {
-    throw new Error('Erro ao buscar paradas: ' + getErrorMessage(error));
-  }),
-  
-  getParadaById: (id) => api.get(`/paradas/${id}`).catch(error => {
-    throw new Error('Erro ao buscar detalhes da parada: ' + getErrorMessage(error));
-  }),
-  
-  createParada: (data) => api.post('/paradas', data).catch(error => {
-    throw new Error('Erro ao criar parada: ' + getErrorMessage(error));
-  }),
-  
-  updateParada: (id, data) => api.put(`/paradas/${id}`, data).catch(error => {
-    throw new Error('Erro ao atualizar parada: ' + getErrorMessage(error));
-  }),
-  
-  deleteParada: (id) => api.delete(`/paradas/${id}`).catch(error => {
-    throw new Error('Erro ao excluir parada: ' + getErrorMessage(error));
-  })
-};
-
-export const PresencaService = {
-  getPresencas: () => api.get('/presencas').catch(error => {
-    throw new Error('Erro ao buscar presenças: ' + getErrorMessage(error));
-  }),
-  
-  getPresencaById: (id) => api.get(`/presencas/${id}`).catch(error => {
-    throw new Error('Erro ao buscar detalhes da presença: ' + getErrorMessage(error));
-  }),
-  
-  createPresenca: (data) => {
-    // Format time field for API
-    const formattedData = { ...data };
-    if (formattedData.hora_registro) {
-      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
-    }
-    
-    return api.post('/presencas', formattedData).catch(error => {
-      throw new Error('Erro ao criar presença: ' + getErrorMessage(error));
-    });
-  },
-  
-  updatePresenca: (id, data) => {
-    // Format time field for API
-    const formattedData = { ...data };
-    if (formattedData.hora_registro) {
-      formattedData.hora_registro = formatTimeForApi(formattedData.hora_registro);
-    }
-    
-    return api.put(`/presencas/${id}`, formattedData).catch(error => {
-      throw new Error('Erro ao atualizar presença: ' + getErrorMessage(error));
-    });
-  },
-  
-  deletePresenca: (id) => api.delete(`/presencas/${id}`).catch(error => {
-    throw new Error('Erro ao excluir presença: ' + getErrorMessage(error));
-  }),
-  
-  getPresencasByViagem: (viagemId) => api.get(`/presencas/viagem/${viagemId}`).catch(error => {
-    throw new Error('Erro ao buscar presenças da viagem: ' + getErrorMessage(error));
-  }),
-  
-  getPresencasByAluno: (alunoId) => api.get(`/presencas/aluno/${alunoId}`).catch(error => {
-    throw new Error('Erro ao buscar presenças do aluno: ' + getErrorMessage(error));
-  })
-};
-
-// Função auxiliar para extrair mensagens amigáveis de erros
+// Helper function to extract friendly error messages
 function getErrorMessage(error) {
   if (error.response) {
-    // Respostas do servidor com status de erro
+    // Server responses with error status
     if (error.response.data && error.response.data.message) {
       return error.response.data.message;
     }
     
-    // Tratamento específico para erros de validação do Laravel
+    // Specific handling for Laravel validation errors
     if (error.response.data && error.response.data.errors) {
       const errorMessages = Object.entries(error.response.data.errors)
         .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
@@ -456,10 +316,12 @@ function getErrorMessage(error) {
     
     return `Erro ${error.response.status}: ${error.response.statusText}`;
   } else if (error.request) {
-    // Sem resposta do servidor
+    // No response from server
     return 'Sem resposta do servidor. Verifique sua conexão.';
   } else {
-    // Erro na configuração da requisição
+    // Request configuration error
     return error.message || 'Erro desconhecido';
   }
 }
+
+export default api;
