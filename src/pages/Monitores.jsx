@@ -3,6 +3,7 @@ import DataTable from '../components/common/DataTable';
 import { MonitorService } from '../api/services';
 import { useNotification } from '../contexts/NotificationContext';
 
+
 export const Monitores = () => {
   const [monitores, setMonitores] = useState([]);
   const [loading, setLoading] = useState(true);

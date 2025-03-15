@@ -1,80 +1,100 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", className = "border rounded p-2 w-full uppercase" }, ref) => {
+/**
+ * Componente para entrada de placas de veículos com detecção automática de formato
+ * Suporta formato Mercosul (AAA0A00) e tradicional (AAA-0000)
+ * 
+ * @param {Object} props - Propriedades do componente
+ * @param {string} props.value - Valor atual da placa
+ * @param {function} props.onChange - Função chamada quando o valor muda
+ * @param {string} props.name - Nome do campo
+ * @param {string} props.className - Classes CSS adicionais
+ * @param {string} props.placeholder - Texto de placeholder
+ * @param {Object} props.rest - Outras propriedades do input
+ * @param {React.Ref} ref - Referência para o input
+ */
+const PlacaInput = React.forwardRef(({ 
+  value, 
+  onChange, 
+  name = "placa", 
+  className = "border rounded p-2 w-full uppercase",
+  placeholder = "Digite a placa do veículo",
+  ...rest
+}, ref) => {
   const [inputValue, setInputValue] = useState(value || "");
   const inputRef = useRef(null);
   
-  // Determine mask pattern based on input value
+  // Determina o padrão de máscara baseado no valor de entrada
   const getMaskPattern = (val) => {
     const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
     
-    // Check for Mercosul format: 3 letters + 1 number + 1 letter + 2 numbers
+    // Verifica formato Mercosul: 3 letras + 1 número + 1 letra + 2 números
     const mercosul = /([A-Z]{3}[0-9]{1}[A-Z]{1})/;
     
-    // Check for traditional format: 3 letters + 2 numbers
+    // Verifica formato tradicional: 3 letras + 2 números
     const normal = /([A-Z]{3}[0-9]{2})/;
     
     if (normal.test(cleanVal)) {
-      return "SSS-0000"; // Traditional format
+      return "SSS-0000"; // Formato tradicional
     } else if (mercosul.test(cleanVal)) {
-      return "SSS0A00"; // Mercosul format
+      return "SSS0A00"; // Formato Mercosul
     }
     
-    // If not enough characters to determine yet, use a flexible mask
-    return "SSS0A00"; // Default to Mercosul as it's the current standard
+    // Se não houver caracteres suficientes para determinar, usa uma máscara flexível
+    return "SSS0A00"; // Padrão para Mercosul como é o formato atual
   };
   
-  // Apply mask to the value
+  // Aplica a máscara ao valor
   const applyMask = (val, pattern) => {
     let cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
     let result = '';
     let charIndex = 0;
     
-    // Limit to max 7 chars (the actual content of the plate)
+    // Limita a 7 caracteres (o conteúdo real da placa)
     cleanVal = cleanVal.slice(0, 7);
     
-    // Apply the pattern
+    // Aplica o padrão
     for (let i = 0; i < pattern.length && charIndex < cleanVal.length; i++) {
       const patternChar = pattern[i];
       
       if (patternChar === 'S') {
-        // 'S' is for letters (A-Z)
+        // 'S' é para letras (A-Z)
         if (/[A-Z]/.test(cleanVal[charIndex])) {
           result += cleanVal[charIndex];
           charIndex++;
         } else {
-          // Skip non-letter characters for 'S' positions
+          // Pula caracteres não-letra para posições 'S'
           charIndex++;
-          i--; // Try this pattern position again
+          i--; // Tenta esta posição de padrão novamente
         }
       } else if (patternChar === '0') {
-        // '0' is for numbers (0-9)
+        // '0' é para números (0-9)
         if (/[0-9]/.test(cleanVal[charIndex])) {
           result += cleanVal[charIndex];
           charIndex++;
         } else {
-          // Skip non-number characters for '0' positions
+          // Pula caracteres não-número para posições '0'
           charIndex++;
-          i--; // Try this pattern position again
+          i--; // Tenta esta posição de padrão novamente
         }
       } else if (patternChar === 'A') {
-        // 'A' is for letters (A-Z)
+        // 'A' é para letras (A-Z)
         if (/[A-Z]/.test(cleanVal[charIndex])) {
           result += cleanVal[charIndex];
           charIndex++;
         } else {
-          // Skip non-letter characters for 'A' positions
+          // Pula caracteres não-letra para posições 'A'
           charIndex++;
-          i--; // Try this pattern position again
+          i--; // Tenta esta posição de padrão novamente
         }
       } else if (patternChar === '-') {
-        // Add hyphen for traditional format
+        // Adiciona hífen para formato tradicional
         result += '-';
       } else {
-        // Add any other character from the pattern as-is
+        // Adiciona qualquer outro caractere do padrão como está
         result += patternChar;
         
-        // If the pattern char matches the input char, consume it
+        // Se o caractere do padrão corresponder ao caractere de entrada, consuma-o
         if (patternChar === cleanVal[charIndex]) {
           charIndex++;
         }
@@ -84,30 +104,30 @@ const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", classNam
     return result;
   };
   
-  // Format value according to detected pattern
+  // Formata o valor de acordo com o padrão detectado
   const formatValue = (val) => {
-    // Remove any existing mask characters
+    // Remove qualquer caractere de máscara existente
     const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
     
-    // If empty, return empty
+    // Se vazio, retorna vazio
     if (!cleanVal) return '';
     
-    // Determine the appropriate mask pattern
+    // Determina o padrão de máscara apropriado
     const pattern = getMaskPattern(cleanVal);
     
-    // Apply the mask
+    // Aplica a máscara
     return applyMask(cleanVal, pattern);
   };
 
-  // Handle input change
+  // Manipula a alteração do input
   const handleChange = (e) => {
     const rawValue = e.target.value.toUpperCase();
     
-    // Format the value
+    // Formata o valor
     const formatted = formatValue(rawValue);
     setInputValue(formatted);
     
-    // Create synthetic event for onChange
+    // Cria um evento sintético para onChange
     const syntheticEvent = {
       target: {
         name: e.target.name,
@@ -115,18 +135,18 @@ const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", classNam
       }
     };
     
-    onChange(syntheticEvent);
+    onChange && onChange(syntheticEvent);
   };
 
-  // Handle paste event
+  // Manipula o evento de colar (paste)
   const handlePaste = (e) => {
-    // Let the paste happen, then format in the next tick
+    // Deixa a colagem acontecer, depois formata no próximo ciclo
     setTimeout(() => {
       const rawValue = e.target.value.toUpperCase();
       const formatted = formatValue(rawValue);
       setInputValue(formatted);
       
-      // Create synthetic event for onChange
+      // Cria um evento sintético para onChange
       const syntheticEvent = {
         target: {
           name: e.target.name,
@@ -134,11 +154,11 @@ const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", classNam
         }
       };
       
-      onChange(syntheticEvent);
+      onChange && onChange(syntheticEvent);
     }, 0);
   };
 
-  // Initialize the formatted value when component mounts or value prop changes
+  // Inicializa o valor formatado quando o componente é montado ou o valor prop muda
   useEffect(() => {
     if (value) {
       const formatted = formatValue(value);
@@ -148,12 +168,12 @@ const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", classNam
     }
   }, [value]);
 
-  // Handle ref forwarding
+  // Lida com o encaminhamento de ref
   const setRef = (element) => {
-    // Set internal ref
+    // Define a ref interna
     inputRef.current = element;
     
-    // Forward ref
+    // Encaminha a ref
     if (ref) {
       if (typeof ref === 'function') {
         ref(element);
@@ -172,8 +192,9 @@ const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", classNam
       value={inputValue}
       onChange={handleChange}
       onPaste={handlePaste}
-      placeholder="Digite a placa do veículo"
-      maxLength={8} // Longest format is AAA-0000 (8 chars)
+      placeholder={placeholder}
+      maxLength={8} // O formato mais longo é AAA-0000 (8 caracteres)
+      {...rest}
     />
   );
 });

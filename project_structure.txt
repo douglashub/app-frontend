@@ -88,92 +88,341 @@ export const NotificationProvider = ({ children }) => {
  */
 
 export const MASKS = {
-    // Documentos
-    CPF: '999.999.999-99',
-    CNPJ: '99.999.999/9999-99',
-    RG: '99.999.999-9',
-    CNH: '999999999aa',
-    
-    // Contato
-    PHONE: '(99) 99999-9999',
-    PHONE_WITH_DDD: '(99) 99999-9999',
-    LANDLINE: '(99) 9999-9999',
-    
-    // Veículos
-    LICENSE_PLATE: 'aaa-9*999', // Formato atual brasileiro: 3 letras + 1 número + 1 letra + 3 números
-    LICENSE_PLATE_OLD: 'aaa-9999', // Formato antigo brasileiro
-    
-    // Datas e horas
-    DATE: '99/99/9999',
-    TIME: '99:99',
-    DATE_TIME: '99/99/9999 99:99',
-    
-    // Endereços
-    CEP: '99999-999',
-    
-    // Valores
-    MONEY: 'R$ 999.999.999,99',
-    
-    // Utilitários
-    INTEGER: '9999999999',
-    DECIMAL: '9999999999,99',
+  // Documentos
+  CPF: '999.999.999-99',
+  CNPJ: '99.999.999/9999-99',
+  RG: '99.999.999-9',
+  CNH: '999999999aa',
+
+  // Contato
+  PHONE: '(99) 99999-9999',
+  LANDLINE: '(99) 9999-9999',
+
+  // Veículos - formatos atualizados
+  LICENSE_PLATE_MERCOSUL: 'aaa9a99', // Formato Mercosul
+  LICENSE_PLATE_BRAZIL: 'aaa-9999', // Formato antigo brasileiro
+  LICENSE_PLATE: '', // Dinâmico - será definido pelo componente PlacaInput
+
+  // Datas e horas
+  DATE: '99/99/9999',
+  TIME: '99:99',
+  DATE_TIME: '99/99/9999 99:99',
+
+  // Endereços
+  CEP: '99999-999',
+
+  // Valores
+  MONEY: 'R$ 999.999.999,99',
+
+  // Utilitários
+  INTEGER: '9999999999',
+  DECIMAL: '9999999999,99',
+};
+
+/**
+ * Remover máscara de um valor (para envio ao backend)
+ * @param {string} value - Valor com máscara
+ * @returns {string} Valor sem máscara
+ */
+export const unmask = (value) => {
+  if (!value) return '';
+  return value.replace(/\D/g, '');
+};
+
+/**
+ * Remover máscara e formatar placa de veículo para envio ao backend
+ * @param {string} value - Placa com ou sem máscara
+ * @returns {string} Placa formatada para envio ao backend
+ */
+export const unmaskPlaca = (value) => {
+  if (!value) return '';
+  
+  // Remove caracteres especiais e converte para maiúsculo
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  // Se não tiver 7 caracteres, retorna o valor limpo como está
+  if (cleaned.length !== 7) return cleaned;
+
+  // Verifica se é formato Mercosul (3 letras + 1 número + 1 letra + 2 números)
+  const isMercosul = /[A-Z]{3}[0-9][A-Z][0-9]{2}/.test(cleaned);
+  
+  // Verifica se é formato antigo (3 letras + 4 números)
+  const isOldFormat = /[A-Z]{3}[0-9]{4}/.test(cleaned);
+  
+  // Se for um dos formatos válidos, retorna como está
+  if (isMercosul || isOldFormat) {
+    return cleaned;
   }
   
-  /**
-   * Remover máscara de um valor (para envio ao backend)
-   * @param {string} value - Valor com máscara
-   * @returns {string} Valor sem máscara
-   */
-  export const unmask = (value) => {
-    if (!value) return '';
-    return value.replace(/[^0-9a-zA-Z]/g, '');
+  // Caso contrário, tenta verificar se é próximo de algum formato conhecido
+  // Verifica se o 4º caractere é numérico (formato Mercosul potencial)
+  if (/\d/.test(cleaned[3])) {
+    // Potencialmente formato Mercosul
+    return cleaned;
+  }
+  
+  // Em outros casos, retorna o valor limpo
+  return cleaned;
+};
+
+/**
+ * Detecta o tipo de placa baseado no formato
+ * @param {string} value - Placa de veículo
+ * @returns {string} - 'mercosul', 'tradicional' ou 'desconhecido'
+ */
+export const detectPlacaFormat = (value) => {
+  if (!value) return 'desconhecido';
+  
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  if (cleaned.length >= 4 && /\d/.test(cleaned[3])) {
+    return 'mercosul';
+  } else if (cleaned.length >= 3 && /[A-Z]{3}/.test(cleaned.substring(0, 3))) {
+    return 'tradicional';
+  }
+  
+  return 'desconhecido';
+};
+
+/**
+ * Formatar placa de veículo para exibição
+ * @param {string} value - Placa sem formatação
+ * @returns {string} Placa formatada para exibição
+ */
+export const formatPlaca = (value) => {
+  if (!value) return '';
+  
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  if (cleaned.length !== 7) return cleaned;
+  
+  const format = detectPlacaFormat(cleaned);
+  
+  if (format === 'mercosul') {
+    // Formato Mercosul não tem hífen
+    return cleaned;
+  } else if (format === 'tradicional') {
+    // Formato tradicional tem hífen após as 3 letras
+    return `${cleaned.substring(0, 3)}-${cleaned.substring(3)}`;
+  }
+  
+  return cleaned;
+};
+
+/**
+ * Formatar documento CPF ou CNPJ baseado no tamanho
+ * @param {string} value - Valor numérico do documento
+ * @returns {string} Documento formatado ou vazio se inválido
+ */
+export const formatDocument = (value) => {
+  if (!value) return '';
+  const numbers = unmask(value);
+  return numbers.length === 11
+    ? numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    : numbers.length === 14
+    ? numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    : value;
+};
+
+/**
+ * Formatar um número de telefone
+ * @param {string} value - Valor do telefone
+ * @returns {string} Telefone formatado
+ */
+export const formatPhone = (value) => {
+  if (!value) return '';
+  const numbers = unmask(value);
+  return numbers.length === 11
+    ? numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+    : numbers.length === 10
+    ? numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+    : value;
+};
+
+export default MASKS;
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/PlacaInput.jsx ===
+
+import React, { useState, useEffect, useRef } from "react";
+
+const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", className = "border rounded p-2 w-full uppercase" }, ref) => {
+  const [inputValue, setInputValue] = useState(value || "");
+  const inputRef = useRef(null);
+  
+  // Determine mask pattern based on input value
+  const getMaskPattern = (val) => {
+    const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
+    
+    // Check for Mercosul format: 3 letters + 1 number + 1 letter + 2 numbers
+    const mercosul = /([A-Z]{3}[0-9]{1}[A-Z]{1})/;
+    
+    // Check for traditional format: 3 letters + 2 numbers
+    const normal = /([A-Z]{3}[0-9]{2})/;
+    
+    if (normal.test(cleanVal)) {
+      return "SSS-0000"; // Traditional format
+    } else if (mercosul.test(cleanVal)) {
+      return "SSS0A00"; // Mercosul format
+    }
+    
+    // If not enough characters to determine yet, use a flexible mask
+    return "SSS0A00"; // Default to Mercosul as it's the current standard
   };
   
-  /**
-   * Formatar um valor CPF/CNPJ baseado no tamanho
-   * @param {string} value - Valor numérico do documento
-   * @returns {string} Documento formatado ou vazio se inválido
-   */
-  export const formatDocument = (value) => {
-    if (!value) return '';
+  // Apply mask to the value
+  const applyMask = (val, pattern) => {
+    let cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
+    let result = '';
+    let charIndex = 0;
     
-    const numbers = unmask(value);
+    // Limit to max 7 chars (the actual content of the plate)
+    cleanVal = cleanVal.slice(0, 7);
     
-    // CPF
-    if (numbers.length === 11) {
-      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    // Apply the pattern
+    for (let i = 0; i < pattern.length && charIndex < cleanVal.length; i++) {
+      const patternChar = pattern[i];
+      
+      if (patternChar === 'S') {
+        // 'S' is for letters (A-Z)
+        if (/[A-Z]/.test(cleanVal[charIndex])) {
+          result += cleanVal[charIndex];
+          charIndex++;
+        } else {
+          // Skip non-letter characters for 'S' positions
+          charIndex++;
+          i--; // Try this pattern position again
+        }
+      } else if (patternChar === '0') {
+        // '0' is for numbers (0-9)
+        if (/[0-9]/.test(cleanVal[charIndex])) {
+          result += cleanVal[charIndex];
+          charIndex++;
+        } else {
+          // Skip non-number characters for '0' positions
+          charIndex++;
+          i--; // Try this pattern position again
+        }
+      } else if (patternChar === 'A') {
+        // 'A' is for letters (A-Z)
+        if (/[A-Z]/.test(cleanVal[charIndex])) {
+          result += cleanVal[charIndex];
+          charIndex++;
+        } else {
+          // Skip non-letter characters for 'A' positions
+          charIndex++;
+          i--; // Try this pattern position again
+        }
+      } else if (patternChar === '-') {
+        // Add hyphen for traditional format
+        result += '-';
+      } else {
+        // Add any other character from the pattern as-is
+        result += patternChar;
+        
+        // If the pattern char matches the input char, consume it
+        if (patternChar === cleanVal[charIndex]) {
+          charIndex++;
+        }
+      }
     }
     
-    // CNPJ
-    if (numbers.length === 14) {
-      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    }
-    
-    return value;
+    return result;
   };
   
-  /**
-   * Formatar um número de telefone
-   * @param {string} value - Valor do telefone
-   * @returns {string} Telefone formatado
-   */
-  export const formatPhone = (value) => {
-    if (!value) return '';
+  // Format value according to detected pattern
+  const formatValue = (val) => {
+    // Remove any existing mask characters
+    const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
     
-    const numbers = unmask(value);
+    // If empty, return empty
+    if (!cleanVal) return '';
     
-    if (numbers.length === 11) {
-      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    }
+    // Determine the appropriate mask pattern
+    const pattern = getMaskPattern(cleanVal);
     
-    if (numbers.length === 10) {
-      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    }
-    
-    return value;
+    // Apply the mask
+    return applyMask(cleanVal, pattern);
   };
-  
-  export default MASKS;
+
+  // Handle input change
+  const handleChange = (e) => {
+    const rawValue = e.target.value.toUpperCase();
+    
+    // Format the value
+    const formatted = formatValue(rawValue);
+    setInputValue(formatted);
+    
+    // Create synthetic event for onChange
+    const syntheticEvent = {
+      target: {
+        name: e.target.name,
+        value: formatted
+      }
+    };
+    
+    onChange(syntheticEvent);
+  };
+
+  // Handle paste event
+  const handlePaste = (e) => {
+    // Let the paste happen, then format in the next tick
+    setTimeout(() => {
+      const rawValue = e.target.value.toUpperCase();
+      const formatted = formatValue(rawValue);
+      setInputValue(formatted);
+      
+      // Create synthetic event for onChange
+      const syntheticEvent = {
+        target: {
+          name: e.target.name,
+          value: formatted
+        }
+      };
+      
+      onChange(syntheticEvent);
+    }, 0);
+  };
+
+  // Initialize the formatted value when component mounts or value prop changes
+  useEffect(() => {
+    if (value) {
+      const formatted = formatValue(value);
+      setInputValue(formatted);
+    } else {
+      setInputValue("");
+    }
+  }, [value]);
+
+  // Handle ref forwarding
+  const setRef = (element) => {
+    // Set internal ref
+    inputRef.current = element;
+    
+    // Forward ref
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(element);
+      } else {
+        ref.current = element;
+      }
+    }
+  };
+
+  return (
+    <input
+      ref={setRef}
+      type="text"
+      name={name}
+      className={className}
+      value={inputValue}
+      onChange={handleChange}
+      onPaste={handlePaste}
+      placeholder="Digite a placa do veículo"
+      maxLength={8} // Longest format is AAA-0000 (8 chars)
+    />
+  );
+});
+
+export default PlacaInput;
 === /Users/micaelsantana/Documents/app-frontend/src/utils/statusProcessor.js ===
 
 /**
@@ -4797,6 +5046,8 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { processStatus } from '../utils/statusProcessor'
+import { unmaskPlaca } from '../utils/inputMasks';
+import PlacaInput from '../utils/PlacaInput';
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
@@ -4915,6 +5166,8 @@ const Onibus = () => {
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
+      ...formData,
+      placa: unmaskPlaca(formData.placa),
         ...formData,
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
@@ -5050,9 +5303,7 @@ const Onibus = () => {
         <div className="grid grid-cols-1 gap-4 mb-4">
           <div>
             <label htmlFor="placa" className="block text-sm font-medium text-gray-700">Placa</label>
-            <input
-              type="text"
-              name="placa"
+            <PlacaInput
               id="placa"
               required
               value={formData.placa}

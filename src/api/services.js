@@ -136,6 +136,13 @@ export const OnibusService = {
   }),
 
   deleteOnibus: (id) => api.delete(`/onibus/${id}`).catch(error => {
+    console.error('Delete Error Details:', error.response?.data);
+    
+    // Handle foreign key constraint error
+    if (error.response?.data?.message?.includes('Foreign key violation')) {
+      throw new Error('Não é possível excluir o ônibus pois existem viagens relacionadas. Exclua as viagens primeiro.');
+    }
+    
     throw new Error('Erro ao excluir ônibus: ' + getErrorMessage(error));
   }),
 

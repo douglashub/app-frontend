@@ -5,8 +5,9 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
-import MaskedInput from '../utils/MaskedInput';
-import { MASKS, unmask } from '../utils/inputMasks';
+import { MASKS } from '../utils/masks/constants';
+import MaskedInput from '../utils/masks/components/MaskedInput';
+import PlacaInput from '../utils/masks/components/PlacaInput';
 
 const Viagens = () => {
   const { showError, showSuccess } = useNotification();

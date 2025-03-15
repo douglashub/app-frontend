@@ -6,8 +6,8 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { processStatus } from '../utils/statusProcessor'
-import { unmaskPlaca } from '../utils/inputMasks';
-import PlacaInput from '../utils/PlacaInput';
+import { unmask } from '../utils/masks/processors';
+import PlacaInput from '../utils/masks/components/PlacaInput';
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
@@ -127,7 +127,7 @@ const Onibus = () => {
       // Prepare data for API - converting to expected format
       const apiData = {
       ...formData,
-      placa: unmaskPlaca(formData.placa),
+      placa: unmask(formData.placa),
         ...formData,
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
@@ -146,7 +146,7 @@ const Onibus = () => {
       fetchOnibus();
     } catch (err) {
       console.error('Error saving onibus:', err);
-      const errorMsg = err.response?.data?.message || err.message;
+      const errorMsg = err.message; // Get processed message from service layer
       setError('Erro ao salvar ônibus: ' + errorMsg);
       showError('Erro ao salvar ônibus: ' + errorMsg);
     } finally {
@@ -189,7 +189,7 @@ const Onibus = () => {
       setCurrentOnibus(null);
       fetchOnibus();
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message;
+      const errorMsg = err.message; // Get processed message from service layer
       setError('Erro ao excluir ônibus: ' + errorMsg);
       showError('Erro ao excluir ônibus: ' + errorMsg);
     }

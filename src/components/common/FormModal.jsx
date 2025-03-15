@@ -1,6 +1,6 @@
 import React from 'react';
-import MaskedInput from '../../utils/MaskedInput';
-import { MASKS } from '../../utils/inputMasks';
+import MaskedInput from '../../utils/masks/components/MaskedInput';
+import { MASKS } from '../../utils/masks/constants';
 
 export default function FormModal({
   isOpen,
@@ -40,7 +40,7 @@ export default function FormModal({
                       if (child.type === 'input' && maskedFields[child.props.name]) {
                         return React.cloneElement(child, {
                           component: MaskedInput,
-                          mask: MASKS[maskedFields[child.props.name]]
+                          mask: MASKS[maskedFields[child.props.name] === 'PLACA' ? 'PLACA_MERCOSUL' : maskedFields[child.props.name]]
                         });
                       }
                       return child;

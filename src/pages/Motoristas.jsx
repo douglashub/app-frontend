@@ -6,8 +6,10 @@ import DeleteConfirmationModal from '../components/common/DeleteConfirmationModa
 import { MotoristaService } from '../api/services';
 import { processStatus } from '../utils/statusProcessor'
 import { useNotification } from '../contexts/NotificationContext';
-import MaskedInput from '../utils/MaskedInput';
-import { MASKS, unmask, formatDocument } from '../utils/inputMasks';
+import MaskedInput from '../utils/masks/components/MaskedInput';
+import { MASKS } from '../utils/masks/constants';
+import { unmask } from '../utils/masks/processors';
+import { formatDocument } from '../utils/masks/formatters';
 
 export default function Motoristas() {
   const [motoristas, setMotoristas] = useState([]);
