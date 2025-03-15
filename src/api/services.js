@@ -163,14 +163,26 @@ export const RotaService = {
   createRota: (data) => {
     // Format time fields
     const formattedData = { ...data };
+    
     if (formattedData.horario_inicio) {
       formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
     }
+    
     if (formattedData.horario_fim) {
       formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
     }
+    
+    // Convert status to 0/1 for the backend if needed
+    if (typeof formattedData.status === 'boolean') {
+      formattedData.status = formattedData.status ? 1 : 0;
+    } else if (formattedData.status === 'on') {
+      formattedData.status = 1;
+    }
+
+    console.log('Dados finais enviados para API:', formattedData);
 
     return api.post('/rotas', formattedData).catch(error => {
+      console.error('Erro detalhado API:', error.response?.data);
       throw new Error('Erro ao criar rota: ' + getErrorMessage(error));
     });
   },
@@ -178,14 +190,26 @@ export const RotaService = {
   updateRota: (id, data) => {
     // Format time fields
     const formattedData = { ...data };
+    
     if (formattedData.horario_inicio) {
       formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
     }
+    
     if (formattedData.horario_fim) {
       formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
     }
+    
+    // Convert status to 0/1 for the backend if needed
+    if (typeof formattedData.status === 'boolean') {
+      formattedData.status = formattedData.status ? 1 : 0;
+    } else if (formattedData.status === 'on') {
+      formattedData.status = 1;
+    }
+
+    console.log('Dados finais enviados para API (update):', formattedData);
 
     return api.put(`/rotas/${id}`, formattedData).catch(error => {
+      console.error('Erro detalhado API:', error.response?.data);
       throw new Error('Erro ao atualizar rota: ' + getErrorMessage(error));
     });
   },

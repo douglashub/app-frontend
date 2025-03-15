@@ -81,348 +81,6 @@ export const NotificationProvider = ({ children }) => {
     </NotificationContext.Provider>
   );
 };
-=== /Users/micaelsantana/Documents/app-frontend/src/utils/inputMasks.js ===
-
-/**
- * Biblioteca de máscaras para inputs do sistema
- */
-
-export const MASKS = {
-  // Documentos
-  CPF: '999.999.999-99',
-  CNPJ: '99.999.999/9999-99',
-  RG: '99.999.999-9',
-  CNH: '999999999aa',
-
-  // Contato
-  PHONE: '(99) 99999-9999',
-  LANDLINE: '(99) 9999-9999',
-
-  // Veículos - formatos atualizados
-  LICENSE_PLATE_MERCOSUL: 'aaa9a99', // Formato Mercosul
-  LICENSE_PLATE_BRAZIL: 'aaa-9999', // Formato antigo brasileiro
-  LICENSE_PLATE: '', // Dinâmico - será definido pelo componente PlacaInput
-
-  // Datas e horas
-  DATE: '99/99/9999',
-  TIME: '99:99',
-  DATE_TIME: '99/99/9999 99:99',
-
-  // Endereços
-  CEP: '99999-999',
-
-  // Valores
-  MONEY: 'R$ 999.999.999,99',
-
-  // Utilitários
-  INTEGER: '9999999999',
-  DECIMAL: '9999999999,99',
-};
-
-/**
- * Remover máscara de um valor (para envio ao backend)
- * @param {string} value - Valor com máscara
- * @returns {string} Valor sem máscara
- */
-export const unmask = (value) => {
-  if (!value) return '';
-  return value.replace(/\D/g, '');
-};
-
-/**
- * Remover máscara e formatar placa de veículo para envio ao backend
- * @param {string} value - Placa com ou sem máscara
- * @returns {string} Placa formatada para envio ao backend
- */
-export const unmaskPlaca = (value) => {
-  if (!value) return '';
-  
-  // Remove caracteres especiais e converte para maiúsculo
-  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  
-  // Se não tiver 7 caracteres, retorna o valor limpo como está
-  if (cleaned.length !== 7) return cleaned;
-
-  // Verifica se é formato Mercosul (3 letras + 1 número + 1 letra + 2 números)
-  const isMercosul = /[A-Z]{3}[0-9][A-Z][0-9]{2}/.test(cleaned);
-  
-  // Verifica se é formato antigo (3 letras + 4 números)
-  const isOldFormat = /[A-Z]{3}[0-9]{4}/.test(cleaned);
-  
-  // Se for um dos formatos válidos, retorna como está
-  if (isMercosul || isOldFormat) {
-    return cleaned;
-  }
-  
-  // Caso contrário, tenta verificar se é próximo de algum formato conhecido
-  // Verifica se o 4º caractere é numérico (formato Mercosul potencial)
-  if (/\d/.test(cleaned[3])) {
-    // Potencialmente formato Mercosul
-    return cleaned;
-  }
-  
-  // Em outros casos, retorna o valor limpo
-  return cleaned;
-};
-
-/**
- * Detecta o tipo de placa baseado no formato
- * @param {string} value - Placa de veículo
- * @returns {string} - 'mercosul', 'tradicional' ou 'desconhecido'
- */
-export const detectPlacaFormat = (value) => {
-  if (!value) return 'desconhecido';
-  
-  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  
-  if (cleaned.length >= 4 && /\d/.test(cleaned[3])) {
-    return 'mercosul';
-  } else if (cleaned.length >= 3 && /[A-Z]{3}/.test(cleaned.substring(0, 3))) {
-    return 'tradicional';
-  }
-  
-  return 'desconhecido';
-};
-
-/**
- * Formatar placa de veículo para exibição
- * @param {string} value - Placa sem formatação
- * @returns {string} Placa formatada para exibição
- */
-export const formatPlaca = (value) => {
-  if (!value) return '';
-  
-  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  
-  if (cleaned.length !== 7) return cleaned;
-  
-  const format = detectPlacaFormat(cleaned);
-  
-  if (format === 'mercosul') {
-    // Formato Mercosul não tem hífen
-    return cleaned;
-  } else if (format === 'tradicional') {
-    // Formato tradicional tem hífen após as 3 letras
-    return `${cleaned.substring(0, 3)}-${cleaned.substring(3)}`;
-  }
-  
-  return cleaned;
-};
-
-/**
- * Formatar documento CPF ou CNPJ baseado no tamanho
- * @param {string} value - Valor numérico do documento
- * @returns {string} Documento formatado ou vazio se inválido
- */
-export const formatDocument = (value) => {
-  if (!value) return '';
-  const numbers = unmask(value);
-  return numbers.length === 11
-    ? numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-    : numbers.length === 14
-    ? numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
-    : value;
-};
-
-/**
- * Formatar um número de telefone
- * @param {string} value - Valor do telefone
- * @returns {string} Telefone formatado
- */
-export const formatPhone = (value) => {
-  if (!value) return '';
-  const numbers = unmask(value);
-  return numbers.length === 11
-    ? numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-    : numbers.length === 10
-    ? numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-    : value;
-};
-
-export default MASKS;
-=== /Users/micaelsantana/Documents/app-frontend/src/utils/PlacaInput.jsx ===
-
-import React, { useState, useEffect, useRef } from "react";
-
-const PlacaInput = React.forwardRef(({ value, onChange, name = "placa", className = "border rounded p-2 w-full uppercase" }, ref) => {
-  const [inputValue, setInputValue] = useState(value || "");
-  const inputRef = useRef(null);
-  
-  // Determine mask pattern based on input value
-  const getMaskPattern = (val) => {
-    const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
-    
-    // Check for Mercosul format: 3 letters + 1 number + 1 letter + 2 numbers
-    const mercosul = /([A-Z]{3}[0-9]{1}[A-Z]{1})/;
-    
-    // Check for traditional format: 3 letters + 2 numbers
-    const normal = /([A-Z]{3}[0-9]{2})/;
-    
-    if (normal.test(cleanVal)) {
-      return "SSS-0000"; // Traditional format
-    } else if (mercosul.test(cleanVal)) {
-      return "SSS0A00"; // Mercosul format
-    }
-    
-    // If not enough characters to determine yet, use a flexible mask
-    return "SSS0A00"; // Default to Mercosul as it's the current standard
-  };
-  
-  // Apply mask to the value
-  const applyMask = (val, pattern) => {
-    let cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
-    let result = '';
-    let charIndex = 0;
-    
-    // Limit to max 7 chars (the actual content of the plate)
-    cleanVal = cleanVal.slice(0, 7);
-    
-    // Apply the pattern
-    for (let i = 0; i < pattern.length && charIndex < cleanVal.length; i++) {
-      const patternChar = pattern[i];
-      
-      if (patternChar === 'S') {
-        // 'S' is for letters (A-Z)
-        if (/[A-Z]/.test(cleanVal[charIndex])) {
-          result += cleanVal[charIndex];
-          charIndex++;
-        } else {
-          // Skip non-letter characters for 'S' positions
-          charIndex++;
-          i--; // Try this pattern position again
-        }
-      } else if (patternChar === '0') {
-        // '0' is for numbers (0-9)
-        if (/[0-9]/.test(cleanVal[charIndex])) {
-          result += cleanVal[charIndex];
-          charIndex++;
-        } else {
-          // Skip non-number characters for '0' positions
-          charIndex++;
-          i--; // Try this pattern position again
-        }
-      } else if (patternChar === 'A') {
-        // 'A' is for letters (A-Z)
-        if (/[A-Z]/.test(cleanVal[charIndex])) {
-          result += cleanVal[charIndex];
-          charIndex++;
-        } else {
-          // Skip non-letter characters for 'A' positions
-          charIndex++;
-          i--; // Try this pattern position again
-        }
-      } else if (patternChar === '-') {
-        // Add hyphen for traditional format
-        result += '-';
-      } else {
-        // Add any other character from the pattern as-is
-        result += patternChar;
-        
-        // If the pattern char matches the input char, consume it
-        if (patternChar === cleanVal[charIndex]) {
-          charIndex++;
-        }
-      }
-    }
-    
-    return result;
-  };
-  
-  // Format value according to detected pattern
-  const formatValue = (val) => {
-    // Remove any existing mask characters
-    const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
-    
-    // If empty, return empty
-    if (!cleanVal) return '';
-    
-    // Determine the appropriate mask pattern
-    const pattern = getMaskPattern(cleanVal);
-    
-    // Apply the mask
-    return applyMask(cleanVal, pattern);
-  };
-
-  // Handle input change
-  const handleChange = (e) => {
-    const rawValue = e.target.value.toUpperCase();
-    
-    // Format the value
-    const formatted = formatValue(rawValue);
-    setInputValue(formatted);
-    
-    // Create synthetic event for onChange
-    const syntheticEvent = {
-      target: {
-        name: e.target.name,
-        value: formatted
-      }
-    };
-    
-    onChange(syntheticEvent);
-  };
-
-  // Handle paste event
-  const handlePaste = (e) => {
-    // Let the paste happen, then format in the next tick
-    setTimeout(() => {
-      const rawValue = e.target.value.toUpperCase();
-      const formatted = formatValue(rawValue);
-      setInputValue(formatted);
-      
-      // Create synthetic event for onChange
-      const syntheticEvent = {
-        target: {
-          name: e.target.name,
-          value: formatted
-        }
-      };
-      
-      onChange(syntheticEvent);
-    }, 0);
-  };
-
-  // Initialize the formatted value when component mounts or value prop changes
-  useEffect(() => {
-    if (value) {
-      const formatted = formatValue(value);
-      setInputValue(formatted);
-    } else {
-      setInputValue("");
-    }
-  }, [value]);
-
-  // Handle ref forwarding
-  const setRef = (element) => {
-    // Set internal ref
-    inputRef.current = element;
-    
-    // Forward ref
-    if (ref) {
-      if (typeof ref === 'function') {
-        ref(element);
-      } else {
-        ref.current = element;
-      }
-    }
-  };
-
-  return (
-    <input
-      ref={setRef}
-      type="text"
-      name={name}
-      className={className}
-      value={inputValue}
-      onChange={handleChange}
-      onPaste={handlePaste}
-      placeholder="Digite a placa do veículo"
-      maxLength={8} // Longest format is AAA-0000 (8 chars)
-    />
-  );
-});
-
-export default PlacaInput;
 === /Users/micaelsantana/Documents/app-frontend/src/utils/statusProcessor.js ===
 
 /**
@@ -503,6 +161,18 @@ export const processStatus = (status, entityType = 'default') => {
     // Fallback para undefined ou outros tipos
     return 'inactive';
   };
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/index.js ===
+
+/**
+ * Arquivo central de exportação de utilitários
+ * Reúne todas as funções de utilidade em um único ponto de importação
+ */
+
+export * from './masks';
+export { MASKS } from './masks';
+export { processStatus } from './statusProcessor';
+export * from './errorHandler';
+export * from './rotas-utils';
 === /Users/micaelsantana/Documents/app-frontend/src/utils/errorHandler.js ===
 
 /**
@@ -601,15 +271,684 @@ export const formatErrorForLogging = (error) => {
     timestamp: new Date().toISOString()
   };
 };
-=== /Users/micaelsantana/Documents/app-frontend/src/utils/MaskedInput.jsx ===
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/rotas-utils.js ===
 
-import React from 'react';
-import { PatternFormat } from 'react-number-format';
+/**
+ * Utilitários para formatação de números no formato brasileiro e para trabalhar
+ * com quilometragem em rotas.
+ */
+
+/**
+ * Converte um número formatado no padrão brasileiro para um valor numérico
+ * Aceita valores com vírgula como separador decimal
+ * 
+ * @param {string|number} value - Valor a ser convertido (ex: "1.234,56" ou "1234,56")
+ * @returns {number|null} - Valor numérico ou null se inválido
+ */
+export const parseNumeroDecimal = (value) => {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    try {
+        // Se já for um número, retorna ele mesmo
+        if (typeof value === 'number') {
+            return value;
+        }
+
+        // Converte para string se não for
+        const valorStr = String(value);
+
+        // Remove pontos de milhar e substitui vírgula por ponto
+        const valorLimpo = valorStr
+            .replace(/\./g, '') // Remove pontos de milhar
+            .replace(',', '.'); // Substitui vírgula por ponto
+
+        const numero = parseFloat(valorLimpo);
+        return isNaN(numero) ? null : numero;
+    } catch (error) {
+        console.error('Erro ao converter valor para número:', error);
+        return null;
+    }
+};
+
+/**
+ * Formata um número para o padrão brasileiro com vírgula como separador decimal
+ * 
+ * @param {number|string} value - Valor a ser formatado
+ * @param {number} [decimais=2] - Número de casas decimais
+ * @returns {string} - Valor formatado (ex: "1.234,56")
+ */
+export const formatarNumeroDecimal = (value, decimais = 2) => {
+    if (value === undefined || value === null || value === '') {
+        return '';
+    }
+
+    try {
+        const numero = typeof value === 'string' ? parseNumeroDecimal(value) : value;
+
+        if (numero === null || isNaN(numero)) {
+            return '';
+        }
+
+        return numero.toLocaleString('pt-BR', {
+            minimumFractionDigits: decimais,
+            maximumFractionDigits: decimais
+        });
+    } catch (error) {
+        console.error('Erro ao formatar número:', error);
+        return String(value);
+    }
+};
+
+/**
+ * Formata uma distância em quilômetros para exibição
+ * Adiciona sufixo "km" e formata o número no padrão brasileiro
+ * 
+ * @param {number|string} distancia - Valor em quilômetros
+ * @param {number} [decimais=1] - Número de casas decimais
+ * @returns {string} - Distância formatada (ex: "1.234,5 km")
+ */
+export const formatarDistanciaKm = (distancia, decimais = 1) => {
+    if (distancia === undefined || distancia === null || distancia === '') {
+        return '-';
+    }
+
+    const valor = formatarNumeroDecimal(distancia, decimais);
+    return valor ? `${valor} km` : '-';
+};
+
+/**
+ * Valida se um valor de quilometragem é válido
+ * 
+ * @param {string|number} value - Valor a ser validado
+ * @returns {boolean} - true se for um valor válido
+ */
+export const isQuilometragemValida = (value) => {
+    if (value === undefined || value === null || value === '') {
+        return false;
+    }
+
+    const numero = parseNumeroDecimal(value);
+    return numero !== null && numero >= 0 && numero <= 100000; // Limite de 100.000 km
+};
+
+/**
+ * Formata tempo em minutos para horas e minutos
+ * 
+ * @param {number} minutos - Tempo em minutos
+ * @returns {string} - Tempo formatado (ex: "2h 30min")
+ */
+export const formatarTempoMinutos = (minutos) => {
+    if (minutos === undefined || minutos === null || minutos === '' || isNaN(minutos)) {
+        return '-';
+    }
+
+    const horas = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+
+    if (horas > 0 && mins > 0) {
+        return `${horas}h ${mins}min`;
+    } else if (horas > 0) {
+        return `${horas}h`;
+    } else {
+        return `${mins}min`;
+    }
+};
+
+export default {
+    parseNumeroDecimal,
+    formatarNumeroDecimal,
+    formatarDistanciaKm,
+    isQuilometragemValida,
+    formatarTempoMinutos
+};
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/constants.js ===
+
+/**
+ * Constantes de máscaras para inputs do sistema
+ */
+
+// Definição das máscaras de entrada
+export const MASKS = {
+    // Documentos
+    CPF: '999.999.999-99',
+    CNPJ: '99.999.999/9999-99',
+    RG: '99.999.999-9',
+    CNH: '999999999aa',
+  
+    // Contato
+    PHONE: '(99) 99999-9999',
+    LANDLINE: '(99) 9999-9999',
+  
+    // Veículos - formatos atualizados
+    LICENSE_PLATE_MERCOSUL: 'aaa9a99', // Formato Mercosul
+    LICENSE_PLATE_BRAZIL: 'aaa-9999', // Formato antigo brasileiro
+    LICENSE_PLATE: '', // Dinâmico - será definido pelo componente PlacaInput
+  
+    // Datas e horas
+    DATE: '99/99/9999',
+    TIME: '99:99',
+    DATE_TIME: '99/99/9999 99:99',
+  
+    // Endereços
+    CEP: '99999-999',
+  
+    // Valores
+    MONEY: 'R$ 999.999.999,99',
+  
+    // Utilitários
+    INTEGER: '9999999999',
+    DECIMAL: '9999999999,99',
+  };
+  
+  // Caracteres para as máscaras
+  export const MASK_CHARS = {
+    '9': /[0-9]/,       // Apenas números
+    'a': /[a-zA-Z]/,    // Apenas letras
+    '*': /[0-9a-zA-Z]/, // Letras e números
+    'S': /[a-zA-Z]/,    // Apenas letras (alternativo)
+    '0': /[0-9]/,       // Apenas números (alternativo)
+  };
+  
+  // Placeholders para os inputs
+  export const PLACEHOLDERS = {
+    CPF: '000.000.000-00',
+    CNPJ: '00.000.000/0000-00',
+    PHONE: '(00) 00000-0000',
+    LICENSE_PLATE: 'AAA0A00',
+    DATE: 'DD/MM/AAAA',
+    CEP: '00000-000',
+  };
+  
+  export default MASKS;
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/index.js ===
+
+/**
+ * Exporta todos os componentes e utilitários de máscaras
+ * Esse arquivo funciona como ponto de entrada para as máscaras
+ * e mantém compatibilidade com o código existente
+ */
+
+// Importar itens de outros arquivos
+import MASKS, { MASK_CHARS, PLACEHOLDERS } from './constants';
+import * as processors from './processors';
+import * as formatters from './formatters';
+import * as detectors from './detectors';
+import MaskedInput from './components/MaskedInput';
+import PlacaInput from './components/PlacaInput';
+import DocumentInput from './components/DocumentInput';
+import PhoneInput from './components/PhoneInput';
+
+// Re-exportar constantes
+export { MASKS, MASK_CHARS, PLACEHOLDERS };
+
+// Re-exportar processadores
+export const {
+  unmask,
+  unmaskAlphanumeric,
+  unmaskPlaca,
+  processInputValue,
+  processFormData
+} = processors;
+
+// Re-exportar formatadores
+export const {
+  formatDocument,
+  formatPhone,
+  formatPlaca,
+  formatDate,
+  formatCurrency,
+  formatTimeForDisplay,
+  formatTimeForApi
+} = formatters;
+
+// Re-exportar detectores
+export const {
+  detectPlacaFormat,
+  detectDocumentType,
+  detectPhoneType,
+  isNumeric,
+  isAlphabetic,
+  isAlphanumeric,
+  isValidPlaca
+} = detectors;
+
+// Re-exportar componentes
+export { MaskedInput, PlacaInput, DocumentInput, PhoneInput };
+
+// Exportar o objeto principal (compatível com o import default do arquivo antigo)
+const MaskUtils = {
+  // Constantes
+  ...MASKS,
+  MASKS,
+  MASK_CHARS,
+  PLACEHOLDERS,
+
+  // Processadores
+  ...processors,
+
+  // Formatadores
+  ...formatters,
+
+  // Detectores
+  ...detectors,
+
+  // Componentes
+  Components: {
+    MaskedInput,
+    PlacaInput,
+    DocumentInput,
+    PhoneInput
+  }
+};
+
+// Exportação padrão para manter compatibilidade com código existente
+export default MASKS;
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/formatters.js ===
+
+/**
+ * Funções de formatação para exibição de dados
+ */
+
+import { unmask } from './processors';
+import { detectPlacaFormat } from './detectors';
+
+/**
+ * Formatar documento CPF ou CNPJ baseado no tamanho
+ * @param {string} value - Valor numérico do documento
+ * @returns {string} Documento formatado ou vazio se inválido
+ */
+export const formatDocument = (value) => {
+  if (!value) return '';
+  const numbers = unmask(value);
+  
+  if (numbers.length === 11) {
+    // CPF
+    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  } else if (numbers.length === 14) {
+    // CNPJ
+    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  }
+  
+  return value; // Retorna o valor original se não for CPF nem CNPJ
+};
+
+/**
+ * Formatar um número de telefone
+ * @param {string} value - Valor do telefone
+ * @returns {string} Telefone formatado
+ */
+export const formatPhone = (value) => {
+  if (!value) return '';
+  const numbers = unmask(value);
+  
+  if (numbers.length === 11) {
+    // Celular
+    return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  } else if (numbers.length === 10) {
+    // Telefone fixo
+    return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  }
+  
+  return value; // Retorna o valor original se não for telefone válido
+};
+
+/**
+ * Formatar placa de veículo para exibição
+ * @param {string} value - Placa sem formatação
+ * @returns {string} Placa formatada para exibição
+ */
+export const formatPlaca = (value) => {
+  if (!value) return '';
+  
+  const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  if (cleaned.length !== 7) return cleaned;
+  
+  const format = detectPlacaFormat(cleaned);
+  
+  if (format === 'mercosul') {
+    // Formato Mercosul não tem hífen
+    return cleaned;
+  } else if (format === 'tradicional') {
+    // Formato tradicional tem hífen após as 3 letras
+    return `${cleaned.substring(0, 3)}-${cleaned.substring(3)}`;
+  }
+  
+  return cleaned;
+};
+
+/**
+ * Formatar uma data no formato ISO para exibição
+ * @param {string} dateString - Data em formato ISO ou string
+ * @param {string} format - Formato de saída (default: 'dd/mm/yyyy')
+ * @returns {string} Data formatada ou vazio se inválida
+ */
+export const formatDate = (dateString, format = 'dd/mm/yyyy') => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    
+    if (format === 'dd/mm/yyyy') {
+      return `${day}/${month}/${year}`;
+    } else if (format === 'mm/dd/yyyy') {
+      return `${month}/${day}/${year}`;
+    } else if (format === 'yyyy-mm-dd') {
+      return `${year}-${month}-${day}`;
+    }
+    
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString || '';
+  }
+};
+
+/**
+ * Formatar um valor monetário
+ * @param {number|string} value - Valor numérico
+ * @param {string} currency - Símbolo da moeda (default: 'R$')
+ * @returns {string} Valor formatado como moeda
+ */
+export const formatCurrency = (value, currency = 'R$') => {
+  if (value === undefined || value === null) return '';
+  
+  try {
+    // Converte para número se for string
+    const numValue = typeof value === 'string' ? 
+      parseFloat(value.replace(',', '.')) : value;
+    
+    if (isNaN(numValue)) return value;
+    
+    // Formata com 2 casas decimais, separador de milhares e separador decimal
+    return `${currency} ${numValue.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  } catch (error) {
+    console.error('Error formatting currency:', error);
+    return value.toString();
+  }
+};
+
+/**
+ * Formatar time values from API format (H:i) to HTML time input format (HH:mm)
+ * @param {string} time - Time in H:i format
+ * @returns {string} - Time in HH:mm format
+ */
+export const formatTimeForDisplay = (time) => {
+  if (!time) return '';
+
+  try {
+    // Handle different time formats from API
+    const timeParts = time.split(':');
+
+    if (timeParts.length < 2) return time; // Return as is if not valid
+
+    const hours = timeParts[0].padStart(2, '0');
+    const minutes = timeParts[1].substring(0, 2).padStart(2, '0');
+
+    return `${hours}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting time for display:', error);
+    return time || '';
+  }
+};
+
+/**
+ * Format time values for API (HH:mm to H:i)
+ * @param {string} time - Time in HH:mm format 
+ * @returns {string} - Time in H:i format or null if input is empty
+ */
+export const formatTimeForApi = (time) => {
+  if (!time) return null;
+
+  try {
+    // Split time into hours and minutes
+    const [hours, minutes] = time.split(':');
+
+    // Convert hours to integer to remove leading zeros
+    const hour = parseInt(hours, 10);
+
+    // Return formatted time (H:i format as Laravel expects)
+    return `${hour}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return null;
+  }
+};
+
+export default {
+  formatDocument,
+  formatPhone,
+  formatPlaca,
+  formatDate,
+  formatCurrency,
+  formatTimeForDisplay,
+  formatTimeForApi
+};
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/components/PlacaInput.jsx ===
+
+import React, { useState, useEffect, useRef } from "react";
+
+/**
+ * Componente para entrada de placas de veículos com detecção automática de formato
+ * Suporta formato Mercosul (AAA0A00) e tradicional (AAA-0000)
+ * 
+ * @param {Object} props - Propriedades do componente
+ * @param {string} props.value - Valor atual da placa
+ * @param {function} props.onChange - Função chamada quando o valor muda
+ * @param {string} props.name - Nome do campo
+ * @param {string} props.className - Classes CSS adicionais
+ * @param {string} props.placeholder - Texto de placeholder
+ * @param {Object} props.rest - Outras propriedades do input
+ * @param {React.Ref} ref - Referência para o input
+ */
+const PlacaInput = React.forwardRef(({ 
+  value, 
+  onChange, 
+  name = "placa", 
+  className = "border rounded p-2 w-full uppercase",
+  placeholder = "Digite a placa do veículo",
+  ...rest
+}, ref) => {
+  const [inputValue, setInputValue] = useState(value || "");
+  const inputRef = useRef(null);
+  
+  // Determina o padrão de máscara baseado no valor de entrada
+  const getMaskPattern = (val) => {
+    const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
+    
+    // Verifica formato Mercosul: 3 letras + 1 número + 1 letra + 2 números
+    const mercosul = /([A-Z]{3}[0-9]{1}[A-Z]{1})/;
+    
+    // Verifica formato tradicional: 3 letras + 2 números
+    const normal = /([A-Z]{3}[0-9]{2})/;
+    
+    if (normal.test(cleanVal)) {
+      return "SSS-0000"; // Formato tradicional
+    } else if (mercosul.test(cleanVal)) {
+      return "SSS0A00"; // Formato Mercosul
+    }
+    
+    // Se não houver caracteres suficientes para determinar, usa uma máscara flexível
+    return "SSS0A00"; // Padrão para Mercosul como é o formato atual
+  };
+  
+  // Aplica a máscara ao valor
+  const applyMask = (val, pattern) => {
+    let cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
+    let result = '';
+    let charIndex = 0;
+    
+    // Limita a 7 caracteres (o conteúdo real da placa)
+    cleanVal = cleanVal.slice(0, 7);
+    
+    // Aplica o padrão
+    for (let i = 0; i < pattern.length && charIndex < cleanVal.length; i++) {
+      const patternChar = pattern[i];
+      
+      if (patternChar === 'S') {
+        // 'S' é para letras (A-Z)
+        if (/[A-Z]/.test(cleanVal[charIndex])) {
+          result += cleanVal[charIndex];
+          charIndex++;
+        } else {
+          // Pula caracteres não-letra para posições 'S'
+          charIndex++;
+          i--; // Tenta esta posição de padrão novamente
+        }
+      } else if (patternChar === '0') {
+        // '0' é para números (0-9)
+        if (/[0-9]/.test(cleanVal[charIndex])) {
+          result += cleanVal[charIndex];
+          charIndex++;
+        } else {
+          // Pula caracteres não-número para posições '0'
+          charIndex++;
+          i--; // Tenta esta posição de padrão novamente
+        }
+      } else if (patternChar === 'A') {
+        // 'A' é para letras (A-Z)
+        if (/[A-Z]/.test(cleanVal[charIndex])) {
+          result += cleanVal[charIndex];
+          charIndex++;
+        } else {
+          // Pula caracteres não-letra para posições 'A'
+          charIndex++;
+          i--; // Tenta esta posição de padrão novamente
+        }
+      } else if (patternChar === '-') {
+        // Adiciona hífen para formato tradicional
+        result += '-';
+      } else {
+        // Adiciona qualquer outro caractere do padrão como está
+        result += patternChar;
+        
+        // Se o caractere do padrão corresponder ao caractere de entrada, consuma-o
+        if (patternChar === cleanVal[charIndex]) {
+          charIndex++;
+        }
+      }
+    }
+    
+    return result;
+  };
+  
+  // Formata o valor de acordo com o padrão detectado
+  const formatValue = (val) => {
+    // Remove qualquer caractere de máscara existente
+    const cleanVal = val.replace(/[^\w]/g, '').toUpperCase();
+    
+    // Se vazio, retorna vazio
+    if (!cleanVal) return '';
+    
+    // Determina o padrão de máscara apropriado
+    const pattern = getMaskPattern(cleanVal);
+    
+    // Aplica a máscara
+    return applyMask(cleanVal, pattern);
+  };
+
+  // Manipula a alteração do input
+  const handleChange = (e) => {
+    const rawValue = e.target.value.toUpperCase();
+    
+    // Formata o valor
+    const formatted = formatValue(rawValue);
+    setInputValue(formatted);
+    
+    // Cria um evento sintético para onChange
+    const syntheticEvent = {
+      target: {
+        name: e.target.name,
+        value: formatted
+      }
+    };
+    
+    onChange && onChange(syntheticEvent);
+  };
+
+  // Manipula o evento de colar (paste)
+  const handlePaste = (e) => {
+    // Deixa a colagem acontecer, depois formata no próximo ciclo
+    setTimeout(() => {
+      const rawValue = e.target.value.toUpperCase();
+      const formatted = formatValue(rawValue);
+      setInputValue(formatted);
+      
+      // Cria um evento sintético para onChange
+      const syntheticEvent = {
+        target: {
+          name: e.target.name,
+          value: formatted
+        }
+      };
+      
+      onChange && onChange(syntheticEvent);
+    }, 0);
+  };
+
+  // Inicializa o valor formatado quando o componente é montado ou o valor prop muda
+  useEffect(() => {
+    if (value) {
+      const formatted = formatValue(value);
+      setInputValue(formatted);
+    } else {
+      setInputValue("");
+    }
+  }, [value]);
+
+  // Lida com o encaminhamento de ref
+  const setRef = (element) => {
+    // Define a ref interna
+    inputRef.current = element;
+    
+    // Encaminha a ref
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(element);
+      } else {
+        ref.current = element;
+      }
+    }
+  };
+
+  return (
+    <input
+      ref={setRef}
+      type="text"
+      name={name}
+      className={className}
+      value={inputValue}
+      onChange={handleChange}
+      onPaste={handlePaste}
+      placeholder={placeholder}
+      maxLength={8} // O formato mais longo é AAA-0000 (8 caracteres)
+      {...rest}
+    />
+  );
+});
+
+export default PlacaInput;
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/components/MaskedInput.jsx ===
+
+import React, { useState, useEffect, useRef } from 'react';
+import { MASK_CHARS } from '../constants';
 
 /**
  * Componente para campos de entrada com máscara
+ * Implementação personalizada com funcionalidade similar ao PatternFormat
  * 
- * @param {string} format - Padrão da máscara (ex: '###.###.###-##')
+ * @param {string} mask - Padrão da máscara no formato react-input-mask (ex: "99/99/9999")
+ * @param {string} format - Padrão da máscara no formato react-number-format (ex: "##/##/####")
  * @param {string} name - Nome do campo
  * @param {string} id - ID do campo
  * @param {string} value - Valor do campo
@@ -633,23 +972,120 @@ const MaskedInput = React.forwardRef(({
   className = '',
   ...props
 }, ref) => {
-  // Converter máscara do formato react-input-mask para formato de react-number-format
-  // Ex: "99/99/9999" para "##/##/####"
-  const convertMask = (inputMask) => {
-    if (!inputMask) return format || '';
-    return inputMask.replace(/9/g, '#').replace(/a/g, '*');
+  // Converter máscara para formato padrão interno
+  const getStandardMask = () => {
+    if (format) return format.replace(/#/g, '9').replace(/\*/g, 'a');
+    if (mask) return mask;
+    return '';
+  };
+  
+  const standardMask = getStandardMask();
+  const [inputValue, setInputValue] = useState(value || '');
+  const inputRef = useRef(null);
+  
+  // Atualiza o valor quando a prop value muda
+  useEffect(() => {
+    if (value !== undefined && value !== inputValue) {
+      setInputValue(value);
+    }
+  }, [value]);
+
+  // Aplica a máscara ao valor
+  const applyMask = (val) => {
+    if (!val) return '';
+    if (!standardMask) return val;
+    
+    let result = '';
+    let valueIndex = 0;
+    
+    // Percorre cada caractere da máscara
+    for (let i = 0; i < standardMask.length && valueIndex < val.length; i++) {
+      const maskChar = standardMask[i];
+      
+      // Define o padrão baseado no caractere da máscara
+      let pattern;
+      if (maskChar === '9') {
+        pattern = /[0-9]/;
+      } else if (maskChar === 'a') {
+        pattern = /[a-zA-Z]/;
+      } else if (maskChar === '*') {
+        pattern = /[0-9a-zA-Z]/;
+      } else {
+        // Caractere estático da máscara
+        result += maskChar;
+        
+        // Pula o caractere do valor se for igual ao caractere da máscara
+        if (val[valueIndex] === maskChar) {
+          valueIndex++;
+        }
+        continue;
+      }
+      
+      // Procura o próximo caractere válido
+      while (valueIndex < val.length) {
+        const char = val[valueIndex];
+        valueIndex++;
+        
+        if (pattern.test(char)) {
+          result += char;
+          break;
+        }
+      }
+    }
+    
+    return result;
   };
 
+  // Manipula a mudança de valor
   const handleChange = (e) => {
-    // Simular um evento para manter a compatibilidade com os outros componentes
+    const rawValue = e.target.value;
+    const maskedValue = applyMask(rawValue);
+    
+    setInputValue(maskedValue);
+    
     if (onChange) {
-      const syntheticEvent = {
+      // Simular um evento similar ao formato do react-number-format
+      onChange({
         target: {
           name: name,
-          value: e.value
-        }
-      };
-      onChange(syntheticEvent);
+          value: maskedValue
+        },
+        value: maskedValue // Compatível com a API do react-number-format
+      });
+    }
+  };
+
+  // Manipula a operação de paste
+  const handlePaste = (e) => {
+    setTimeout(() => {
+      const rawValue = e.target.value;
+      const maskedValue = applyMask(rawValue);
+      
+      setInputValue(maskedValue);
+      
+      if (onChange) {
+        onChange({
+          target: {
+            name: name,
+            value: maskedValue
+          },
+          value: maskedValue
+        });
+      }
+    }, 0);
+  };
+
+  // Manipula as referências
+  const handleRef = (el) => {
+    inputRef.current = el;
+    
+    // Compatibilidade com getInputRef do react-number-format
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(el);
+      } else {
+        ref.current = el;
+      }
     }
   };
 
@@ -660,16 +1096,16 @@ const MaskedInput = React.forwardRef(({
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <PatternFormat
-        format={format || convertMask(mask)}
-        valueIsNumericString={false}
+      <input
+        ref={handleRef}
+        type="text"
         id={id}
         name={name}
-        value={value}
-        onValueChange={handleChange}
+        value={inputValue}
+        onChange={handleChange}
+        onPaste={handlePaste}
         placeholder={placeholder}
         className={`mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${className}`}
-        getInputRef={ref}
         {...props}
       />
     </div>
@@ -677,6 +1113,427 @@ const MaskedInput = React.forwardRef(({
 });
 
 export default MaskedInput;
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/components/DocumentInput.jsx ===
+
+import React, { useState, useEffect, useRef } from "react";
+import { MASKS } from '../constants';
+import { detectDocumentType } from '../detectors';
+import MaskedInput from './MaskedInput';
+
+/**
+ * Componente de entrada para documentos com detecção automática
+ * Suporta CPF e CNPJ, detectando automaticamente o formato
+ * 
+ * @param {Object} props - Propriedades do componente
+ * @param {string} props.value - Valor atual
+ * @param {function} props.onChange - Função chamada quando o valor muda
+ * @param {string} props.name - Nome do campo
+ * @param {string} props.className - Classes CSS adicionais
+ * @param {string} props.placeholder - Texto de placeholder
+ * @param {Object} props.rest - Outras propriedades do input
+ * @param {React.Ref} ref - Referência para o input
+ */
+const DocumentInput = React.forwardRef(({
+  value,
+  onChange,
+  name = "documento",
+  className = "border rounded p-2 w-full",
+  placeholder = "CPF ou CNPJ",
+  ...rest
+}, ref) => {
+  const [mask, setMask] = useState(MASKS.CPF);
+  const [inputValue, setInputValue] = useState(value || "");
+  const inputRef = useRef(null);
+
+  // Define a máscara baseada no valor
+  useEffect(() => {
+    if (value) {
+      const docType = detectDocumentType(value);
+      setMask(docType === 'cnpj' ? MASKS.CNPJ : MASKS.CPF);
+    }
+  }, [value]);
+
+  // Manipula a mudança de valor
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    
+    // Detecta o tipo de documento e ajusta a máscara
+    const docType = detectDocumentType(newValue);
+    const newMask = docType === 'cnpj' ? MASKS.CNPJ : MASKS.CPF;
+    setMask(newMask);
+    
+    // Passa o evento para o onChange
+    onChange && onChange(e);
+  };
+
+  // Lida com encaminhamento de ref
+  const setRef = (el) => {
+    inputRef.current = el;
+    
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(el);
+      } else {
+        ref.current = el;
+      }
+    }
+  };
+
+  return (
+    <MaskedInput
+      ref={setRef}
+      value={inputValue}
+      onChange={handleChange}
+      mask={mask}
+      name={name}
+      className={className}
+      placeholder={placeholder}
+      {...rest}
+    />
+  );
+});
+
+export default DocumentInput;
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/components/PhoneInput.jsx ===
+
+import React, { useState, useEffect, useRef } from "react";
+import { MASKS } from '../constants';
+import { detectPhoneType } from '../detectors';
+import MaskedInput from './MaskedInput';
+
+/**
+ * Componente de entrada para telefones com detecção automática
+ * Suporta celular e telefone fixo, detectando automaticamente o formato
+ * 
+ * @param {Object} props - Propriedades do componente
+ * @param {string} props.value - Valor atual
+ * @param {function} props.onChange - Função chamada quando o valor muda
+ * @param {string} props.name - Nome do campo
+ * @param {string} props.className - Classes CSS adicionais
+ * @param {string} props.placeholder - Texto de placeholder
+ * @param {Object} props.rest - Outras propriedades do input
+ * @param {React.Ref} ref - Referência para o input
+ */
+const PhoneInput = React.forwardRef(({
+  value,
+  onChange,
+  name = "telefone",
+  className = "border rounded p-2 w-full",
+  placeholder = "Telefone",
+  ...rest
+}, ref) => {
+  const [mask, setMask] = useState(MASKS.PHONE);
+  const [inputValue, setInputValue] = useState(value || "");
+  const inputRef = useRef(null);
+
+  // Define a máscara baseada no valor
+  useEffect(() => {
+    if (value) {
+      const phoneType = detectPhoneType(value);
+      setMask(phoneType === 'fixo' ? MASKS.LANDLINE : MASKS.PHONE);
+    }
+  }, [value]);
+
+  // Manipula a mudança de valor
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    
+    // Detecta o tipo de telefone e ajusta a máscara
+    const phoneType = detectPhoneType(newValue);
+    const newMask = phoneType === 'fixo' ? MASKS.LANDLINE : MASKS.PHONE;
+    setMask(newMask);
+    
+    // Passa o evento para o onChange
+    onChange && onChange(e);
+  };
+
+  // Lida com encaminhamento de ref
+  const setRef = (el) => {
+    inputRef.current = el;
+    
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(el);
+      } else {
+        ref.current = el;
+      }
+    }
+  };
+
+  return (
+    <MaskedInput
+      ref={setRef}
+      value={inputValue}
+      onChange={handleChange}
+      mask={mask}
+      name={name}
+      className={className}
+      placeholder={placeholder}
+      {...rest}
+    />
+  );
+});
+
+export default PhoneInput;
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/processors.js ===
+
+/**
+ * Funções de processamento para máscaras
+ * Estas funções removem ou processam valores mascarados
+ */
+
+/**
+ * Remover qualquer máscara de um valor (para envio ao backend)
+ * @param {string} value - Valor com máscara
+ * @returns {string} Valor sem máscara
+ */
+export const unmask = (value) => {
+    if (!value) return '';
+    return value.replace(/\D/g, '');
+  };
+  
+  /**
+   * Remover caracteres especiais mantendo letras e números
+   * @param {string} value - Valor com caracteres especiais
+   * @returns {string} Valor com apenas letras e números
+   */
+  export const unmaskAlphanumeric = (value) => {
+    if (!value) return '';
+    return value.replace(/[^\w]/g, '');
+  };
+  
+  /**
+   * Remover máscara e formatar placa de veículo para envio ao backend
+   * @param {string} value - Placa com ou sem máscara
+   * @returns {string} Placa formatada para envio ao backend
+   */
+  export const unmaskPlaca = (value) => {
+    if (!value) return '';
+    
+    // Remove caracteres especiais e converte para maiúsculo
+    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    // Se não tiver 7 caracteres, retorna o valor limpo como está
+    if (cleaned.length !== 7) return cleaned;
+  
+    // Verifica se é formato Mercosul (3 letras + 1 número + 1 letra + 2 números)
+    const isMercosul = /[A-Z]{3}[0-9][A-Z][0-9]{2}/.test(cleaned);
+    
+    // Verifica se é formato antigo (3 letras + 4 números)
+    const isOldFormat = /[A-Z]{3}[0-9]{4}/.test(cleaned);
+    
+    // Se for um dos formatos válidos, retorna como está
+    if (isMercosul || isOldFormat) {
+      return cleaned;
+    }
+    
+    // Caso contrário, tenta verificar se é próximo de algum formato conhecido
+    // Verifica se o 4º caractere é numérico (formato Mercosul potencial)
+    if (/\d/.test(cleaned[3])) {
+      // Potencialmente formato Mercosul
+      return cleaned;
+    }
+    
+    // Em outros casos, retorna o valor limpo
+    return cleaned;
+  };
+  
+  /**
+   * Processa valor de entrada para formulários/APIs
+   * Converte string para número e trata valores vazios
+   * @param {string} value - Valor a ser processado
+   * @param {string} type - Tipo de dado ('int', 'float', ou vazio para string)
+   * @returns {number|string|null} Valor processado
+   */
+  export const processInputValue = (value, type) => {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    
+    if (type === 'int') {
+      return parseInt(unmask(value), 10) || null;
+    }
+    
+    if (type === 'float') {
+      // Convert comma to dot for JS float parsing
+      const numStr = value.toString().replace(',', '.');
+      return parseFloat(numStr) || null;
+    }
+    
+    return value; // return as string
+  };
+  
+  /**
+   * Processa um array de valores para submissão ao backend
+   * @param {Object} data - Objeto com dados a serem processados
+   * @param {Object} config - Configuração de campos {campo: tipo}
+   * @returns {Object} Dados processados
+   */
+  export const processFormData = (data, config = {}) => {
+    const result = { ...data };
+    
+    Object.entries(config).forEach(([field, type]) => {
+      if (data[field] !== undefined) {
+        result[field] = processInputValue(data[field], type);
+      }
+    });
+    
+    return result;
+  };
+  
+  /**
+ * Remove máscara e valida quilometragem formatada
+ * @param {string} value - Valor com máscara (ex: 1.234,56 km)
+ * @returns {number|null} Valor numérico ou null se inválido
+ */
+export const unmaskQuilometragem = (value) => {
+    if (!value) return null;
+    
+    // Remove texto e mantém apenas números e ponto decimal
+    const cleaned = value.replace(/[^0-9,]/g, '').replace(',', '.');
+    
+    // Converte para float e valida intervalo
+    const numericValue = parseFloat(cleaned);
+    return !isNaN(numericValue) && numericValue >= 0 && numericValue <= 999999.99 
+        ? numericValue 
+        : null;
+};
+
+export default {
+    unmask,
+    unmaskAlphanumeric,
+    unmaskPlaca,
+    processInputValue,
+    processFormData,
+    unmaskQuilometragem
+  };
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/masks/detectors.js ===
+
+/**
+ * Funções para detectar formatos de dados
+ */
+
+/**
+ * Detecta o tipo de placa baseado no formato
+ * @param {string} value - Placa de veículo
+ * @returns {string} - 'mercosul', 'tradicional' ou 'desconhecido'
+ */
+export const detectPlacaFormat = (value) => {
+    if (!value) return 'desconhecido';
+    
+    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    if (cleaned.length >= 4 && /\d/.test(cleaned[3])) {
+      return 'mercosul';
+    } else if (cleaned.length >= 3 && /[A-Z]{3}/.test(cleaned.substring(0, 3))) {
+      return 'tradicional';
+    }
+    
+    return 'desconhecido';
+  };
+  
+  /**
+   * Detecta o tipo de documento baseado no formato
+   * @param {string} value - Documento (CPF ou CNPJ)
+   * @returns {string} - 'cpf', 'cnpj' ou 'desconhecido'
+   */
+  export const detectDocumentType = (value) => {
+    if (!value) return 'desconhecido';
+    
+    // Remove todos os caracteres não numéricos
+    const cleaned = value.replace(/\D/g, '');
+    
+    if (cleaned.length === 11) {
+      return 'cpf';
+    } else if (cleaned.length === 14) {
+      return 'cnpj';
+    }
+    
+    return 'desconhecido';
+  };
+  
+  /**
+   * Detecta o tipo de telefone baseado no formato
+   * @param {string} value - Número de telefone
+   * @returns {string} - 'celular', 'fixo' ou 'desconhecido'
+   */
+  export const detectPhoneType = (value) => {
+    if (!value) return 'desconhecido';
+    
+    // Remove todos os caracteres não numéricos
+    const cleaned = value.replace(/\D/g, '');
+    
+    if (cleaned.length === 11) {
+      return 'celular';
+    } else if (cleaned.length === 10) {
+      return 'fixo';
+    }
+    
+    return 'desconhecido';
+  };
+  
+  /**
+   * Verifica se um texto contém apenas caracteres numéricos
+   * @param {string} value - Texto a ser verificado
+   * @returns {boolean} - true se contém apenas números, false caso contrário
+   */
+  export const isNumeric = (value) => {
+    if (!value) return false;
+    return /^\d+$/.test(value);
+  };
+  
+  /**
+   * Verifica se um texto contém apenas caracteres alfabéticos
+   * @param {string} value - Texto a ser verificado
+   * @returns {boolean} - true se contém apenas letras, false caso contrário
+   */
+  export const isAlphabetic = (value) => {
+    if (!value) return false;
+    return /^[a-zA-Z]+$/.test(value);
+  };
+  
+  /**
+   * Verifica se um texto contém apenas caracteres alfanuméricos
+   * @param {string} value - Texto a ser verificado
+   * @returns {boolean} - true se contém apenas letras e números, false caso contrário
+   */
+  export const isAlphanumeric = (value) => {
+    if (!value) return false;
+    return /^[a-zA-Z0-9]+$/.test(value);
+  };
+  
+  /**
+   * Verifica se uma placa é válida baseada no formato
+   * @param {string} value - Placa a ser verificada
+   * @returns {boolean} - true se a placa é válida, false caso contrário
+   */
+  export const isValidPlaca = (value) => {
+    if (!value) return false;
+    
+    const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    if (cleaned.length !== 7) return false;
+    
+    // Verifica formato Mercosul (3 letras + 1 número + 1 letra + 2 números)
+    const isMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(cleaned);
+    
+    // Verifica formato tradicional (3 letras + 4 números)
+    const isTradicional = /^[A-Z]{3}[0-9]{4}$/.test(cleaned);
+    
+    return isMercosul || isTradicional;
+  };
+  
+  export default {
+    detectPlacaFormat,
+    detectDocumentType,
+    detectPhoneType,
+    isNumeric,
+    isAlphabetic,
+    isAlphanumeric,
+    isValidPlaca
+  };
 === /Users/micaelsantana/Documents/app-frontend/src/index.css ===
 
 @tailwind base;
@@ -1153,9 +2010,23 @@ export default function ConfirmationModal({
 }
 === /Users/micaelsantana/Documents/app-frontend/src/components/common/FormModal.jsx ===
 
-import React from 'react';
-import MaskedInput from '../../utils/MaskedInput';
-import { MASKS } from '../../utils/inputMasks';
+import React, { useEffect } from 'react';
+import PropTypes from 'prop-types';
+import MaskedInput from '../../utils/masks/components/MaskedInput';
+import { MASKS } from '../../utils/masks/constants';
+import { unmaskQuilometragem } from '../../utils/masks/processors';
+
+FormModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string.isRequired,
+  children: PropTypes.node.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  isSubmitting: PropTypes.bool,
+  formData: PropTypes.object,
+  onInputChange: PropTypes.func,
+  maskedFields: PropTypes.object
+};
 
 export default function FormModal({
   isOpen,
@@ -1164,18 +2035,78 @@ export default function FormModal({
   children,
   onSubmit,
   isSubmitting = false,
-  formData,
+  formData = {},
   onInputChange,
   maskedFields = {}
 }) {
+  // Debug formData whenever it changes
+  useEffect(() => {
+    console.log('FormModal - formData atualizado:', formData);
+  }, [formData]);
+  
+  // Track quilometragem changes
+  useEffect(() => {
+    if(formData?.quilometragem) {
+      console.log('Valor bruto da quilometragem:', formData.quilometragem);
+      console.log('Valor processado:', unmaskQuilometragem(formData.quilometragem));
+    }
+  }, [formData?.quilometragem]);
+  
+  // Track distancia_km changes
+  useEffect(() => {
+    if(formData?.distancia_km) {
+      console.log('Valor bruto da distância km:', formData.distancia_km);
+      console.log('Valor processado da distância:', unmaskQuilometragem(formData.distancia_km));
+    }
+  }, [formData?.distancia_km]);
+  
+  // Enhanced submit handler with debugging
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    
+    // Debug form elements directly
+    console.log('=== ELEMENTOS DO FORMULÁRIO ===');
+    const formElements = event.target.elements;
+    for (let i = 0; i < formElements.length; i++) {
+      const element = formElements[i];
+      if (element.name) {
+        console.log(`${element.name}: ${element.value}`);
+      }
+    }
+    
+    // Debug formData
+    console.log('=== DADOS SENDO ENVIADOS PARA O BACKEND ===');
+    console.log('formData completo:', formData);
+    console.log('formData é objeto vazio?', Object.keys(formData).length === 0);
+    
+    if(formData?.quilometragem) {
+      console.log('quilometragem (bruto):', formData.quilometragem);
+      console.log('quilometragem (processado):', unmaskQuilometragem(formData.quilometragem));
+    } else {
+      console.log('quilometragem não encontrado no formData');
+    }
+    
+    if(formData?.distancia_km) {
+      console.log('distancia_km (bruto):', formData.distancia_km);
+      console.log('distancia_km (processado):', unmaskQuilometragem(formData.distancia_km));
+    } else {
+      console.log('distancia_km não encontrado no formData');
+    }
+    
+    console.log('=====================================');
+    
+    // Call the original onSubmit function
+    onSubmit(event);
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
-        <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+        <div
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
           aria-hidden="true"
           onClick={onClose}
         ></div>
@@ -1188,19 +2119,49 @@ export default function FormModal({
                 <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                   {title}
                 </h3>
-                
+
                 <div className="mt-4">
-                  <form onSubmit={onSubmit}>
+                  <form onSubmit={handleSubmit}>
                     {React.Children.map(children, child => {
-                      if (child.type === 'input' && maskedFields[child.props.name]) {
-                        return React.cloneElement(child, {
-                          component: MaskedInput,
-                          mask: MASKS[maskedFields[child.props.name]]
+                      // Debug each child to see what's being rendered
+                      console.log('Rendering child:', child?.props?.name);
+                      
+                      if (child?.type === 'input' && maskedFields[child.props.name]) {
+                        const isQuilometragem = child.props.name === 'quilometragem';
+                        
+                        // Log input properties
+                        console.log(`Input field: ${child.props.name}`, {
+                          value: child.props.value,
+                          hasValue: !!child.props.value,
+                          inFormData: formData?.[child.props.name] !== undefined
                         });
+                        
+                        const clonedChild = React.cloneElement(child, {
+                          component: MaskedInput,
+                          mask: MASKS[maskedFields[child.props.name] === 'PLACA' ? 'PLACA_MERCOSUL' : maskedFields[child.props.name]],
+                          placeholder: isQuilometragem ? 'Ex: 15000.50 km' : child.props.placeholder,
+                          step: isQuilometragem ? '0.01' : child.props.step,
+                          onChange: (e) => {
+                            console.log(`Changing ${child.props.name} to:`, e.target.value);
+                            if (child.props.onChange) child.props.onChange(e);
+                            if (onInputChange) onInputChange(e);
+                          }
+                        });
+
+                        return (
+                          <>
+                            {clonedChild}
+                            {isQuilometragem && formData.quilometragem && !unmaskQuilometragem(formData.quilometragem) && (
+                              <div className="text-red-500 text-sm mt-1">
+                                Formato inválido! Use números com até 2 casas decimais (Ex: 15000.50)
+                              </div>
+                            )}
+                          </>
+                        );
                       }
                       return child;
                     })}
-                    
+
                     <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                       <button
                         type="submit"
@@ -1771,6 +2732,13 @@ export const OnibusService = {
   }),
 
   deleteOnibus: (id) => api.delete(`/onibus/${id}`).catch(error => {
+    console.error('Delete Error Details:', error.response?.data);
+    
+    // Handle foreign key constraint error
+    if (error.response?.data?.message?.includes('Foreign key violation')) {
+      throw new Error('Não é possível excluir o ônibus pois existem viagens relacionadas. Exclua as viagens primeiro.');
+    }
+    
     throw new Error('Erro ao excluir ônibus: ' + getErrorMessage(error));
   }),
 
@@ -2193,8 +3161,9 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { AlunoService } from '../api/services';
 import { useNotification } from '../contexts/NotificationContext';
-import MaskedInput from '../utils/MaskedInput';
-import { MASKS, unmask } from '../utils/inputMasks';
+import MaskedInput from '../utils/masks/components/MaskedInput';
+import { MASKS } from '../utils/masks/constants';
+import { unmask } from '../utils/masks/processors';
 
 export default function Alunos() {
   const [alunos, setAlunos] = useState([]);
@@ -2496,13 +3465,9 @@ export default function Alunos() {
               mask={MASKS.PHONE}
               name="telefone_responsavel"
               id="telefone_responsavel"
+              required
               value={formData.telefone_responsavel}
-              onChange={(e) => handleInputChange({
-                target: {
-                  name: 'telefone_responsavel',
-                  value: unmask(e.target.value)
-                }
-              })}
+              onChange={handleInputChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -2635,6 +3600,13 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
+import { 
+  parseNumeroDecimal, 
+  formatarNumeroDecimal, 
+  formatarDistanciaKm, 
+  formatarTempoMinutos,
+  isQuilometragemValida 
+} from '../utils';
 
 const Rotas = () => {
   const [rotas, setRotas] = useState([]);
@@ -2662,6 +3634,12 @@ const Rotas = () => {
     distancia_km: '',
     tempo_estimado_minutos: '',
     status: true
+  });
+
+  // Input errors
+  const [inputErrors, setInputErrors] = useState({
+    distancia_km: '',
+    tempo_estimado_minutos: ''
   });
 
   useEffect(() => {
@@ -2717,15 +3695,99 @@ const Rotas = () => {
     return 'inactive'; // Default value
   };
 
+  // Validar quilometragem
+  const validarDistanciaKm = (value) => {
+    if (!value) return '';
+    
+    const numero = parseNumeroDecimal(value);
+    
+    if (numero === null) {
+      return 'Digite um valor válido (use vírgula como separador decimal)';
+    }
+    
+    if (numero < 0) {
+      return 'A distância não pode ser negativa';
+    }
+    
+    if (numero > 10000) {
+      return 'A distância parece excessiva (máximo 10.000 km)';
+    }
+    
+    return '';
+  };
+
+  // Validar tempo em minutos
+  const validarTempoMinutos = (value) => {
+    if (!value) return '';
+    
+    const numero = parseInt(value, 10);
+    
+    if (isNaN(numero)) {
+      return 'Digite um valor numérico válido';
+    }
+    
+    if (numero < 0) {
+      return 'O tempo não pode ser negativo';
+    }
+    
+    if (numero > 1440) {
+      return 'O tempo excede 24 horas (máximo 1440 minutos)';
+    }
+    
+    return '';
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    if (name === 'distancia_km') {
+      // Permite digitar no formato brasileiro (com vírgula)
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+      
+      // Valida o campo
+      setInputErrors({
+        ...inputErrors,
+        [name]: validarDistanciaKm(value)
+      });
+      return;
+    }
+    
+    if (name === 'tempo_estimado_minutos') {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+      
+      // Valida o campo
+      setInputErrors({
+        ...inputErrors,
+        [name]: validarTempoMinutos(value)
+      });
+      return;
+    }
+    
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
   };
 
+  // Formatar a quilometragem para exibição no formulário
+  const formatKilometroForDisplay = (value) => {
+    if (!value) return '';
+    return formatarNumeroDecimal(value, 1);
+  };
+
   const openModal = (rota = null) => {
+    // Resetar erros ao abrir o modal
+    setInputErrors({
+      distancia_km: '',
+      tempo_estimado_minutos: ''
+    });
+    
     if (rota) {
       // Edit mode
       setFormData({
@@ -2736,7 +3798,7 @@ const Rotas = () => {
         destino: rota.destino || '',
         horario_inicio: rota.horario_inicio || '',
         horario_fim: rota.horario_fim || '',
-        distancia_km: rota.distancia_km || '',
+        distancia_km: rota.distancia_km ? formatKilometroForDisplay(rota.distancia_km) : '',
         tempo_estimado_minutos: rota.tempo_estimado_minutos || '',
         status: rota.status === 'active' || rota.status === true || rota.status === 1
       });
@@ -2762,14 +3824,27 @@ const Rotas = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validar campos antes de submeter
+    const distanciaError = validarDistanciaKm(formData.distancia_km);
+    const tempoError = validarTempoMinutos(formData.tempo_estimado_minutos);
+    
+    if (distanciaError || tempoError) {
+      setInputErrors({
+        distancia_km: distanciaError,
+        tempo_estimado_minutos: tempoError
+      });
+      return; // Não continua se houver erros
+    }
+    
     setIsSubmitting(true);
     
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
         ...formData,
-        distancia_km: formData.distancia_km ? parseFloat(formData.distancia_km) : null,
-        tempo_estimado_minutos: formData.tempo_estimado_minutos ? parseInt(formData.tempo_estimado_minutos) : null
+        distancia_km: parseNumeroDecimal(formData.distancia_km),
+        tempo_estimado_minutos: formData.tempo_estimado_minutos ? parseInt(formData.tempo_estimado_minutos, 10) : null
       };
       
       if (currentRota) {
@@ -2812,7 +3887,12 @@ const Rotas = () => {
     { 
       key: 'distancia', 
       header: 'Distância', 
-      format: (item) => item.distancia_km ? `${item.distancia_km} km` : '-' 
+      format: (item) => formatarDistanciaKm(item.distancia_km) 
+    },
+    { 
+      key: 'tempo', 
+      header: 'Tempo Estimado', 
+      format: (item) => formatarTempoMinutos(item.tempo_estimado_minutos) 
     },
     { 
       key: 'status', 
@@ -3006,29 +4086,45 @@ const Rotas = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="distancia_km" className="block text-sm font-medium text-gray-700">Distância (km)</label>
-              <input
-                type="number"
-                name="distancia_km"
-                id="distancia_km"
-                min="0"
-                step="0.1"
-                value={formData.distancia_km}
-                onChange={handleInputChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="mt-1 relative">
+                <input
+                  type="text"
+                  name="distancia_km"
+                  id="distancia_km"
+                  placeholder="Ex: 12,5"
+                  value={formData.distancia_km}
+                  onChange={handleInputChange}
+                  className={`block w-full border ${inputErrors.distancia_km ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {inputErrors.distancia_km && (
+                  <p className="mt-1 text-sm text-red-600">{inputErrors.distancia_km}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">Use vírgula como separador decimal (ex: 12,5)</p>
+              </div>
             </div>
             
             <div>
               <label htmlFor="tempo_estimado_minutos" className="block text-sm font-medium text-gray-700">Tempo Estimado (minutos)</label>
-              <input
-                type="number"
-                name="tempo_estimado_minutos"
-                id="tempo_estimado_minutos"
-                min="0"
-                value={formData.tempo_estimado_minutos}
-                onChange={handleInputChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="mt-1 relative">
+                <input
+                  type="number"
+                  name="tempo_estimado_minutos"
+                  id="tempo_estimado_minutos"
+                  min="0"
+                  placeholder="Ex: 45"
+                  value={formData.tempo_estimado_minutos}
+                  onChange={handleInputChange}
+                  className={`block w-full border ${inputErrors.tempo_estimado_minutos ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {inputErrors.tempo_estimado_minutos && (
+                  <p className="mt-1 text-sm text-red-600">{inputErrors.tempo_estimado_minutos}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.tempo_estimado_minutos ? 
+                    `Equivale a ${formatarTempoMinutos(formData.tempo_estimado_minutos)}` : 
+                    'Digite o tempo total em minutos'}
+                </p>
+              </div>
             </div>
           </div>
           
@@ -3694,6 +4790,7 @@ import DataTable from '../components/common/DataTable';
 import { MonitorService } from '../api/services';
 import { useNotification } from '../contexts/NotificationContext';
 
+
 export const Monitores = () => {
   const [monitores, setMonitores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3800,8 +4897,9 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
-import MaskedInput from '../utils/MaskedInput';
-import { MASKS, unmask } from '../utils/inputMasks';
+import { MASKS } from '../utils/masks/constants';
+import MaskedInput from '../utils/masks/components/MaskedInput';
+import PlacaInput from '../utils/masks/components/PlacaInput';
 
 const Viagens = () => {
   const { showError, showSuccess } = useNotification();
@@ -4487,8 +5585,10 @@ import DeleteConfirmationModal from '../components/common/DeleteConfirmationModa
 import { MotoristaService } from '../api/services';
 import { processStatus } from '../utils/statusProcessor'
 import { useNotification } from '../contexts/NotificationContext';
-import MaskedInput from '../utils/MaskedInput';
-import { MASKS, unmask, formatDocument } from '../utils/inputMasks';
+import MaskedInput from '../utils/masks/components/MaskedInput';
+import { MASKS } from '../utils/masks/constants';
+import { unmask } from '../utils/masks/processors';
+import { formatDocument } from '../utils/masks/formatters';
 
 export default function Motoristas() {
   const [motoristas, setMotoristas] = useState([]);
@@ -5046,8 +6146,8 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { processStatus } from '../utils/statusProcessor'
-import { unmaskPlaca } from '../utils/inputMasks';
-import PlacaInput from '../utils/PlacaInput';
+import { unmask } from '../utils/masks/processors';
+import PlacaInput from '../utils/masks/components/PlacaInput';
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
@@ -5167,11 +6267,17 @@ const Onibus = () => {
       // Prepare data for API - converting to expected format
       const apiData = {
       ...formData,
-      placa: unmaskPlaca(formData.placa),
+      placa: unmask(formData.placa),
         ...formData,
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
       };
+      
+      console.log('Dados enviados para API:', formData);
+      console.log('Dados processados:', {
+        ...formData,
+        quilometragem: unmaskQuilometragem(formData.quilometragem)
+      });
       
       if (currentOnibus) {
         // Update
@@ -5186,7 +6292,7 @@ const Onibus = () => {
       fetchOnibus();
     } catch (err) {
       console.error('Error saving onibus:', err);
-      const errorMsg = err.response?.data?.message || err.message;
+      const errorMsg = err.message; // Get processed message from service layer
       setError('Erro ao salvar ônibus: ' + errorMsg);
       showError('Erro ao salvar ônibus: ' + errorMsg);
     } finally {
@@ -5229,7 +6335,7 @@ const Onibus = () => {
       setCurrentOnibus(null);
       fetchOnibus();
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message;
+      const errorMsg = err.message; // Get processed message from service layer
       setError('Erro ao excluir ônibus: ' + errorMsg);
       showError('Erro ao excluir ônibus: ' + errorMsg);
     }
@@ -5441,6 +6547,7 @@ export default Onibus;
   "dependencies": {
     "@heroicons/react": "^2.1.1",
     "axios": "^1.6.2",
+    "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-input-mask": "^2.0.4",

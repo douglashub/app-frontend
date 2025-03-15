@@ -102,10 +102,29 @@ export const unmask = (value) => {
     return result;
   };
   
-  export default {
+  /**
+ * Remove máscara e valida quilometragem formatada
+ * @param {string} value - Valor com máscara (ex: 1.234,56 km)
+ * @returns {number|null} Valor numérico ou null se inválido
+ */
+export const unmaskQuilometragem = (value) => {
+    if (!value) return null;
+    
+    // Remove texto e mantém apenas números e ponto decimal
+    const cleaned = value.replace(/[^0-9,]/g, '').replace(',', '.');
+    
+    // Converte para float e valida intervalo
+    const numericValue = parseFloat(cleaned);
+    return !isNaN(numericValue) && numericValue >= 0 && numericValue <= 999999.99 
+        ? numericValue 
+        : null;
+};
+
+export default {
     unmask,
     unmaskAlphanumeric,
     unmaskPlaca,
     processInputValue,
-    processFormData
+    processFormData,
+    unmaskQuilometragem
   };

@@ -126,12 +126,14 @@ const Onibus = () => {
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
-      ...formData,
-      placa: unmask(formData.placa),
         ...formData,
+        placa: unmask(formData.placa),
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
       };
+      
+      console.log('Dados enviados para API:', formData);
+      console.log('Dados processados:', formData);
       
       if (currentOnibus) {
         // Update

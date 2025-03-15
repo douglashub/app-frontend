@@ -16,7 +16,6 @@ import PhoneInput from './components/PhoneInput';
 
 // Re-exportar constantes
 export { MASKS, MASK_CHARS, PLACEHOLDERS };
-export { default as MASKS } from './constants';
 
 // Re-exportar processadores
 export const {

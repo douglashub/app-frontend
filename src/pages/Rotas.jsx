@@ -5,6 +5,13 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
+import {
+  parseNumeroDecimal,
+  formatarNumeroDecimal,
+  formatarDistanciaKm,
+  formatarTempoMinutos,
+  isQuilometragemValida
+} from '../utils';
 
 const Rotas = () => {
   const [rotas, setRotas] = useState([]);
@@ -15,11 +22,11 @@ const Rotas = () => {
   const [currentRota, setCurrentRota] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { showSuccess, showError } = useNotification ? useNotification() : { 
-    showSuccess: () => {}, 
-    showError: () => {} 
+  const { showSuccess, showError } = useNotification ? useNotification() : {
+    showSuccess: () => { },
+    showError: () => { }
   };
-  
+
   // Form state
   const [formData, setFormData] = useState({
     nome: '',
@@ -34,6 +41,12 @@ const Rotas = () => {
     status: true
   });
 
+  // Input errors
+  const [inputErrors, setInputErrors] = useState({
+    distancia_km: '',
+    tempo_estimado_minutos: ''
+  });
+
   useEffect(() => {
     fetchRotas();
   }, []);
@@ -42,7 +55,7 @@ const Rotas = () => {
     try {
       setLoading(true);
       const response = await RotaService.getRotas();
-      
+
       if (response?.data?.data && Array.isArray(response.data.data)) {
         // Process data - ensure status is standardized
         const formattedData = response.data.data.map(rota => ({
@@ -87,15 +100,99 @@ const Rotas = () => {
     return 'inactive'; // Default value
   };
 
+  // Validar quilometragem
+  const validarDistanciaKm = (value) => {
+    if (!value) return '';
+
+    const numero = parseNumeroDecimal(value);
+
+    if (numero === null) {
+      return 'Digite um valor válido (use vírgula como separador decimal)';
+    }
+
+    if (numero < 0) {
+      return 'A distância não pode ser negativa';
+    }
+
+    if (numero > 10000) {
+      return 'A distância parece excessiva (máximo 10.000 km)';
+    }
+
+    return '';
+  };
+
+  // Validar tempo em minutos
+  const validarTempoMinutos = (value) => {
+    if (!value) return '';
+
+    const numero = parseInt(value, 10);
+
+    if (isNaN(numero)) {
+      return 'Digite um valor numérico válido';
+    }
+
+    if (numero < 0) {
+      return 'O tempo não pode ser negativo';
+    }
+
+    if (numero > 1440) {
+      return 'O tempo excede 24 horas (máximo 1440 minutos)';
+    }
+
+    return '';
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === 'distancia_km') {
+      // Permite digitar no formato brasileiro (com vírgula)
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+
+      // Valida o campo
+      setInputErrors({
+        ...inputErrors,
+        [name]: validarDistanciaKm(value)
+      });
+      return;
+    }
+
+    if (name === 'tempo_estimado_minutos') {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+
+      // Valida o campo
+      setInputErrors({
+        ...inputErrors,
+        [name]: validarTempoMinutos(value)
+      });
+      return;
+    }
+
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
   };
 
+  // Formatar a quilometragem para exibição no formulário
+  const formatKilometroForDisplay = (value) => {
+    if (!value) return '';
+    return formatarNumeroDecimal(value, 1);
+  };
+
   const openModal = (rota = null) => {
+    // Resetar erros ao abrir o modal
+    setInputErrors({
+      distancia_km: '',
+      tempo_estimado_minutos: ''
+    });
+
     if (rota) {
       // Edit mode
       setFormData({
@@ -106,7 +203,7 @@ const Rotas = () => {
         destino: rota.destino || '',
         horario_inicio: rota.horario_inicio || '',
         horario_fim: rota.horario_fim || '',
-        distancia_km: rota.distancia_km || '',
+        distancia_km: rota.distancia_km ? formatKilometroForDisplay(rota.distancia_km) : '',
         tempo_estimado_minutos: rota.tempo_estimado_minutos || '',
         status: rota.status === 'active' || rota.status === true || rota.status === 1
       });
@@ -130,18 +227,44 @@ const Rotas = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  // Updated handleSubmit function to accept form values
+  // Add this to your Rotas.jsx file to properly handle the status value
+
+  // Updated handleSubmit function with better status handling
+  const handleSubmit = async (e, formValues) => {
     e.preventDefault();
+
+    // Use formValues if provided, otherwise fall back to formData state
+    const dataToUse = formValues || formData;
+
+    console.log('Using data for submission:', dataToUse);
+
+    // Validar campos antes de submeter
+    const distanciaError = validarDistanciaKm(dataToUse.distancia_km);
+    const tempoError = validarTempoMinutos(dataToUse.tempo_estimado_minutos);
+
+    if (distanciaError || tempoError) {
+      setInputErrors({
+        distancia_km: distanciaError,
+        tempo_estimado_minutos: tempoError
+      });
+      return; // Não continua se houver erros
+    }
+
     setIsSubmitting(true);
-    
+
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
-        ...formData,
-        distancia_km: formData.distancia_km ? parseFloat(formData.distancia_km) : null,
-        tempo_estimado_minutos: formData.tempo_estimado_minutos ? parseInt(formData.tempo_estimado_minutos) : null
+        ...dataToUse,
+        distancia_km: parseNumeroDecimal(dataToUse.distancia_km),
+        tempo_estimado_minutos: dataToUse.tempo_estimado_minutos ? parseInt(dataToUse.tempo_estimado_minutos, 10) : null,
+        // Handle checkbox status value correctly
+        status: dataToUse.status === 'on' ? true : !!dataToUse.status
       };
-      
+
+      console.log('Sending to API:', apiData);
+
       if (currentRota) {
         // Update
         await RotaService.updateRota(currentRota.id, apiData);
@@ -162,9 +285,8 @@ const Rotas = () => {
       setIsSubmitting(false);
     }
   };
-
   // Search and filter function
-  const filteredRotas = rotas.filter(rota => 
+  const filteredRotas = rotas.filter(rota =>
     rota.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rota.tipo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rota.origem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -174,18 +296,23 @@ const Rotas = () => {
   const columns = [
     { key: 'nome', header: 'Nome' },
     { key: 'tipo', header: 'Tipo' },
-    { 
-      key: 'origem_destino', 
+    {
+      key: 'origem_destino',
       header: 'Origem / Destino',
       format: (item) => `${item.origem || '-'} → ${item.destino || '-'}`
     },
-    { 
-      key: 'distancia', 
-      header: 'Distância', 
-      format: (item) => item.distancia_km ? `${item.distancia_km} km` : '-' 
+    {
+      key: 'distancia',
+      header: 'Distância',
+      format: (item) => formatarDistanciaKm(item.distancia_km)
     },
-    { 
-      key: 'status', 
+    {
+      key: 'tempo',
+      header: 'Tempo Estimado',
+      format: (item) => formatarTempoMinutos(item.tempo_estimado_minutos)
+    },
+    {
+      key: 'status',
       header: 'Status',
       format: (item) => <StatusBadge status={item.status} type="rota" />
     }
@@ -218,7 +345,7 @@ const Rotas = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Rotas</h1>
-        <button 
+        <button
           className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
           onClick={() => openModal()}
         >
@@ -228,11 +355,11 @@ const Rotas = () => {
           Nova Rota
         </button>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="font-bold text-lg">Rotas Cadastradas</h2>
-          
+
           {/* Search box */}
           <div className="relative w-full sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -249,7 +376,7 @@ const Rotas = () => {
             />
           </div>
         </div>
-        
+
         <div className="p-4">
           {error && (
             <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
@@ -259,7 +386,7 @@ const Rotas = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           <DataTable
             columns={columns}
             data={filteredRotas}
@@ -270,14 +397,15 @@ const Rotas = () => {
           />
         </div>
       </div>
-      
+
       {/* Modal Form */}
-      <FormModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <FormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={currentRota ? "Editar Rota" : "Nova Rota"}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
+        formData={formData} // Pass formData to FormModal
       >
         <div className="grid grid-cols-1 gap-4 mb-4">
           <div>
@@ -292,7 +420,7 @@ const Rotas = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descrição</label>
             <textarea
@@ -304,7 +432,7 @@ const Rotas = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             ></textarea>
           </div>
-          
+
           <div>
             <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">Tipo de Rota</label>
             <select
@@ -320,7 +448,7 @@ const Rotas = () => {
               <option value="Especial">Especial</option>
             </select>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="origem" className="block text-sm font-medium text-gray-700">Origem</label>
@@ -333,7 +461,7 @@ const Rotas = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="destino" className="block text-sm font-medium text-gray-700">Destino</label>
               <input
@@ -346,7 +474,7 @@ const Rotas = () => {
               />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="horario_inicio" className="block text-sm font-medium text-gray-700">Horário de Início</label>
@@ -359,7 +487,7 @@ const Rotas = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="horario_fim" className="block text-sm font-medium text-gray-700">Horário de Fim</label>
               <input
@@ -372,36 +500,52 @@ const Rotas = () => {
               />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="distancia_km" className="block text-sm font-medium text-gray-700">Distância (km)</label>
-              <input
-                type="number"
-                name="distancia_km"
-                id="distancia_km"
-                min="0"
-                step="0.1"
-                value={formData.distancia_km}
-                onChange={handleInputChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="mt-1 relative">
+                <input
+                  type="text"
+                  name="distancia_km"
+                  id="distancia_km"
+                  placeholder="Ex: 12,5"
+                  value={formData.distancia_km}
+                  onChange={handleInputChange}
+                  className={`block w-full border ${inputErrors.distancia_km ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {inputErrors.distancia_km && (
+                  <p className="mt-1 text-sm text-red-600">{inputErrors.distancia_km}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">Use vírgula como separador decimal (ex: 12,5)</p>
+              </div>
             </div>
-            
+
             <div>
               <label htmlFor="tempo_estimado_minutos" className="block text-sm font-medium text-gray-700">Tempo Estimado (minutos)</label>
-              <input
-                type="number"
-                name="tempo_estimado_minutos"
-                id="tempo_estimado_minutos"
-                min="0"
-                value={formData.tempo_estimado_minutos}
-                onChange={handleInputChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="mt-1 relative">
+                <input
+                  type="number"
+                  name="tempo_estimado_minutos"
+                  id="tempo_estimado_minutos"
+                  min="0"
+                  placeholder="Ex: 45"
+                  value={formData.tempo_estimado_minutos}
+                  onChange={handleInputChange}
+                  className={`block w-full border ${inputErrors.tempo_estimado_minutos ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {inputErrors.tempo_estimado_minutos && (
+                  <p className="mt-1 text-sm text-red-600">{inputErrors.tempo_estimado_minutos}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.tempo_estimado_minutos ?
+                    `Equivale a ${formatarTempoMinutos(formData.tempo_estimado_minutos)}` :
+                    'Digite o tempo total em minutos'}
+                </p>
+              </div>
             </div>
           </div>
-          
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -415,7 +559,7 @@ const Rotas = () => {
           </div>
         </div>
       </FormModal>
-      
+
       {/* Delete Confirmation Modal - moved outside of FormModal */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
@@ -425,7 +569,7 @@ const Rotas = () => {
         message={`Tem certeza que deseja excluir a rota ${currentRota?.nome}?`}
         isSubmitting={isSubmitting}
       />
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
