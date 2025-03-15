@@ -6,6 +6,8 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { processStatus } from '../utils/statusProcessor'
+import { unmaskPlaca } from '../utils/inputMasks';
+import PlacaInput from '../utils/PlacaInput';
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
@@ -124,6 +126,8 @@ const Onibus = () => {
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
+      ...formData,
+      placa: unmaskPlaca(formData.placa),
         ...formData,
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
@@ -259,9 +263,7 @@ const Onibus = () => {
         <div className="grid grid-cols-1 gap-4 mb-4">
           <div>
             <label htmlFor="placa" className="block text-sm font-medium text-gray-700">Placa</label>
-            <input
-              type="text"
-              name="placa"
+            <PlacaInput
               id="placa"
               required
               value={formData.placa}
