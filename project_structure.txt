@@ -81,6 +81,99 @@ export const NotificationProvider = ({ children }) => {
     </NotificationContext.Provider>
   );
 };
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/inputMasks.js ===
+
+/**
+ * Biblioteca de mÃ¡scaras para inputs do sistema
+ */
+
+export const MASKS = {
+    // Documentos
+    CPF: '999.999.999-99',
+    CNPJ: '99.999.999/9999-99',
+    RG: '99.999.999-9',
+    CNH: '999999999aa',
+    
+    // Contato
+    PHONE: '(99) 99999-9999',
+    PHONE_WITH_DDD: '(99) 99999-9999',
+    LANDLINE: '(99) 9999-9999',
+    
+    // VeÃ­culos
+    LICENSE_PLATE: 'aaa-9*999', // Formato atual brasileiro: 3 letras + 1 nÃºmero + 1 letra + 3 nÃºmeros
+    LICENSE_PLATE_OLD: 'aaa-9999', // Formato antigo brasileiro
+    
+    // Datas e horas
+    DATE: '99/99/9999',
+    TIME: '99:99',
+    DATE_TIME: '99/99/9999 99:99',
+    
+    // EndereÃ§os
+    CEP: '99999-999',
+    
+    // Valores
+    MONEY: 'R$ 999.999.999,99',
+    
+    // UtilitÃ¡rios
+    INTEGER: '9999999999',
+    DECIMAL: '9999999999,99',
+  }
+  
+  /**
+   * Remover mÃ¡scara de um valor (para envio ao backend)
+   * @param {string} value - Valor com mÃ¡scara
+   * @returns {string} Valor sem mÃ¡scara
+   */
+  export const unmask = (value) => {
+    if (!value) return '';
+    return value.replace(/[^0-9a-zA-Z]/g, '');
+  };
+  
+  /**
+   * Formatar um valor CPF/CNPJ baseado no tamanho
+   * @param {string} value - Valor numÃ©rico do documento
+   * @returns {string} Documento formatado ou vazio se invÃ¡lido
+   */
+  export const formatDocument = (value) => {
+    if (!value) return '';
+    
+    const numbers = unmask(value);
+    
+    // CPF
+    if (numbers.length === 11) {
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    
+    // CNPJ
+    if (numbers.length === 14) {
+      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    
+    return value;
+  };
+  
+  /**
+   * Formatar um nÃºmero de telefone
+   * @param {string} value - Valor do telefone
+   * @returns {string} Telefone formatado
+   */
+  export const formatPhone = (value) => {
+    if (!value) return '';
+    
+    const numbers = unmask(value);
+    
+    if (numbers.length === 11) {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    
+    if (numbers.length === 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    
+    return value;
+  };
+  
+  export default MASKS;
 === /Users/micaelsantana/Documents/app-frontend/src/utils/errorHandler.js ===
 
 /**
@@ -179,6 +272,82 @@ export const formatErrorForLogging = (error) => {
     timestamp: new Date().toISOString()
   };
 };
+=== /Users/micaelsantana/Documents/app-frontend/src/utils/MaskedInput.jsx ===
+
+import React from 'react';
+import { PatternFormat } from 'react-number-format';
+
+/**
+ * Componente para campos de entrada com mÃ¡scara
+ * 
+ * @param {string} format - PadrÃ£o da mÃ¡scara (ex: '###.###.###-##')
+ * @param {string} name - Nome do campo
+ * @param {string} id - ID do campo
+ * @param {string} value - Valor do campo
+ * @param {function} onChange - FunÃ§Ã£o de callback para mudanÃ§as
+ * @param {string} label - Texto do label (opcional)
+ * @param {boolean} required - Se o campo Ã© obrigatÃ³rio
+ * @param {string} placeholder - Placeholder para o campo
+ * @param {string} className - Classes CSS adicionais
+ * @param {object} props - Propriedades adicionais
+ */
+const MaskedInput = React.forwardRef(({ 
+  mask,
+  format,
+  name,
+  id,
+  value,
+  onChange,
+  label,
+  required = false,
+  placeholder = '',
+  className = '',
+  ...props
+}, ref) => {
+  // Converter mÃ¡scara do formato react-input-mask para formato de react-number-format
+  // Ex: "99/99/9999" para "##/##/####"
+  const convertMask = (inputMask) => {
+    if (!inputMask) return format || '';
+    return inputMask.replace(/9/g, '#').replace(/a/g, '*');
+  };
+
+  const handleChange = (e) => {
+    // Simular um evento para manter a compatibilidade com os outros componentes
+    if (onChange) {
+      const syntheticEvent = {
+        target: {
+          name: name,
+          value: e.value
+        }
+      };
+      onChange(syntheticEvent);
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      {label && (
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
+      <PatternFormat
+        format={format || convertMask(mask)}
+        valueIsNumericString={false}
+        id={id}
+        name={name}
+        value={value}
+        onValueChange={handleChange}
+        placeholder={placeholder}
+        className={`mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${className}`}
+        getInputRef={ref}
+        {...props}
+      />
+    </div>
+  );
+});
+
+export default MaskedInput;
 === /Users/micaelsantana/Documents/app-frontend/src/index.css ===
 
 @tailwind base;
@@ -501,18 +670,22 @@ export default function StatusBadge({ status, type = 'default', size = 'md' }) {
     pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pendente' },
     completed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'ConcluÃ­do' },
     canceled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelada' },
-    
+
     // Ã”nibus specific
     maintenance: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Em ManutenÃ§Ã£o' },
-    
+
     // Viagem specific
     in_progress: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Em Andamento' },
     scheduled: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Programada' },
-    
+
     // Aluno specific
     enrolled: { bg: 'bg-green-100', text: 'text-green-800', label: 'Matriculado' },
     graduated: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Formado' },
-    
+
+    // Motorista specific
+    vacation: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'FÃ©rias' },
+    leave: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'LicenÃ§a' },
+
     // Fallback
     default: { bg: 'bg-gray-100', text: 'text-gray-800', label: status }
   };
@@ -536,6 +709,12 @@ export default function StatusBadge({ status, type = 'default', size = 'md' }) {
       pending: { label: 'Programada' },
       in_progress: { label: 'Em andamento' },
       canceled: { label: 'Cancelada' }
+    },
+    motorista: {
+      active: { label: 'Ativo' },
+      inactive: { label: 'Inativo' },
+      vacation: { label: 'FÃ©rias' },
+      leave: { label: 'LicenÃ§a' }
     }
   };
 
@@ -548,13 +727,13 @@ export default function StatusBadge({ status, type = 'default', size = 'md' }) {
 
   // Get base styling
   const baseStyle = statusMap[status] || statusMap.default;
-  
+
   // Apply context override if applicable
   let label = baseStyle.label;
   if (contextMap[type] && contextMap[type][status]) {
     label = contextMap[type][status].label;
   }
-  
+
   return (
     <span className={`inline-flex items-center justify-center rounded-full font-normal ${baseStyle.bg} ${baseStyle.text} ${sizeClasses[size]}`}>
       {label}
@@ -638,14 +817,19 @@ export default function ConfirmationModal({
 === /Users/micaelsantana/Documents/app-frontend/src/components/common/FormModal.jsx ===
 
 import React from 'react';
+import MaskedInput from '../../utils/MaskedInput';
+import { MASKS } from '../../utils/inputMasks';
 
-export default function FormModal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
+export default function FormModal({
+  isOpen,
+  onClose,
+  title,
+  children,
   onSubmit,
-  isSubmitting = false
+  isSubmitting = false,
+  formData,
+  onInputChange,
+  maskedFields = {}
 }) {
   if (!isOpen) return null;
 
@@ -670,7 +854,15 @@ export default function FormModal({
                 
                 <div className="mt-4">
                   <form onSubmit={onSubmit}>
-                    {children}
+                    {React.Children.map(children, child => {
+                      if (child.type === 'input' && maskedFields[child.props.name]) {
+                        return React.cloneElement(child, {
+                          component: MaskedInput,
+                          mask: MASKS[maskedFields[child.props.name]]
+                        });
+                      }
+                      return child;
+                    })}
                     
                     <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                       <button
@@ -852,6 +1044,8 @@ import Onibus from './pages/Onibus'
 import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
 import Monitores from './pages/Monitores'
+import Motoristas from './pages/Motoristas'
+import brasaoLogo from './assets/images/Brasao.png'
 
 // The App component is the only one using BrowserRouter now
 const App = () => {
@@ -903,14 +1097,30 @@ const AppContent = () => {
           {/* Sidebar Header with Toggle Button */}
           <div className="flex items-center justify-between p-4 border-b border-gray-700">
             {!sidebarCollapsed && (
-              <div>
-                <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
-                <p className="text-sm text-gray-400">Sistema de Transporte</p>
+              <div className="flex items-center">
+                <img 
+                  src={brasaoLogo}
+                  alt="BrasÃ£o de Navegantes" 
+                  className="h-10 w-auto mr-3"
+                />
+                <div>
+                  <h2 className="text-xl font-bold text-blue-400">Coracao</h2>
+                  <p className="text-sm text-gray-400">Sistema de Transporte</p>
+                </div>
+              </div>
+            )}
+            {sidebarCollapsed && (
+              <div className="flex justify-center w-full">
+                <img 
+                  src={brasaoLogo}
+                  alt="BrasÃ£o de Navegantes" 
+                  className="h-8 w-auto"
+                />
               </div>
             )}
             <button 
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="text-gray-400 hover:text-white p-1 rounded-md"
+              className={`text-gray-400 hover:text-white p-1 rounded-md ${sidebarCollapsed ? 'mx-auto' : ''}`}
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? (
@@ -988,6 +1198,30 @@ const AppContent = () => {
                   {!sidebarCollapsed && <span className="ml-3">Viagens</span>}
                 </Link>
               </li>
+              <li>
+                <Link 
+                  to="/motoristas"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/motoristas') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Motoristas"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Motoristas</span>}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/monitores"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/monitores') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Monitores"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Monitores</span>}
+                </Link>
+              </li>
               <li className="mt-6 border-t border-gray-700 pt-4">
                 <Link 
                   to="/login"
@@ -1013,6 +1247,7 @@ const AppContent = () => {
               <Route path="/alunos" element={<Alunos />} />
               <Route path="/onibus" element={<Onibus />} />
               <Route path="/monitores" element={<Monitores />} />
+              <Route path="/motoristas" element={<Motoristas />} />
               <Route path="/rotas" element={<Rotas />} />
               <Route path="/viagens" element={<Viagens />} />
             </Routes>
@@ -1058,16 +1293,16 @@ api.interceptors.response.use(
   error => {
     // Log error details for debugging
     console.error('API Error:', formatErrorForLogging(error));
-    
+
     // Handle specific errors
     if (error.response?.status === 401) {
       // Redirect to login if unauthorized
       window.location.href = '/login';
     }
-    
+
     // Get user-friendly error message
     error.userMessage = getErrorMessage(error);
-    
+
     return Promise.reject(error);
   }
 );
@@ -1079,14 +1314,14 @@ api.interceptors.response.use(
  */
 function formatTimeForApi(time) {
   if (!time) return null;
-  
+
   try {
     // Split time into hours and minutes
     const [hours, minutes] = time.split(':');
-    
+
     // Convert hours to integer to remove leading zeros
     const hour = parseInt(hours, 10);
-    
+
     // Return formatted time (H:i format as Laravel expects)
     return `${hour}:${minutes}`;
   } catch (error) {
@@ -1102,16 +1337,16 @@ function formatTimeForApi(time) {
  */
 function formatTimeForDisplay(time) {
   if (!time) return '';
-  
+
   try {
     // Handle different time formats from API
     const timeParts = time.split(':');
-    
+
     if (timeParts.length < 2) return time; // Return as is if not valid
-    
+
     const hours = timeParts[0].padStart(2, '0');
     const minutes = timeParts[1].substring(0, 2).padStart(2, '0');
-    
+
     return `${hours}:${minutes}`;
   } catch (error) {
     console.error('Error formatting time for display:', error);
@@ -1124,23 +1359,23 @@ export const AlunoService = {
   getAlunos: () => api.get('/alunos').catch(error => {
     throw new Error('Erro ao buscar alunos: ' + getErrorMessage(error));
   }),
-  
+
   getAlunoById: (id) => api.get(`/alunos/${id}`).catch(error => {
     throw new Error('Erro ao buscar detalhes do aluno: ' + getErrorMessage(error));
   }),
-  
+
   createAluno: (data) => api.post('/alunos', data).catch(error => {
     throw new Error('Erro ao criar aluno: ' + getErrorMessage(error));
   }),
-  
+
   updateAluno: (id, data) => api.put(`/alunos/${id}`, data).catch(error => {
     throw new Error('Erro ao atualizar aluno: ' + getErrorMessage(error));
   }),
-  
+
   deleteAluno: (id) => api.delete(`/alunos/${id}`).catch(error => {
     throw new Error('Erro ao excluir aluno: ' + getErrorMessage(error));
   }),
-  
+
   getAlunoPresencas: (id) => api.get(`/alunos/${id}/presencas`).catch(error => {
     throw new Error('Erro ao buscar presenÃ§as do aluno: ' + getErrorMessage(error));
   })
@@ -1150,23 +1385,23 @@ export const OnibusService = {
   getOnibus: () => api.get('/onibus').catch(error => {
     throw new Error('Erro ao buscar Ã´nibus: ' + getErrorMessage(error));
   }),
-  
+
   getOnibusById: (id) => api.get(`/onibus/${id}`).catch(error => {
     throw new Error('Erro ao buscar detalhes do Ã´nibus: ' + getErrorMessage(error));
   }),
-  
+
   createOnibus: (data) => api.post('/onibus', data).catch(error => {
     throw new Error('Erro ao criar Ã´nibus: ' + getErrorMessage(error));
   }),
-  
+
   updateOnibus: (id, data) => api.put(`/onibus/${id}`, data).catch(error => {
     throw new Error('Erro ao atualizar Ã´nibus: ' + getErrorMessage(error));
   }),
-  
+
   deleteOnibus: (id) => api.delete(`/onibus/${id}`).catch(error => {
     throw new Error('Erro ao excluir Ã´nibus: ' + getErrorMessage(error));
   }),
-  
+
   getOnibusViagens: (id) => api.get(`/onibus/${id}/viagens`).catch(error => {
     throw new Error('Erro ao buscar viagens do Ã´nibus: ' + getErrorMessage(error));
   })
@@ -1176,11 +1411,11 @@ export const RotaService = {
   getRotas: () => api.get('/rotas').catch(error => {
     throw new Error('Erro ao buscar rotas: ' + getErrorMessage(error));
   }),
-  
+
   getRotaById: (id) => api.get(`/rotas/${id}`).catch(error => {
     throw new Error('Erro ao buscar detalhes da rota: ' + getErrorMessage(error));
   }),
-  
+
   createRota: (data) => {
     // Format time fields
     const formattedData = { ...data };
@@ -1190,12 +1425,12 @@ export const RotaService = {
     if (formattedData.horario_fim) {
       formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
     }
-    
+
     return api.post('/rotas', formattedData).catch(error => {
       throw new Error('Erro ao criar rota: ' + getErrorMessage(error));
     });
   },
-  
+
   updateRota: (id, data) => {
     // Format time fields
     const formattedData = { ...data };
@@ -1205,20 +1440,20 @@ export const RotaService = {
     if (formattedData.horario_fim) {
       formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
     }
-    
+
     return api.put(`/rotas/${id}`, formattedData).catch(error => {
       throw new Error('Erro ao atualizar rota: ' + getErrorMessage(error));
     });
   },
-  
+
   deleteRota: (id) => api.delete(`/rotas/${id}`).catch(error => {
     throw new Error('Erro ao excluir rota: ' + getErrorMessage(error));
   }),
-  
+
   getRotaParadas: (id) => api.get(`/rotas/${id}/paradas`).catch(error => {
     throw new Error('Erro ao buscar paradas da rota: ' + getErrorMessage(error));
   }),
-  
+
   getRotaViagens: (id) => api.get(`/rotas/${id}/viagens`).catch(error => {
     throw new Error('Erro ao buscar viagens da rota: ' + getErrorMessage(error));
   })
@@ -1228,15 +1463,15 @@ export const ViagemService = {
   getViagens: () => api.get('/viagens').catch(error => {
     throw new Error('Erro ao buscar viagens: ' + getErrorMessage(error));
   }),
-  
+
   getViagemById: (id) => api.get(`/viagens/${id}`).catch(error => {
     throw new Error('Erro ao buscar detalhes da viagem: ' + getErrorMessage(error));
   }),
-  
+
   createViagem: (data) => {
     // Format time fields for API
     const formattedData = { ...data };
-    
+
     // Handle all time fields
     const timeFields = ['hora_saida_prevista', 'hora_chegada_prevista', 'hora_saida_real', 'hora_chegada_real'];
     timeFields.forEach(field => {
@@ -1244,16 +1479,16 @@ export const ViagemService = {
         formattedData[field] = formatTimeForApi(formattedData[field]);
       }
     });
-    
+
     return api.post('/viagens', formattedData).catch(error => {
       throw new Error('Erro ao criar viagem: ' + getErrorMessage(error));
     });
   },
-  
+
   updateViagem: (id, data) => {
     // Format time fields for API
     const formattedData = { ...data };
-    
+
     // Handle all time fields
     const timeFields = ['hora_saida_prevista', 'hora_chegada_prevista', 'hora_saida_real', 'hora_chegada_real'];
     timeFields.forEach(field => {
@@ -1261,12 +1496,12 @@ export const ViagemService = {
         formattedData[field] = formatTimeForApi(formattedData[field]);
       }
     });
-    
+
     return api.put(`/viagens/${id}`, formattedData).catch(error => {
       throw new Error('Erro ao atualizar viagem: ' + getErrorMessage(error));
     });
   },
-  
+
   deleteViagem: (id) => api.delete(`/viagens/${id}`).catch(error => {
     throw new Error('Erro ao excluir viagem: ' + getErrorMessage(error));
   })
@@ -1276,26 +1511,26 @@ export const MonitorService = {
   getMonitores: (page = 1) => api.get('/monitores', { params: { page } }).catch(error => {
     throw new Error('Erro ao buscar monitores: ' + getErrorMessage(error));
   }),
-  
+
   getMonitorById: (id) => api.get(`/monitores/${id}`).catch(error => {
     throw new Error('Erro ao buscar detalhes do monitor: ' + getErrorMessage(error));
   }),
-  
+
   createMonitor: (data) => api.post('/monitores', data).catch(error => {
     throw new Error('Erro ao criar monitor: ' + getErrorMessage(error));
   }),
-  
+
   updateMonitor: (id, data) => api.put(`/monitores/${id}`, data).catch(error => {
     throw new Error('Erro ao atualizar monitor: ' + getErrorMessage(error));
   }),
-  
+
   deleteMonitor: (id) => api.delete(`/monitores/${id}`).catch(error => {
     throw new Error('Erro ao excluir monitor: ' + getErrorMessage(error));
   })
 };
 
 export const MotoristaService = {
-  getMotoristas: () => api.get('/motoristas').catch(error => {
+  getMotoristas: (page = 1) => api.get('/motoristas', { params: { page } }).catch(error => {
     throw new Error('Erro ao buscar motoristas: ' + getErrorMessage(error));
   }),
   
@@ -1303,20 +1538,280 @@ export const MotoristaService = {
     throw new Error('Erro ao buscar detalhes do motorista: ' + getErrorMessage(error));
   }),
   
-  createMotorista: (data) => api.post('/motoristas', data).catch(error => {
-    throw new Error('Erro ao criar motorista: ' + getErrorMessage(error));
-  }),
+  createMotorista: (data) => {
+    try {
+      // Criar uma cÃ³pia dos dados
+      const apiData = { ...data };
+      
+      // Mantenha o status como string - a conversÃ£o serÃ¡ feita no backend 
+      // Isso irÃ¡ funcionar com a nova versÃ£o atualizada do backend
+      
+      console.log('Enviando dados para API:', apiData);
+      
+      return api.post('/motoristas', apiData).catch(error => {
+        console.error('Erro detalhado:', error.response?.data);
+        throw new Error('Erro ao criar motorista: ' + getErrorMessage(error));
+      });
+    } catch (error) {
+      console.error('Erro ao processar dados:', error);
+      throw error;
+    }
+  },
   
-  updateMotorista: (id, data) => api.put(`/motoristas/${id}`, data).catch(error => {
-    throw new Error('Erro ao atualizar motorista: ' + getErrorMessage(error));
-  }),
+  updateMotorista: (id, data) => {
+    try {
+      // Criar uma cÃ³pia dos dados
+      const apiData = { ...data };
+      
+      // Mantenha o status como string - a conversÃ£o serÃ¡ feita no backend
+      // Isso irÃ¡ funcionar com a nova versÃ£o atualizada do backend
+      
+      console.log('Enviando dados para API:', apiData);
+      
+      return api.put(`/motoristas/${id}`, apiData).catch(error => {
+        console.error('Erro detalhado:', error.response?.data);
+        throw new Error('Erro ao atualizar motorista: ' + getErrorMessage(error));
+      });
+    } catch (error) {
+      console.error('Erro ao processar dados:', error);
+      throw error;
+    }
+  },
   
-  deleteMotorista: (id) => api.delete(`/motoristas/${id}`).catch(error => {
-    throw new Error('Erro ao excluir motorista: ' + getErrorMessage(error));
+  deleteMotorista: (id) => {
+    try {
+      console.log('Tentando excluir motorista:', id);
+      return api.delete(`/motoristas/${id}`).catch(error => {
+        console.error('Erro detalhado ao excluir:', error.response?.data);
+        throw new Error('Erro ao excluir motorista: ' + getErrorMessage(error));
+      });
+    } catch (error) {
+      console.error('Erro ao processar exclusÃ£o:', error);
+      throw error;
+    }
+  },
+  
+  getMotoristaViagens: (id) => api.get(`/motoristas/${id}/viagens`).catch(error => {
+    throw new Error('Erro ao buscar viagens do motorista: ' + getErrorMessage(error));
   })
 };
 
 export default api;
+=== /Users/micaelsantana/Documents/app-frontend/src/assets/images/Brasao.png ===
+
+‰PNG
+
+   IHDR   ó  $   úº   sRGB ®Îé   gAMA  ±üa   	pHYs  Â  Â(J€  êÁIDATx^ì}˜·uõ}½oïì½ˆ”D‘T£hIVw‘Ü{Mì8.ùãØqãšÄ-vì¸—Ø²lË¶ÜäªfUªR…)±×%¹½ï¾Şş{0sßb±óv—½ˆçûğ€Á`ğ0Ü‹†ÎàÎàÎàÎàÎàÎàÎàÎÀ.Û?ƒS ŸúÔ[ƒt!b–ğñ/ü´×* İË—Ÿu›}¨îkoHìÏ…«?yå»¿´ŞV¸ó;ŸXjÛ2ß>TøÙãƒıK.˜öôg>ó“”UÂ}ôÍµçÏj·~_û.;ŠÒwÜ)í?œ!ó)teaäò@nèu8z‹5©œ«Ï©zòÁløû:‘@N÷Ş6Tã‘˜7GwÒ7ç¼Ô›÷¦Gr¡ßJzsvºãüé«ó¤†ãEßPÄ•­¦Ğ~OİçŸtGïÕóFú‹ëƒ?G8İ³·¾'XÑIó~cvgp|á¶ı38öÒå5ù¾·¬ì{ËrOëKz:ŞLt½Ê>­ Òz¶Ÿ?İ3Yé§E¡šè£y¡ªógÈã*ÖÚIKh¨ª¨^èœêl:?|`!üéî¾µè8LMà¼HúÚiO­Y8øà5øÿY®®·„R7Ø§Ïàâ™O€TEû $mÌ“¦jOœ*½iûìxx<Ş;¨àÉZ‡®|aº“ªtç•ï¥œrwNIiÀ[ÌD›}C4=0Dş$A’'Úvë$Îàøâ™O`Lª|V—~WNùNät®Í§†1Şµ£hÕ¬Y5tÏ…!ŸK‘X r»óÙJœ·£J Ñ¤G š/¼üU~y'gÆÌ‡ ŒáŸ(cÏíŸ{Í›’{ÿ{~ §)âNS¼ éºĞìÅ8¤ù\½Û®›ŸÚúõz_œ(fS´¯ĞBmùŠíÃáiŸu×-\ï¦Lu±wÏ…õ‰}ƒj­“¹?¡ÖL•ÊÛ[7{‡MùÖï]î;ğHfäÙA´'[³=9sÍ›ÏŒ™O,Îy`º¶©ñìiË/¼4İ±óEûv¤aøI{+~yıç~;Æb|¬ñÇåuµ¹¯-	t/„š…xW²Šz‹Ñí—W£€%4x‡›*XØê30œĞşT„Šn_‡¥¤tÆÔdŞ•ˆ‘Ïë“6âÉGk=ÃQü?€t›Cçn½+Zq":8±¬#\ ÿÕïşRÇó|ƒÇöÏÀ°
+OOu^U‹|%»ùo¯.ôî›íß¶»ÀËMßtß–»ì¤Çÿú—Öø÷¿ÂOùÚ ßCÙ|‘»cyŠùZo!3+PL+ç*¢OÒE/%
+¾’Ëİäåî;“§hĞ•‹z)ÍŠQ¯«Èçı4Äd‡È‡h(ç§«åœçtY¾&âÎFSybuÚME—[¥ëË)Û|NWC¤î¶Ÿşå>»¨ÇèhÏ¦®õnû¸Ë¹¤Ø¿ú›^ûÊ½sWÍIÜÿ3£jÆóg$3½;ÔS³W‡ZKüd­kd!=BÒm×Ğpõ‚­—|ä–%vÒc”–ä¨Ÿ>‘í=¸8J)Ê293 4#Ãa G>Šs3Øãi¯Ç«|ÀKY;4ŠT~|z¬<‘—\ãóù”d³£ù MEÓ´­Élñ;W}â×ÿkG ³-¶>ö	XÔ+¼ÕAKIDZ¾õƒû×ßrûßµ“>/ğ¼—Ìh¬}áë½…ô³ç5<t÷ƒ“ö)zÍ%‹§WÌZzeÃÈ¶úzïùrqr2Tô¨5´¨úí/¿âö›şòĞA;ù1ˆ¼:šzc8Ùõ–şŞŞ•îbR,5‹?¹
+,*=.ò3—qìã'fŞ±¼¤ûµ¾´2fAR‡˜¤â*}|_óJ®ÖŸ£*rçpÒá˜¥?‹ä±ÔWçÄ!ïd*º~00ûG»Z[‡ìbs¼ñÂ¦ë"¹¡+çøûgáùTù2TáN×æRéKf7dç\zş:‘Ğâ—]v®÷t–ØÏK2ãÁ^sÑÙ•ÿ|ù‚ËZæÎûBêÉß¿md÷†UKW½°¶yiÓòÀ—_¼ª¿.Û—	¦®«ó%ÈÅRcÕô@¯»îoØQ7#øÔ±n W\rNxÙòÕoÈĞKkRín‹hL*‹Õ]Ÿ‹ÉÆªrÔ)‘i
+¬xÅs.ÊF]<ï¡Ş¡œWuºÃ9ä‡k2î eø>YÍV òÂ˜.äÉSØSìcµ¿mõ%—İr¼Tm<Ã9”~}u¾÷òéşÁ(J‡ß¾|xdÈ_óÓw~êæ’ö_âfQú†TpÚğ_µ&yÉ+Š§±ŸWdÆCı·×½tNÃPÛÊÙì›*2ï´mXÙDİ˜;KÉ¦ŞøŞ/ıÎNNxàÓÜ¹ÙµÅÁ«]Tô‡8€“.úè`ëÁ§;SŞõº4?Hù–,ŸåÒóDø5/<§£¶e¶§/ç;§··Ï]¤¢" Æº‰ÆÆ^JæYmæ8Ä.8U‘òLD·C]/y<Nç¥áœ‡¼nX”#N)ÇšàÊ¥)ÉùugüÔ9ÌíŞdñŸW¤ÇÿdyÜîÇãÑiŸ*Fn~Ñ‡¿÷˜ºğ8àß_wÍy¾Á½¯¬*WO=üPr”÷©?¢®|´-×¼êËÒ± NÃ¹¾¯Ûo¸h-j
+úfOóäk y½ıõ¯t.cìçÕ˜êêZwëï+
+Ck+¼¬BzÓj†LÉ<˜œ¿.9cíß?Ô±?1Õ³Ì—8ä9¾¾…2“÷E©;¦ÅiN·\ørTs²9`ŒÕ¿ü“;–}ğÅsÂ®DÿÕ‘ªêóS©üŸ
+K~`æ»åÁß}(×¿ÿ#Ãü¬vvhÌšÚ›ŒÒÁ”ŸFTï·ŒÊ²Dæ£0rm‰Pµ?OK#}”c)ì-X×èa ]ğĞãñfNåhyçí‹«ë‘wW&DİTµîo¾ÙW—³dcƒi˜Ş’µÜGcjOìæsy.ÙØÑY¬¼óšÏßõV;©*C¤õŞ?c uòwg‚Êª?R9{`$CÿñT<p»¹ÆıTÃóJ2C]å|İtßà¬ş‚¤…j†† õ™{õ@`Şê†•KVäc7éyaÌ¾¬Ú•Xqg¢ >ÒA2C@BÅæ­œñª®Şâ¤^~ïS}ñâ%Ë®\²pÉ
+¸™±Ğëjv¯ôÅ{Ïšçyc‹käšğĞ·^3#ıáp¦ÿ•®ø9®Ä@]¢àŞå©lØdÇoX½ ;ğ^@mÏÎ¡oBuFp	–Â],AG‡™p	VÃ³j÷èw±ê­9úsAVÅÔìÆŠ.UpzX9—‹:ÓA-ª<ñÈ×ãvQw>ÖºÛSõS'É†Îsz¦ıÿùFÚ¿R;²û¥ÕÁplš/{ÉLonÁ[_ı’â›^ryøÍ/yA-4hASÓª|¹"ÏkŠ=¥1±dN¹BJÅSp×ÒKÖ¬ûÈ¯Ÿç‚±u ;|é4ßP­”?Ê9×_4>¯+æsõ^ß_<°e§ı§$N;Éi¸¦iÆŒşáÑÚsÏmŞ¡÷¶2vÂ‚
+¬WÖ! æfÎiñumyj$ŸÏEñ’$8zôLãLKÀ°WAUerG¢!%¡!Ñ!qğ?˜›®«¯ûbûŞk‘]ú`!;ĞåƒQ	S>{“¬²2®¨íVK3sÁÏeš×á%s¦¦®æ#Åíw¿e^v‡O®Ú³ôP­ª¢¦P†‚…±’[GÊ¥TãË¨µÛ“á‘¡e5¿ v¸”/Ê
+ídW®¡¬déVº:¾Šµä8ÌÔê1XSèÀËo/Œà<^ØÈ¹=Ï`AËûöõ9½†gI_İ8íãÁİ÷-²: ÷Õ‘ôSÎåéÈG7äk&R‰ÁŸF’ïÂZs,?…†g¸|¬–ç#´%]¿½×Ûô~½¾åB›8UŞsÛş)T>ûEŞä+Cû×ıß{WÓ¿AE¶O+àkİ†UPhŒ:ğ`¡:ú‡Û|íÏ®§ˆ+ÅtˆŒF¸%^MOVÑ³Ã1nÄA54+œ¡ie3™Ëg,?ïevV„‡E&Ùm÷¯©ëzÒsÎĞ:Èwv´W©µxbvÈjè$¤q¡¡á8/§"@íîßöÈF„Eu6ï£‡¥s2[T«ÃàĞÀáFÃU.mMiay'®—´#-|qˆÀœ3ßo>§MI±:æq:Pn(ñôÓí¢”¸:PkM÷0¹
+Ù¦ş‘ÔÚÆ|·za®2¾÷CŞ‘ïáùaÎÎ¦„×_zí5õß/†ª~Ò»eıÒşŒ‡Ÿ…uO('† ,µÌóv­mê]VÌs#kñe8…g sÆ‚›`Ë’’T"Ç<Ù_½rÅ_wÕÿdŸ:©qÚ¨Ù»rÑkƒ;>8+ßö¾FÏÀ‚ å[†¹›ÿÙƒ»oµ“(@¥›îK­­¢øB1h TÈ[$?×¬´h¨Wµ§ÃÔ‘öÑ7–
+/¦x
+4+”PÓ5ù"¬Ã^
+Î¿pgWGï§ßñ¡ot!/¨v/_=+—/úf·d÷Í•S[[©®}¬æöf}œ—õ¿ È“gÒ¤
+ş¾Awåtµ†œš™_Ù3’Yáév‚Ü˜CÔ›ÓŞL%%¸­ä¼TäÇŠq!TéöT€5‰ íO†X](×Îj3ëÊ`6ÈÃ…ÎC#‘WÆ§|8‰ÃıS±H>‡²6É{3ege;]?ëÜß;3¾şæÿ/—I^1×ß?fİvœËİÃu›ãú›Jê'êÍRwŒµ?Wí@Ú•1ŸİÕ3i®»í™¸‡;gû‹iÕÁôq¢Ì9_?ùÜü¹£Ã¼3†^Wµ«"a5†2¤pİùÊ‘^Ë­§ş *>Ôı‹/ºò5X(äßûĞªdûÎË^yùŠİo{Í‹CsVÍï=Ye§d†ñ¨2?´ªÙÛ¯Şèd…T°O+2@íCïÍ%BÚ"a<ªŠ%Œ0&íˆ‡h_Âjƒ,Íñ•ÕRŒ3÷%Ôš¨ó=,åÒK_·Ô4Var69ğ×ÁB¨€4ÿƒú "5¡¶HÇ˜„¾&¼~ˆå›â q¸»¶¼³{ßÖ·»ól	²¶PA»¹¬p0PX,ÒŸõ¤V'“ê<Ê¨#ÊGˆù‰… ˜v‚ë+„•Û«ër'†ÿ€`5şç	VÏ¡¡ ~äÔ^”që=¿¸õŒøÆó^ğwğE;@b˜RíË+’è"ğfÆ³ñ¼gïi«Â-óz÷'ı·1Û·7³43”Vy`÷Œg‚²A‹Â2WtFÈ¨â:0¤Áám4S>x÷Ïë§¥wû IA«‚„µ>ôÓÉš'§Í˜ù®ÿxõÿÇÛŞ{N°}!´7S7²Ë?ï1ÃË…øÀÊ¹Ş¾W`,UO UR+¢êµ`B^ê‡ôáÆ'«¥ä<,â
+®Õoü¿U¯şÀ;ÔIúZj4RX†õq7ˆVÉI‘*›å2[«·"¶æÂ	ÅŒbº¬ ï'ËL 4	”çA4r”ä…õ[#lõå0€cX§AD ¢CÍ®÷¥ÔÿÉ&²ú,Ây·§¼ò}5œ•åvÀß50Ô_=mÎçFö=çÁéÑBb¢œè4¿¬’Ë¥ïAú§FêÊ¾¸b¯ıÆpºÿ%v”ê`Íg%À½L&©±zOTm%•¹óÄøùx¨ñ{_½³ıËÖÌN`xVïùØŠÀşµáü J//©ÜéŸÎÉ:~>mÔì7¿ú}Ş¡WD\éYÑÂ RgùáúéÜ2ÄO/t¾±Ş5¸ºÚ›ğW{Sª×Ş¬ }É0« ÕĞè§soïf5F*ê[®PPD†tj
+æhEÕMóõ+Õÿ†öìzVW	¡@{ëUË/ğG*Ö¶÷%êúXÆíIUP¦t2^J$ÓTğøY‹H³ªMÔH²au“Ç~Á8M÷ĞL?ÿüàÕ1¡Ü.·Ìàó°ZWz’Jšaà†,À<s7d ¨šÕÜ	…	ËRóã¬Ü°]C¥Æ¢äIg­ËSïùÌŠ0¡½#JFYx¬©:4¬[ê¥êÔAw8İWWSè]ÓàM\áîtû8oÔ!:°~&î]©í¨ùV$‹v>¾7Ö ònêpÕ=òhıØiş3³©ÿ­çÆúfùTgäRÃ¡œ¥e “EY±hÆË¦ø?0¬ÀìCªàSxÜ+Ö£C‡Z^áJÎre’Ÿ?7²¢9àYÍö¼¾ÖÖû“ªA-f¸Š2Ñé?úûOÿâ¸¾\s(8­¬ÙûÌ+¿4+·÷İóıJ§Cï{ ]¡¤zfH¨µx¸è½!	!ıjÜ	u=¬V?q£	-Òch¨µHYl¯JüÅú‹.T0¼Á3}ÑŠæ½ı>W¾9Yt]™m}ÆƒõÎ~–˜–hp ÔtÄ_\Õ3FjL M`œ‰qÊñôpjÌÀ{’ôÈ®nºh^=½b¾OİÎA:£0ÿ×c½9¤Ê†r}sİ^š^£·,¯RÒä^I*®ÇĞ hÚ8éPï êšˆİÃ¬"‡-Y"kÁQ?Eo€ò‘¦/¯O†¿è4ïû·ï|øüºı÷ıA^ÙDÙ¡ñ`x›7ôeyìŒº¶‡2¸¯´Ë¯´tØ8-Cf)P÷xèpP· ê·ªĞ«†_È]äÊ¼/RuñÉüšçi5ÏüñO~2ÜİÓy~K¾½NæIñvO<‰æq^„ÚR~Ê0‰k}YeÈ
+¹²ªWGcíÌ¨!£,FFXR²ôƒE›¥¤0ŞH[Ò;Ë´#³¦©Š¾ºP"™=8àyéBÚsÃÀöÇ>èK¾.0rp~K¦Õ½$:L-Á”’¦œ_3K¶ê`QI%ÌU/÷«²NÀh\,¸n0¢¬²Cêìè/ÒÿŞ¶‡m¤í<Z_³¸^­¹F'UàÇ	’XGÆ¦ÍÃa%ÍP_{`=°©—6í iÍU´¬Ö*§ÏËõ¸¬>ó21Ä¸è& ñĞ‚ùaªög•±¯µ·ÇC«XÃi	¦™Ì¤Œ‚Ğ&°:-èÍ÷7…}‘W¯YRƒ7ÅŞò’5ÓÄğô†§]¶Ô½÷-  <c”oÍŠ¤•æ m!Wô(‰Û4<gHlÔş«Ú”å¿èW«ù0ÆVÃê5Œº-d(ë«`Í-B¡%—=0’ÈıÚÉĞw²à´"sKs¸gz¾ûÁBj!zìÎlL­t‚	ä^¸Æ_àq”ÚKõàƒYVóXrAJ‡¹Ñ-‹Y‹.xÜ†ˆÆ"¸‡ÉÜÏÄäëÚÒ!jÏDÔ2Êt&ë¯ó$®XSÙ}>Ş°šôC=†j¬ç¥«µŠ¸Å‚Rõ¡Ê/ŠLıİ”Åj¨nn´<$à¼ZÓ•ÊªKûcíiZ¿£Ÿ5/õĞÜi•4³2 –h¢A×øF‰ ¿xÎCİ…‡ò´o°H·¬ï§H0H‰TŠf5Gé¼¦Z"ŠÎ š;A¨¦I¼2©¤˜Kİ£º'iDÖ!ñxm²—Iµ‹PĞQâ	¨î4wt)C§Vä‡x¼:|]qğà‹=CíkZ‚şPÚßâº¸)ùF÷àB!3Ê²@m¹âäÊrÍòDGŒá‹? ¡ ÃBç†ÎC
+t^¨;<¨áÈy¹®PfŒï1SP½üª÷ßıÔÛÖÒİcÓŠÌ¨èW\ºb`$x#¦`@b?´ú@^C!Y‹!ÊXcJ¼=ˆ%œuş4ğCEƒZ’no.BûR15ECP–Û,®C¾Íœvz1¯Èô0KÏ`‰¸hlÒÈMà$[“y^$QJgJ6)–$ /È©
+©‰NêÎ=	ÚyĞ2(%³9EÆ…ua*ğ¸÷ìã1 ´äƒ2`,‰{ÃPE7´ÇéÎ§PU€%1KÏ kÌkPëºAv¬œÂzî
+ ÊT€ú„T¬ğ¥àPg¨»*o’j<#ş:_2Š· <#³ÙÄÚùõ·³#ËĞ©BeÇX$D}`x€k¥î$OEjùÙBú&X»  vÃ •o…Øx‘vŒ.ÖÎP'yîÜQOƒ…èHUüòÂw~é'3‘ÓŠÌ0<ÍöåWf’‰WÀğ)Œ‡uKŒYTÈ*gK0CÂCJåU’“îs#LRj$ÒÚˆ¨ñ5®ss¬‚g¸adyì§™!Œ±¤2®æ^ÑûÇÜ–qi*@Sã6D;1šË¨e” #:œQ!ÁÑ©@•Äü,,Î0Ö˜GîJ[F%Œå«¸á>Ô–¥]I&KO&suÌCçÍ¨&/_ÒÇ~_ÓÆ÷…eš’èP .Gyü{÷Ş¸R¯cA¿Ê£è	Ó¥ªÔ«•#,ÁQ—É<Ôn–bVá‘2£œ9ÜŠL Î!F¶AÛ6²ÔàµbK8AI©è÷ó~'ABü7êÚHc—Ìã¿õç€ã4w<ş5ùYr³ÍclZZk»CZÃ"ÒzØy,7óâ=™ÕkÁiEf,Áâ{Vyk=Ü 0>Â”Şî‰3!ĞØWTÒ¬à°"¡HOµBŠjû3.ÚŸbUP©­yªã14¤/Æ× /Ö2£·G“Æ+,|	TP³Q¦ÄUÿËÒ±-PF64B¥‚BrqƒQ!q÷§£<–Ó.îX@À^H–² VWÖZĞ¢´…|Ni óÖVkÚÍ›ÏSsCˆÔÇ¨&êWi¢<„ê	éèbi‹No(ÉÆC &üi:Ø•"/Kp9Ò•‹-2CcXÑ¶ÆĞyn>PSÛ2QÕA@¢Á® ûp`Q¬Ôj—¾?Â°mQ†5X`Ö™Y_¨+t &4…²j6ãcèĞ©@%äÏ¢À2:Ø†¸CÆğ	ê3^i­dƒØ8ŸÄıpN]¬á°„g#-·¸"•{Ç{ëGŠÓŠÌo½béå\rV%eŠµxõ”ˆî|–ÆbíÌFyö&B,…ÃªA…,qĞè½yšÊĞìà’ :yM)‚•€„s’Îx=RV¶ÜA1E#Æxœ¤×æ>–Gnú'Xa«}˜ÛÎªô"è`æ„ãê8‘Ç|2ÆÌ™’š]ÈYd>»¥’*™ÁØÔ`IÌz‰×`*ì¬Êõ§1ÿíVZÌo7õRW?Ë82ÃÍäZÕeÁ2oÍ¹ã•H qû¹ƒÂK½&:‡G¸C•Õg ?V~ah"ÓD¨?“ÌæPõÅ±ª~¡!=:OtÌBltâØ,±Aj¨×è\dE˜ş?xN¢†cŠ¤†¤VçÜUF>>ãöW¼ğ‡'ëÊ/ÁiEfÌ5óxys>X¹>ZŒ/kö%kñ"/¦– ¥ùñ+‰±;£V–|°n£qa*ªÊ_dšr#óùÔ»½<T½µNP³á¡Y¡á ¡)Ã7(ÄÁÊ‰CœZÉ
+Kû²EZ¨íPñÚ"Ô@XĞ¡úc<	¡%ÆôsB<$`­ cV™k®õ¥”Ë7¡*£ñ™dÎR˜Ö.¨ †`AíD‚¹kì†ñ?TË(_‰i‰Îà®]ÃcÈ<·ÙK—/¨QÓ:•L™ßFã‡äC¹ñ²ÃœPœC–áš°¢>ÉYú1ÉP×x9EÍ9³4‡ªç²ŠšìòÔğBİ®ktº 4‹r>:\HûF\Á‹•jè0Ar)³Ùy ŒÿÅÂ“™¬µ¸£Ä°)çòw`ádÁ3mÆô³q²¿÷|Z‘ã¬g~Ëk^rÇ;WÁ²Œ)%ô¸œ7ãÁbÜ8”å1&“w^$©$7€ñ¦3 1e‚ÆÇb‚úØ^]‡ã0¤y÷±ÄGÃF‡ãa@zTCUd©XïKÒŒÀRùDuÕ_u9¼eTP„I ŒI!`|Â”âA„cAœÖ¸‡Úeí´	2W×Äè¢91ªa_lË€”ÆŠ|ï,=‡²nìB÷ìCæ†?­WC‰,ÆªÖ¼;:,¨Î”B.”×_L)R@W‡Ütn¸]u¤°*c‘	Ä@½†Ey N À&1º ÄO}™€ºwt¤PÓ‘':cÌicÆÁIóÑNÃ~ÌVpŞ†`“´RàYA+@=¢Ü–¶dMOUØ‹p ­ŸÍNû]~æùËår?<”xôdsê´"³ =è²åk/Mõ-'2„ÂÃòIX¡aÄZP*$T×»÷¥èûtğÏÒÌêˆjÀP}!ı„Ğh\0NA-‘:2:˜ô«FcL/»AV'1ıÂÀò•}Q¸_ıŸNÜrÂZ™fYyñ¿äÚŠñ›©É„ã¸!¨è,cî=Û[¤Í<fAf HÓêı4£&Byî”ÒÜY©1$“cØk$íL"HÍßë}»KdîIÒ¬Æ0]83¦:5ÔE˜µ”s÷(›X‘KõÂyÂ¨×Àäma•ñp¸W¤Ã½‹ô„Ö1#˜PäF=aü²!=ê!l<àPç°´ÆÇœ“j`
+r0ëSS’IWH°'Z˜‰Š³ 0|õ³f„¡§l	ø€mˆ„Vu00çËWğû·ÿìŞç6ì*6pZ’o½`ƒwMÓµ»¶n	[„Àúä$“xD²0¿‰9IŒÍ0­«5Æ}·lh£§vt+#P.à¡s›¬—	FX’AªBmÆj#X‘1¥s€¥$>‹1#•Ì	óx64BuÜ`Ar j² ß©1
+@¥’§-‚ÀÂN	ÿ‹ñ >èL`İaœòV5ds©´çMİ”MYªhÑë§³£4»:HIîĞHĞÑä]~µâ	Æ,@'5û`ûÕ9S[LæKÔS;¿Ğ	 \}¬½@}Æ!C\&nü°ƒäm<6†å„ ¸"9wÂ¸;¥œë§Ú@^½àm?Hq“`e–¥™PÏ1}$FGÔ)òH…•äMq¥¬Û7Bsb.uè¬aÁRY¨ÜèºYÀ½ÀŠ]dÕeAİ·çªG:ó•7Jœ–dF/zı…K
+Õ³÷ºw®»ª‰Ö²hï8C–Y@fÌ1ÇYU]ß:@}=)òx½Ô5DŒúiI–ù¹•ŠŞÊDVÖ\¾¼¸0Êã]nxê;Pìšy\Š]@ĞPÑ0 a±`¡!0º¸Â$2òƒaˆ‹†ÖÁ–uü¤•Z	©ËCBlºi‹é6¼ôàÊg<ƒÉ<=Şš¢d"IÁŠJ•·Rª‚%)†õ¬FÂA5‡„‚ú*cæŞatøyœ™IÓê¥´°.ª¦¾Ğaˆºêõ¡ƒár±âÙÇeíHyhOwëm´—/^•ÆÂ¨c§ñ*€ÎCq 1É*àPwa}y1ı„úVt~ø/×dÌNu†ùò=ı9úË~úîí;éú•ÓÔÔê/Œ`X ògIÃ)tè$Ñ! SÚŸ¯~Œ¦¯¼ñT˜’œ–dğvìhÛ¿vU„R³ô9M@Ÿú€qe0ëU[ÓBÍÜÑ™ h$JÙ<^°HªE0ˆa,İàÏ(2ÀªŒÕcxÇá+¥9´ }Š
+dÆñºEÿİ™µ¦£ .CÒAâ¢qYóŸX^Ê*k%w  H©ØÈcnl•;@œ4£Í®¢yÍAåV4EÉÏvïÄúlt6Xè¡s/Î÷!Öè¤‹¥juò¸tV·/«¹<|ák¡Ù`M‘{¬(C™°XeŠq]`Æ ‹j@L_AkéâûëáÈ4và ÕXÚÍüğğ˜á:CŒÏ!Eçñ¹ÙÑŒb¤¸#AyÑ¹Èÿ ³ÃR]tZÜÚK7ß»—‡.ºaU³*ÎÔÀàÈDJ«Å¸ÓP¶î±Äó@¾*Õÿ^ÇùTÀiKf {8¿öê2ÁÜÈÅXM¤K}êj6¦Y¶ñØm€(ŸIQ1Ÿ£¡‘K¶JeÆõØL ïÇ¢W‡Š,Äèí‘ŒB0Ö wGc…„İ“*õ4Ëç±)$ˆb<¾3«·OÍgÃ8&‹Ô›S¶NTAŒ¬8Cù[¨äx}riC”VN‹Ò9Í–Ã´¤*¾L¦”ñ	vcÜ¾ŠÍ	0	…±µ\‡N $¸™|ï°dã:Ü#æ¦±ê­É; TjŒ‘§s,¨±Ä©õçÕÿx¦Ğ2Ğ	b±æ§±8RsİAcz—Î¶	ŒaÄãò5Pù¥sÁÿd¸ş°ÔÿÓ>˜¦ŸÜ»ŸIí!8J/^^£ÈŒ9pÿĞÎTgnï6 AİbÈp…Ë¶¬ü”l6qª€oñôv…ôT<wWM@eÅ¦ xY¤Â"H¢W2ævXFL4dÀò˜ÒÂÛCÈÅ¸i`€ÁC˜0^Cş &¤4Ş³Åúd¼
+YåÍ(ââí#l±ƒÎÿ1Pláƒ·± Èf¨Ä=IRÈ×'Â®´Zº
+H¾ğ=^Ÿ@ÃĞñ5€ü°á:	ıİi ÇúN òDÙq¸t|xÁï-#i¬a`X‚ù¨¼(— u‰:Û¯ToíM×¨=½ íÈCBCÍF¹äÍ1XõaÜ‚q3Ç0WÛàøñ:ŞÈ‚ u¦Y€x¼³œ
+7ü¦Ü«'3NkÉ,^>7…7p\É¡ë*ƒ,5¹Á@µİ“ª¤]™Ú›ÀŠ¤¢’
+Ø[R¬;¦'÷Pu8@…T‚ö{hÅÜZ&K
+–d …’N,`qÅTWwÚ¯VdåÜ>*pƒ°zÓ^ØÒ
+V`I‹†)±#S§¤æjE{˜h6¦§`É–—-ğ^±‹Ç’°zãÿ`ÕÆ8ØÏj0V¾A†$D½Åø–qh04Aâ×yYeçûÌw.	•T|+*¹Ã”…ASc˜W‡!q2 ® Q·„iiŒUå@¿ª‘äèñö¤8ä1V^Ae†%#:ÂÙ
+Ö,ûC+×y§ÅÜ;:Y ™`<İ1R¤¿>×NûºXuæ¡’¯˜¥—¬hRõša"ƒÌò^³H,Ø{óõ¡æs~t*•§=™±…k}.]„^30œò`i¤Z,ÂÒ{fUò˜q)KGm ƒo+å©›Û'^Ló8Ûà¦î¢ÆSgYT1æ…jŠ}ªÕT
+7TŒ·cV+™ H€—ù¡‚‚´h8hxN$í*T©†6=Àd¶DHÂ2Æùà0ÆÄ¢µ„‘Ë}»0İ‚åˆ›CÅX€Ñ'Ëä(Â`Ig½L`Xå/F‰µRE"\«=^óDg¡ÀÄE¦¦°œÒÿ[ë²‡X›Á²I%éXêå\<n/¢ÄA0bğÖYk2DsÃ<NåL€ó8FG‚	ÃÌ À ˆ,…æ°7n½á¦k2Ÿ5CÿÀœ4¦µ°âo#“øö'º­˜Ë¶h¦Ÿ.œ]£şÚ:cYwë¤ü¨WZî|¼'ñ·“ı¥
+'œöd†cáåç˜©º`÷À|h`Å›?PLpï.îa|‹—øC¡µ”aoÂ¶fNµêıÑ °KÆ´Æ„Ö‹sXulñ)@ÒA-”e‡€ø&‘Ñú2ÖË9–ô²¦VsŒaåU»¡`ñ‰M@4F¬Ñ†ĞÇD†OÉds–ñ	À=bük7¶BG…8ê°H®Q-c–ba&	^¤c°	@ÁHåIË¸%=Z™pØQ¥‡Œz²èd†}8¦óĞB'³ õ§¦ªø¼X›!E1,ä†å½Èõw¡Ñ¹`qJ—ZM‡…%\\Øõ†iı
+ò3LÒ+.šIÓ+ƒ„÷×—EûTG«¸¬ÀØÄNòKù+oyûç~qÜ¾Ìq4qÚ“À¼óôÂpE¨˜xÁœàˆnhPIQXXaÆôær{aµúK:·´(#Şfõí…Ë•F£iæhy´W­nÂš_¬~BPa¡ş¢±Ãé–YW—²°êbÁ	öÃ°³&¤VsA€…DƒÃkƒò!7¬V‚uê/¬ÚP¥ÑØáDe†ƒÊÕY¦Íà *³tõû=ñf_Â/;rÀÇğñâ°ìSåÏ×ª½Ä8MÁà±qJ‘ ñAXµë'û|/˜òÃšl,ÚÁ\¯ÓBÊT†zé@]¡CÀ˜yvpÇÅXEÆêx Ã	–Ù¬Å ~`ï@'…üõXe†Ä§Ôôâ«W6Q]ÔËmB]òCK‚ÕÚïça?;¨õX`Rô‡)4š*6ğ¼ 3¤ó’óWîœíO[Iñ…j¾™zš
+R“*+$V¹yÚ™Jª-u´`†O½}Ô.ò8Ó­ÔhŒ1½}¢ , k/¤4­L?AÊHGi/«›¼l˜VÁÜ/ÆãX´!„„š‰ÿ€‚BBA½0ö!î²î  Õñ²$µõ²=^3„ƒr…ãCy¿j6¤%´|¾èS€Ëˆ7,)Š­y!y‡s°-„°‡·"Tm8ñ ºãuõèP@lt(«[sy1]…!:KÀçr
+ê~¡æÃaª
+R‘LW¡ş £q-€X†/—Z9'’[ImoR½õ+6f€éí£hˆËçÒY³ô’eêÜ¬ÀPiÙé®d¥ê,§’j]y”;Ét¤9ë_zÍÃkßúo7ªNA</È`#¸U/zKÍÀæ‡¯B#Àšf4"¼òˆO»t³ˆ¹JH],ÃsWšš¢tñü
+ºî¬ªbİÆ2¨xXÇ¨Í£RFk…^`Ø›Šr§aDŒc°hì ©¶ÎŸ²%ºµ9=ÆÀBNU
+"Aµv±ª	Õ*°r¶ôi
+IR\WÆ©*RáÒ¢[âŠƒäÂ5È>:!+^4‰•ZŸÍ*rB
+§x¼Œ¢?m½ïŒ±¶”	×£<è P&Ò’Òy ã€¦‰‰ü0Ü€TÇ³@}À`fR6LSÁŠİ>ÌÚVÃ'—ê¬VÌ«TÓk°ê=Öëxæ“õğÒ¶Â<vOpúªù«¿ıÍŸüv›ı)«› àK¶G¿Š¯(@Êaÿk|bÀ›<ø:€Å!@‚Õnl}[gÍ.)€@ÖË5•Æ\ 0Æ_XÅ„­s‘+‘ lˆôp4P@®`úK ÓM²9$¤¿®«© >k"|¦û‡Ç‹á±+f¦ o1£6ED~Ã}*Nş©" ñ¸8¬t`{MôtÈ¦†€llà:\ƒÎSH˜Ã´Ò"o¼Æ(ÛCÊbsÃ½É¨zdÆî©0ajjÿ`JM3Î¬	Œ+:I,…T°<wdÅ[ÿ¯¯§ï‹§â””àyCf „^Y¹Ü;ÒñWÌSª}¿¸ÁHCÁ¢X]1Ï‰ã1%‹©qV8­vu„š‹ùi4@ı<Ÿìk¢‘Bª:q1§ŠDæY1İ5JTv<YøNül¤¾6íìŠô¯z‹5ˆ+VÍQ:gtæ’›êÃşÕ8>,¼øºy^WnÂûv¨ºö”áÎg+c”\`bÊ+š·¿Ë…r¢.³ÜĞ604À§b±ØF ˜ÔÒ¡^AvXØAf==vŠ±ÆşÖÿÁ!H 0?6Ò`•Y7kI æ¤1mŒ¸ÂÛk¯zß‡¿ğõP§(WddõB:ù’EÁ>ÕÓËØ0m”Ô©o1¨ #Ş×E£Ü›a	Åê¶ß¤‰†´ĞÀ *Š”äG§€t@”©hJYø†´8ØÙíŸ}ú:¨iîêyî±Çñq5Ïºüu-7=z?>nvßC{•í_ßpiÿ¹z]G§ú&Õá¾¶‡ïvÙA…ÿ¾ùşR>ø|ÅÂ>„*]Ûİ;i¨ª¨öå—ØÑ„/‡D\,>m4x‡›à‹„¢yuÒ¢£…¦„¡új×•š:ãÎç tÈèlÑyâztÀêBgí2ãQßÃ¢ŒÆ±°|ğ¿Ò±ºıĞµë¿]nkßS	Ï;2C:ãK‘Á½__]Ñ¥>‰"(}LÌe5¯Èê˜õ
+"¼¨r ¦ôèXÅ 4H4]B£’V ª1VáÃe -ÈÚ½õñßO¿ìõwüüY|{pı…¸fÿ¦§n•/Mâ÷r2¼c‹rÀØû†«HF¢mW­ßïQà-äÏ	¤{.tsx×\$+ áD]Çj/@:M]5¹E•‡¦5[—¸ :c§=½±òM†Ü_Ü<ñ¼$3TmùlŒHe F,ùd	È)Ë/ôö¢.Òà@`4(44sl+„ÅØ×Äó|Æ4QôïÁçKñ£dº°Cÿ¡|èıdşp‰ŸjÛ2?p/påÓó©¡Æ°+3oğ¦ZFÆëé,AlQÉ½ÃÄ³P–v~"¹1„ŠÄcŒ­ööá0u‡æ~ÙéÃö§"wd jŸJ|d^vû‡`Ä`ÈÂ”Œ_ºúI K]ÕÃzjiL¼8x<Ş_å÷UO+··şc×ššêV¬—oş"íéJÚÉ ÒFIa~0Ñõ*[TtŒÉ…àBl!.`jBBlâ@Ç~Ü 5¬õP¹!™wùd{‘·?’ıötxÏK2‘Ö{ÿÜâZˆ9GÖkT'°¨Ï¾0Ü ÑÈy8!ğ´9shsqÎæäğÈ~|ı1_tõ‚¸8òÊxìdQOfˆôFj:Æä!Ÿëİ#»¦'²eh“º×;XÈ-/•ˆaLÆ×xvP½1mX\õúûzº{>r2ræPğ¼%3€/Gº†;ÿË›MDt5Zˆ@ûê	Ëÿ0ŞMê­Zº¦&ZÛü§Û6´ëãy¶<ø»á3«PËa¹‡E]Ts]jÃ¾¡ÒÄ@èÒ¼º®>ëZxÅM§út”ç5™¡n¯u·ş¾¢0´Ö*Í1ƒÜ2şG¦gaeÎy+÷aê§mãC¿Åx÷tçNÏlÕ¬Y5?üÃ£µoZ]Y-coXÑa=¹1M†k@nXÃ1$É(«÷¬³ïhZñÂïœêÓQ:×dFÁGÌ½#ßóyÅ©#Æ_)otŒVµç]—aeÖUç38±Às\ÛÔx6¬ç##CçN‹/n¡şË„Ô¦´ÆtT1Öøñ³áïŸNğóÌğ×¦öô@Õ.-Z`	œŠ<
+õçbí¢ÛØ·O-ƒ:Cà“x¦0ªací‚ö}±ˆ‡›foMUÌ~ëé2V<¯É,xèck¶E‹‰…X	YyC[®èİ5ĞÓñı3Ò÷ÔŒi=Û{ÕŒPæºt¾x4°êóo¸¯«{èN—±²à™·î5oÄ‚†Dî•9_}qÆœÚi=cùy/Ã±+“Şş‹ûo¿ãÌó=M!*÷œ¾À3>óœÏàÎàÎàÎàøà¸™¡æ<rÏîzûğN0>ü†‹š¿tó#íöác8Õ÷ekf'°¼÷HÇğÇÌW]¸úå]}}o°ÏàÃçñF³ùÜ!o^p‡Ô7|©sû¾M±Xõ7î\·N->:\w2_tî²/õ÷ö½7ŸÍ„=ö–;ù|²ÃÖ®€;¦ö‡=ƒ#†?ŸVõ™uYoáKø€:€ú<”NçÕ3 RìGW²òÆ'°9£ eÄñÑ*«÷TT}RçáÊÊÍ™ó‘[nÿÛ£*â0qBÉlGiTâŸÁ±êH$¬W§Ú¨Ñ¹ñ'-|8> Œ	Iw2BÊ®ãpÊ*÷¨w(±ººS›ÌT(„3©$5Ì˜Mç®<–-_NÁàØYƒ`ĞÚâ¥|>¼˜níğ!aÓŸèœîëpŠ;V˜¨\€SØ)]9¤´Ïìxüqºû/²˜à•µÔ7ç|
+54S²«]ùóøÆc²:s:<=ºÂi!™¡Z7-XJïøÇwÑ•W_KşÀ(yƒ‹L>Ÿ—|^7e±İ"ñ0nv»Ì*ı›|lÇ.7§w{¨˜Ë’Ë{h*_lÅÑµİ
+œ¾1œ¦H(H.ß'Ò¸·ç²9A•eG˜¯äàëĞë aÔê)‘%z*=¾ç®Ûécÿú‘’:›}6¼âc”ÆÔqÁ&w&¡| a@?–° îã¡`†ïÇ_^ZUDıTÏCÅn6Ö°têc)5+à¥a¾|­ñPã<†m‰©‡u$â”U–òÇ1€8 e P®]©ñxÄŞ‰Fî/â*ÿ¡‹ÉêLÙú ¹nùB©ş™³µÄmO$0,N‘Ø&2 _ÂzÃ•0€F.®Dd€I£Â “Óë$é9õÆ†°“s€Mäï»>÷éOÓwŞEÅ,KKı?$¬•©TvÂpBdé´pÿR¤Â¡ÑÆ©×­Qõ@d4¼a_-Å‹¡’/ááHƒuÌZ…Ù7ª¢¢×KE*Ÿ+è/ùâ  ‰@èıEhq€é;A'¯‘p¤Jù’7H‡ÿÇÿ
+P.t6pR^”?«sú}›®T/Rgf²3;Á£	­E8èª .A¤Q"™i´å M¤šJçlA¦Ã”MÛ3ø!¾İT"¶@Îqšqç¹Üœ×Ã<IıóŸh`ÿÏé÷7şİ|óÍÔßÛ‹^ÉJÄ×äµ6+å6 ÷¦c¢ú@‡(ĞëÖ	htb©ë·öü\‹ÌnÖJàD2Ïpç©ŠF·c	:Îçô	;Å9¡…¥¿	ü¿ü/ÂN@ùZ»h"‡ˆIëøpRY€Æ&RY “Ø„.•N]ˆ`ú%é‡|¸±µh§oşï7èÏü#e3ÜğÑ A8!‹}¸ä¿´ÿÉnKÛç}nÿİÿPcôgôïËÑšµyºççŸ§o~í«ÔŞŞÉé8?î,ğ…@Ê6˜÷ïTWz‡xX˜€À"…hü@P9!/€p…ß¥Hé$ÉÒ
+qu€¤:yõ°øfØtÚzşúÿ‘á£|@e(@1ƒÿ®œUæ1÷lÖÍaûhâŸôÑÔlŒ—uPÆ~rìWwAÈ««° Ô`àÏ¼•¶?ù5zâ¾÷ÓM7ŞHímmÙDVÒW`hˆ¶S¶®’Î.Ú±uıéÖßQmä.zõk³´bÕ½äú<½êïºéÀÖĞ{Şùë?´q³¨Ô“AîW't¹:’!‹©bşà$’¢LÕIl¢˜ÏP5’âP’ÂÃ}è şáä	˜äñÄ§#âñ”urŞ	z^"¥urP>!4|œy¿÷¯“ûµ˜£É[Í	ÄDRÅïm˜¦AH‡I’äÓ$®›ÕTjãƒÿ¥¤ç‹^” İ?K?üÎ7iÇ–gKäœ8r°ÏÄF~¿du:Õ÷czÉKs4c†e ‰DrôÂ+²ô–·e¨!ü8}ö“Ÿ trì‡ÁQF)ódä–1³ÀI[)uˆšÆsH˜bÃií=@‹{éß*÷Òû+:•»6ş,uwu#"•F6ø:Ië<Eå„¨•øÒ#dwâ·­û–´’^|@şCPúO­Lºæ Bãt-CÇDšÂq&tùVr‚ ¤ˆİøœÔF4Vi°"‰$²N]uGÎkçÎô/ÿïŸèe¯´¤çªósôª×¤(âú>İøÃÿ¤ûï½Ç¾I´Vû"&­’Ğò¿ìkÇímítóM?VDF>—Údå$@F¹5kô‰Og¨0ø'úÙON;¶o·Òp#eÔËª‡õÎuaz"˜„–…eáĞ ¥‹Ô*I/–È…ø½6ÔMßY w]º´ä¾uíbEjX“A’„4ò Ñş=Êyú÷+‡8y0‹/aºK¹Ş©NòÒÉà?á ~ë’Z÷…ĞD]5tÀ=â¨‹q¤>R-Õ	æK-l¥˜’yªV0nl¬©³08ÁÁàõÕ¯|•*](‰)„[±bD©Æ‹fİAwşå‡tË/a°I¥©ŞéÄ"òğ“¿TD^º”ÇŞ£§Ç Ò„~ø·_UeØ×zĞ2„iåè’Şy!ŒmªÜ&¤.<œ‘ú&\4‚F9…q ‰Š©U÷î¢w^¸ˆ.\µœïóÒ· ›[İ”ªl¡ë—Ï¢ùƒ»UZ@'²N¸†ıÑÒbıÓŒœr¯nô*Bg²™¡‘ÒğåœYPÔ:t	­CToHhÈ€>–Ôêğ8‘{lÉN ÂËT¯_\Qp¦DF#…CƒW ®“d3áaÂtutÒğT¸M©×ğXkïŒÙ	zíëÓtÉêÛhóú£ï÷»´oÏ>cÿ¿a¹îïí¡ßüú7Ô·ÿ›tÕÛZU‡€a"à?şîŸ»hAËéÿù9ºë¶¿ZÆ7İ‹Ó9'b›ã”`Z—Ê=|~4KgÖÓî¸›ŞqÛFúş³môÅuÏÒOÛ¥âWUù”tÖIDá _77Do¿pÍl©Wîúf+R¡§…-réĞ%µ)­‘wR›†RKDR›ĞUnHh8Q¹qÏp$g	}O÷ØB7z*Æ4jSºÇø®Ôï~ı+zê/ß./Aùd¼àÂ¢JÓ¶ıKô‘ı«"´’ JJ3±•‘ÌCwİq;íøóÿ¨17Tõ)ÿ*7´ úËŸÿ<=üĞÃ4ç1¶FHs­C¤¶tr‡ªÁ8B'±İ(®4nøX`1Ã—WÏo[ÛèZ{àÖ}½÷DhqÔMg[ûÿ+2ÉX Y!‘W®ZI­mİô…»Ÿ£?º‹ÖoØJM5aªi³Sò¸Ü^-~µ½ó¦À$5-†½SR{’ƒc¤´z2 ~&”ĞÀ1$øIAfù¨ÚD˜Hhà%UÄUsÃ6l"‹
+¢Üzë”Á–åÉ$hM}B¥yëÛ’tşÒû¡ÿøÛßPÿjöı÷ÜMÏ<ô!ºà•û‘M)?¬³ûé'èÀş}*¬CîO÷MR ±éo
+j6ˆ©ÕóÓş¬G­<›Ñh­°,­ŠPeÀC‹[*)!ubAu‘ßxnmoí¦›·tÑ¾khSÍ9*|ûS»©7Ú2†  òà÷ç\%BëÄ–ôèS×	İÛºEZÚR¤¡1~Ö§­DBëGh©ÇcHdà¤ ³'5{"èº"‹4–©%TØ'Ÿx’nºñ'jÎRWG:=ÚXJ°³[¸(®$(ıÌ-ÿ¡UyşõÏ¢KÖ&U~ªc˜œ%à?7oöÓM?Rtú\š>c–uj<îÁ¾¹?ø t©óÒ0Õ5Ç·~„À“4@‘Ê¬¬ÚëŠÒ³[wÓ‚@’şıêÕôËZèïW/¡]qùÙ.Y²P©×F”Şıå»v)¢ÜWÌ¬ heıqÓ>E\¨Ó5áuÍ¸€:kæS]ËÜ’$àØWäëmB—#¶Ş	àÿĞ‘ˆ„Ğèt ]|äìZzk?:wPï«s¡1~)ZnışMBÃ;Æ#Á$%81ĞÕìCQÇ5nZmcïî]ôéÿúoZ:{ƒšó…ÔÕ1•1îÛş.«ÆÄ˜şÚIÇÎš}“"²™ß¤àâİs·>ú/ÚÖÚIóçÍ¥ÙsæR([¬4Æ}ˆdÖ!Çz£[ƒsÏÑ æ Iti#ÖkH*HeAºq}qc/ıøOĞO½b†ş®±Ÿ\­›è©gw7¡ó–Ì¢7]¼Xfmş€2xÁÇøøş'·ÒfWUN[lçÈšº3:›²öÇëu€Èo ±ˆGıH‰/’„Şš¦:’XĞMÿúâUÊ*ÿ™ÙYZÔ±A{ Xİ3œ	ĞêöóM2ë†XNÅÖ%»z‘B$™8+…"†¬²r§©§+Gûö¹)ß@&gQS“Pã\Œ±²+º.¿‚;?‰¬Àé¿ö¥ ílµ–B!µ€Æ£“÷¡Z$3|©àI&®”P†È:ÌUR Æš;+çÒ÷†«éÏ+÷ÀëXzœ~ğè6µF½`ˆªkë”ÅûU—¯¢7,i µ‹[è‘g÷Ğı	ò4”¾
+«Pá­=, ¡zä…¤_'¶Yc"¡›ì5ä[Û†–ÿKÎ?›Ş~é2úìÚùô©E•ôÂstQïFÊ÷÷#´.©ÅÊ]‚-•ËÕåÑÀøš9‰ •Ñ©ñI£-¡DZšjmÁê­ëšxL{>İtë€’†¿úE€úúÂÎêõ$Xs™%¥a–E!‡üçM7ÆhÃsj}…Õ«Î£X~Ü·-atÉ¬Z ¤v’Ø&&;¯ ©ƒh|zÃtR'u«/–g6VÕ’¿y¡’r-”ˆNS«ü ñ¾ÕUM_¿óiZ÷Ğzõ|›[ZhíÅ+•úİák#A¥zƒ”&‰åXÂp¡@P99'Ğ¥8Â¢Šºä©¬Ké|õÕ©ôô²Fáã¡OE·l>½ú‹é“/:Oûs-ƒŠÔ˜@dh*%­E'í$Ã•£…±5p
+¡Ô(ˆÈ´‘NjNFxì»HnÙŸ§Ï|¶@ş£‡ºº¸òµ¾ùaEH]ò˜B> ò¾½>úù~
+VTRÛ`œŞöÖ7ÓW]c©Ø:pb Œ{7¼0pÈÖm£áéSæ”E*—{I€e‹2Ú¦­TÇ+ƒ4R=G©Ñ0jışî'¬©>Öšá
+eÅ†ì‘*nö#i9$Ó©±rÒÚ”ĞYŒ@ZÃ×Ş§¯Ìãk˜°è|@ì³#ãßL;‚B"Oucˆ©â¤&3¡>Æ	äˆq’˜QŠÍÃÍ=ğü•:ˆ-t°óÃÇş=Kÿñi?íß{è¯§±Zã™iœ+1x}åK>zvWœºèÚ«¯¢şÛ¿ÓYËÎRsàz™ÊuZ©½ntf2£Ø¡@—Ì²˜B Oçèó¶Ï¤Ã´Ã?“ûv*Â@†”Ş:R ş¾^EhÌÑC.Xr½äÒó”‘ì²G(¶ûAò''ÿ¨ˆRÃ¡3)-¤ÖUoYH®n¤‡ötª¸1à¡ÚÓO>I_Ş–QÃ	¼2)›“t>–jµ‰Ñ's
+ÁQA;Za´‘y8Óš+¯¤¾Dª´õËŸïLÑ¯åS*÷!Ih×‰Àåòàxh¿¹%¨şe ‘ßò¶·ÒÌéÍäàÅ™j,JQ€„Ö¥´Ô‰8N†°	¡©ÙÁœ…Šm®¢+ñ¶ÆÕT“ë¡‹ã›JÓD°^ßúÕƒô³Û¶æï¹üJ­]2K§Ïjj @û–¡…8å|ÁPf´@bZÔm a™Ö‘áCÕîIqÅua×ı“û•mØŸ(J³=*˜ÑÔpU*™<¿XÈûRÉ45Nk¡ó/¼PÌg¨l.–Fº„q¹¬°ø
+clK3Ä•Òh¾ŠãWYI«V® d"A[·í¤€»È=h€|<GÃƒaª©vSMK7ïÔu	(ŠCqtlß¡ÿûA˜nüÙkmA
+rúïßøºøâ•¥×ºÈ*§*¯]æpoE>†¤†oCÕ‰vè†k‘Î^–Ï=÷İyû\·|	È_ÛB©åWPÆƒŒ#áš´‰#Ä	éé ²¹’ªÕì4Î®¢™=ÏĞœMtNm”š›éÁçöĞ†y—S(¤;[©k_+M«‹‘?¦
+~,l© ¥1Öšö°F“¢,—·Ñ›á²©.?@BŠb”*ùâê<iå§Sqr+xxæÆ#¥½,I…ĞÎ7ˆ¤à¢ööVº|Z”µä"=´îAÚßÖCÓgL£t0­´a¸@ñh=/¥2Õ^…ü.®‹¢< h”ÒÉr8vğ9r=÷ —§ÀÑC¾`p_]uõßÛ¹û€•èğpR“Ùg¨(cH òĞSš¹”ÎHoÚÍä¨ª­§ÓgĞÌÙ³èÎ¿ÜFıI–Ò¡my6M}İ>š5Çe:ÀùåˆUkøKq8ïT“Æuú÷Üí¡ïş€%C6G™xœ.ºìrú§|€ï™º½ì¶+uNv†r¿Bl&¡İ|,í©hKyXÉ7oŞ<Ì‰•/¥,±”A!™Ù7UD4P `ÿ½Nf‘ÈşÃ€_(º”¥ØÇ×Ãdîß²“¦W»hõò…ÔÛÙFÏíİEµ5Ö6>^?õQß–õŠõ5Üá…(‹ÒÌ˜’÷’§gyúÒœŞTÙ¿{R73uÜİ­TOÃÜTr\æ"%Ü!*ğ8]ø™Tp 5 B{ŠïŞJ­LâïîÉPÿöıtşÒéŠD©) ıûöS§+Dq~øÒIè„.‘BkdöÛíıyAf­¢•Àu¡ÑpQy&T8T¦–^™nvM-üß«WRË¬™|‰›vlÚ¨vÜ¶=E×‡X¹hÆ/…BÆ˜s´­Z0ˆ‡ã¿İ¿?L7ÿÌÇDÑÀ ?~–Êõ•ôµoZ¦MWer†4û~Ğyá¾%½F^ã8§öóp´Mf®S'2'Ï½v”ÌBFnx:Ê‘D†Šàz×%3–jºY5ö]í 'û’ÔRé¥ëV.¢á|€ztM«ŠQK¦‹š‡÷%ã4=Û®vÙ³{7<ØFáp„5©
+%¥Ì¨¥i51Šwî£ÁÁAğ×S¸¢–Šuj)¨çŞ Õ©"7LU{È¤Æâ WLšü\ 6 	-D¸#5´¹­vzêh_Í"z6\KÁOÓÂiuªíT&é¶ıC4ª¦S	ãeYÁØCfÀ®O!³­è<?É<ÎøåDd Dxñ¥RmBèç<æÎC«W­¤ûXG»[÷S”{ŞÎ$u¶†h$î¢E‹=£„>ÔcîÁàõØ£úê×¸£hí¤«e±pŞıÑ‹ox™êXÆBÊ(¾„Ù!-œh$yMé\´ó>$2ÛIè†/Y¬ØBdQ±ñZ¡Hæ˜—ÿk×sô/çÔĞÊå‹ÈÏ$¼fi£"2ŒKøPnú9ÔíeÆ´@ˆ’¡ZÊÆ©X=vg+ÕÛ7ÜG3›kÕ0¤ªºŠšššÉ[{†iOd&ekgRªa!yØOVN£lÕô’‹û"´#0ƒÒµs(ÃZB}ÀCÁ¾]T? ˆV+BëRcfHfåW7Q‚Ë„jrG¿¿«ƒVÔ„©¹¡–;­ÛºŸÒşø\¦Èu2ÛÒÙ$³šâÓ$óó†ÌÊhS"¥n¤c$³Ş¨u¨4’nl…ÒÉÏ¨¶¾-?vìi¥ı»•a¬­'M7ám-7•<TYsˆVaKÛ¢|ŞCÉ”—:öi+Q«ïûĞ‡éşñÉkÏoZ@Y¥Üº/÷ İk¹-^Tm‘Î‡Bf›ÌÊ˜–’Õ^ÊØÃ«Š3ÉpşÊP±E2ÃğBTWT“»uÍn¨¢s—Ì¥_ó«§öĞ“Ù
+š1g)å}aÊ±dˆ´(—¯ä²Ä,TS ~&íè‹S÷ö-j,
+øXÍQ=·M¯§ŠáNêîí¦ş‘w2…1æ¥2<”á±uÒ¦aWPåß™A½ì{¹|5ñıÔ0¸‹*\.GrŞˆ"5†a€ŒãyëAâöPCÿ~:oÑLª¬ª$wÇz°'Eíş:•FP¤ÖÆÍ ×%mßrLÈl<¹“ÓR¨<ÛÂ8R‰h|â ‡c®x +’>ıñ¥ë_ıjµ,ÍøÂC]]¡ô"Äá KDñV^³|Û›¢OçÆín•e*çÀ}KÃÑ ÈÉ(;…w€tÖ-·ºt6_ $clNºÕP¾ÿ)úãÃ›Ô<3ÖY;ù‹«[cvŒ§Ÿõ6ÑoT›8à7LßU×ÖÒù+ÓõË¦Ñ²\ïy–{;)R°æ‡ƒ~¯r1ÜeXÒn©\FÏÎº†ú¼uTÓ·Z>©ÆĞP·MˆE¤ÆbÜO:V=j¡ TìI "Ë©ªñOàcª’=Ü”$³îJiL8B_ãñúT9–/?›†â#Hî¦7½±@¯y]b1LSpÒCáˆõœ`onÎĞÂE,™Cnzê®§éÑM­´Œÿf¡}\FÕ¹àb«\¥r«°–)€kt	-aÔÍ¾Ô)$³“5Û”ÌªÑi‚Œ—AR¹}+C*P±¥ñÃğ…·Ê²usi(ÚLÛ†2´§ö,òUÔ+ÃS:_T.ÀPş3KŸ›rùEcäç±ñ‘4uìŞE©¾®c••ê½hv3Í¯ôSöÀNJìßA=Ş
+®ô ÿ‹¹SAzGãj1H}Ó)êÎ+)é&OeGµ%Xá¬]¯¸¿T_;]3·V½‹!ÒÃ;Û¨=ë£\ĞÚFXÁ¦d•š=ú´N2Li§£DÈõ¨L©Pİ7ãF‘IY=ûª‹\ê-)µæú(A^Ô¸ô%½Ôóì_Ô;Õª¬òR€°8uRF;ÙyiĞëH¤ôá`ÜÚb ´Œ••ÏÇ"E-`$4^ÀKúÜ®¬ğÂ¼°HNNÂ Ôe nÖbÊÌ;ŸîJ7ÓŸ=H[ŸyŠF†°©½KÍÏÏš=“®¹ølZsÎjŞC´ıÁÒµf€,m‹Í±$t®G]§¦ªì¹pYL"ı¹3,™±Öëèñ–^ÿÔ_811Y}”o'!Æ5N5s”t_‹Däk°pá‡?ø¡Úãï/ƒ|G¬¿àzÉƒÛŞ¬zíëÓô¾ëQ›#Üş—?Y»tƒt:RV`|çcâHTlQET„¶9 ’Y`.Ÿ”…â –N¤¨Q©Ëˆ,¥=©ëçÓº¶”Rİ±é¢Ejî8jëè¼³æª·²^¶°JNt"KX–ôxªÕ’SQ¹GöªÎÃ„r ‰Ñ±CÖ“C0”Á±T¯'-™eçD;o:Jæ1-ru€îëñÄbnúÑ‘1¾ÅûË
+sHÀõzÆ2PŒ£ñ’Æ‡>ø!%¡Õc: zc±‡RÙä~ÆÃ©œ$òT—t:Iİ’­$>ÈxTVbA*bMµ	!µŒwAj„`˜ŠT7Í\Në—Òí;hÃ¦íÖ>ä k/Õ5Õji,Özc<œëÚMéá±¤Ö×}¡1ß¿¤ËúJŒ.•õ
+’À[zú¾u"™1~v\£}Œáü”Nˆší¤n—à$™ÕÌ(A-Hf¼{Úæ¯ş³ÚÏÛàb—N+ø»ñÜ)‡â•ÀùÀ0†—4¾ôéµë	öƒ”Q»—J÷(e·}IãP"™u	]ZÎ9¡63Š©¨…P¯N0P·uiìDd@›F,½=ø"•%R¯÷Ì¤ßÜû„zë¼Ñ©CõÆZo,½¤°K-©ÑY8ı7İ›­ÂóÒ•oû—A«7Û¸ÓÀâ&‘Ëu„Ç'-™0F},×(K’Y aøâtR[ç!ï½çEäqûwá¯àL"kÇê½hı<Âfz'pì
+
+M „Æ^ÛöµZ„–±ñmÃ*ïD¤„dF]É˜y*j¡HfYW³MÈøSÔmĞ¦tÑt(©l«Û@IS£û¾`ÕVW©ñôÓ}eõÆvÇ¤,Ì.jni¦KÖ®UR/{àåÊB¼¤fëºÓ[£Ôm¤3éìêRû˜á]gÀüäÏ‰È'?¦Ô8m)kÖ~à&¦”hßŞVúßÿù*]tö­jÓõ&Ú¦X`Û ‘¿õz7Y½y5k€„†&ğÁgiVıwéûßü¸ú>•úÒF‰ÈÒé‘3„ÈÒùM¤İ˜ÛÊØN$óDDä]a'È«‹‘ÊP‰ºdrZ¨{2¡S Eêš(?ïb¥zCJÿò¯–ÆÒê¬ÅKèM×^¬ÆÒP½§xX§õÎ;š`‹"Ãf»míLÃ‹öÒÂ93Xê[eìSSmòA<ÁT¦ª6N)2CÙ1³
+Ø¾	»%(K±|–fó=7ªİBJØ´à´x/ù?òÑW¿Vo^aéæ”¯×€1úòsŠôë›ÿF÷İ~+õ[oæXĞ	]e¤5¤Ù‘Œ™ËáPÇÌAŞŠÉˆÕZ†.™KÀîŒìr¸-	Û,‡‘RsÓwİq‡²…(»ÆÒµutîy+”ê·¶ z÷´í£-dC?;w¤24cF%5×à…˜Ñç±y Nƒ©±‚æÌ˜ùP ";5Ş1cføFçmÂã!ßróÏJ»t*Ë5ˆ\8'Î^À{ÉXÒİ3HßúvN½}ÛŸ"jçD0Ï£¸÷níïP;ˆªpú}L ‡ÎÒ’¹Ü+å^?šcfQ³¦u’9 ‘Ì¦ºÀ‡Î)Åä… ¬KAhoÃ\z2º\íGöÔs»-)m“›\|ÑJµ?÷{ú©áà4xp«2ÒõEZ,U;7ºæÌ±cçõ/§ºÚjÁ¹¨£Ïš¶¬Äëo''%™Ë5¼)™K°*Û‚VÙ
+Ãàõ?_şo5N–¯Y(L–µ»”`"|8;¶T¯Ûî³öõzb½×z?ºôÍ¡ªCªCÂÑHØşĞ›Ü|	OP·f°1ƒıcà€®nc'œn	tÉ<™ª- ‘a3¡«º¦Õy"¤xÜ;–Ôáá€èô…JmÆŸ˜Æ‚Å+È ¬"›5gNi‡ìZµ{’Ô
+C}jz
+{z_S‘¥é³f’Ïo?V¥ŸŞÛa¥=	pjKærPÒM²¶Œ]Øçú?Cï~{«5NÖwåÔ³.ó7 ßW¾V»”Ì¨«RN¤œ¯˜U;ˆ|ößCŠìJí 8½È Õ!áQÉ,å†?z‡sÌœeI‰·¶&‚)™Í¥œXèÒy28‘X‡¨Ú¢bëÿ§«Ú&aMß$ôğÜK”Ú±ôƒë7*‹·ÌÈx÷½k…µmQOO+…G–¾y…İC!•Õ.0öÏK;s¬è»®`¼,cfÙféxà¤$3ÆwNÒ¤,LbãØ^N§ …ñ ñÍä¯}å+j¶ÛòøÖNg½—ì+m0 Ÿ}ÁÅ´ú²+(VU[AJƒĞ2Ş¾ã,p8½À².Eì™9Bwª³²aÜû¤FBN¹TS2›˜Ì¦¯ ˆt6W€PµöŞÀ6è¶êHHé,†0ÁtBËúkX”è@Zıä•¬™«æ’ïnRïg6ï¶æömÕ¤^¾b…Ú¶èMW_FÓ¦OW$†Ã¤²«mööö«½ÂLãÆËNcf³ƒ<m÷ ›ÊçFË6Ô²*77RÃwñƒKÑîm[è×7…Ö®\¯Va•İWCØvçBÚB€„ïÿàésŸû½óÿ}jš§Q<‘R„îJ+‰ûÅ«§‡Ö…Ç©İ°~ã<6‘3)káHCC½½K'P
+Úıë–lİ¢mÂ”ÌúÛFAˆ&’ó®sÜ¬ß	Ğ%³Ó¸„îŠídDJ›F°ŞÜ¨$œŒÈ ÊBcl.Rª÷­ïPª·%¥‹JòŠ¤¾âÊ+é^~½`íe8³öf¬²ã:ØôèÏN¬é8ÁñG€“VÍv²¾–k˜ã$sIm<xXmmêk‹øø9ÖGQ­ËAkŸ²¤(È‡×$±ß;ÿñjÜµ`É2zëÛßNïÿ—¦ÅË—+Bxhwm(©İbø‚ÿİo‡•$Ç˜*¶ìÒyı7h»tâ>´ÆûÕïÙ¼å:ÀÉ$3¤ˆ.ILuQŞ˜R;„ØĞÇÍNÒY'ğd*·tºª-u"«Äô°YÏSPéæ%tÏ®VúŞı›iÓ†¬z³ Z·,:Á®¡Øn×‚”™}Nw°o¤¤bWûR.ç<8iÉ|HĞ™’Öj<‘Ê|Œ…¿ùÕÍê{Èøøù”¾<¡µGªõw¿é¥6õ*ò„7Üp=½ãİïãŞÜjÔèÕ_ûú×Ó'?û9:ÿ’µŠ4 µŒ£?ÿ%#D6DU~¿û©÷›ÔĞ Êïü Í;O“ÀÔŠHå#…®jë+™D*;Am®Ï6Ñ™ßY›sÎ€®j;‘UHrË±@'¯°P+¾\/!|Ïê{:¬Å&%)häSÿ.êïëW»‹–C¹yæ©Ì.NZ2—Ã”©>¦äVÖ\oòkja†Zsç5q{³Àé@dÌ%ÿæGõôû?RKe„úiíUWÓ{ÿå#jšX B_rÙeô¥ÿş½éïÿüùti5jõ7ÿ³N©êÆˆÃtÔ+ßü&z÷{ŞCs-)-J°0V%U0;0Nõ3f™¯›Š0)AjŒ™¦¨D2›ª¶ŒCÎûWƒĞb•ÛÉ fB'±@¤1|XıBc¸|Ïêwñ*e CÇoåÃ½I9å˜¨§«ƒÈÑL€±XDpJ‘y¢1à8ØsÉ°Zşá÷¿£ÿò#5µp©ıò ğ$€jı“Ctó½{)S!• yK—ª1264° ÷ŞÖØj÷ûÿõÃô¯ÿùE¥v£  vß÷T·ú$ÆÉÃÃ	ºø‚Õô®w¿‡.¼p5_+÷h7$]Ë©QFµ–ú1ë©œ¦s$ã¶‰Œ`N ‘±*6ˆ\NÕC 2
+‰u)]’VÒ™êµ};^ûy¯óLWŸÉÁ´S©şµçjµ±ÇxY´SÅ†LïüĞ1ÊêºÃÁ™qìa.XL‹ö8"£A‹Ó¡ˆì¢t2N¿ûÍ¯Õ· >ù¹¤µæº|[s¦ ZÃr‰	;÷ÜUô©ÿøœ"+ÆUğ¥Q6n¬Æ8úCû˜Ú«Æ2X1±“	\ow¯ŠÇyXR1FÍk4Ÿ ‘E*—!4:½É4¨ı€Çc5°1óÌûf;Ie@VI‰tÖ×i;›‘Èğ¤³	Hk!¤¾2Ì„>?tzG È\¶Nbl¹@}nïìQaRÆÑ²¶ÇË—[¦¦Ì—,¥Šœ4d6!j¡Iè1ToØ›ÈXíóè£Óú¿}RMA•Ö\@dLıíŞ¬RKAdŒo1¾üòKíT“Á¥ÔnXF?ğñOÓ‹ox©Êª5Tl_0@ŸúìgÕ‹ cÇÈ6Ä S†¸N@§§w|˜gÒrN|FDÖ>§2™ª5S¤3|'Éì¤jD:›¤6ÇÏº„Õ}=¬Xâu@¥v"²l~Ÿ«jQk®ñìFQ¼Q±eZÊ¬«c“–ÌºZ¨7Ì1ÒY—ÊZs‡®[G¿¼ùçêÌ¥¹d;éT€)$Y‘òÁ5sî<úÄş']úÂ+l	:ĞHG;"Œñ4|‚æû¨Roa	Ç~cç®\Y2 •…Nô2Ä–Î”ÌèÔl‘Ê%‘$s9©¢Ãtu[`EÕL$™Ah!5È)’U‡|"u(GbHdyÏú`Âú~”w µ&ù Ö&­ *¶>V>Qãæ“–Ì:Ê5Ò1)ÍcK,
+yôÆÓ‚–?N<—ìÎ¢´LóçA¶ŞœDşğÇ?F7¼üêØzĞNUâ9ìÂòÁÙô†·¼>òéÏ–,×V:=­\/>Cï´ )nCŞ”éÆ@'´±…4 ²LQéóÍÀDÓT¦dLÕ©r¾	Xˆ¬¿êè¼Pe›µÑ ÕbıµfH……;¢§¶ìSocá+‘Á/œôd†Š(Ôl¬
+Bb»‘bj‹B²=jÿ®CR­9›¾î0=ö¨K­Üj;Ğ¥¢±äï{Køë•ÊlAhºÉ€÷k[è-o{ıÏÿ~CY®G¡ç"ÚùáŞ„¼âk¤Ô;;ˆ<Ñ«‚|Ş¡¡éª6ûS1Şˆº-pzÇYW·Ah8}ŠJH]Ü"©åµEñÅ .ÂN’X)¬Ÿ’]Zì£sküÖs–µ
+<ÔÁj±ïß½‘Şò`½go„î/P–Ñ6ÿ;Ñ8éÉŒFéÔXÇy6“¡{îºzZÿFÿø„õÍä±íiB`½5ˆŒ)#¼…ñ,$ò?¾û]Jš*c—ŒaKÔta4ÔnÇFÇÉzpBh†ÖY•üÒuœÒ¡³‘%³qª6à ™Mé¢Kg'€ÈúŠ0'cÔmQ¹õ±³“•DÄ†x»	¯-Â‡ñ­&ŞVr¡¾İjÿ.„ëòıŠìN¯6B­†õ/R‘ñ®3¶ï`ZsÇÖ-ôÉu;é{‹ŠÀµÓgQo¨–ìÎÉT«O„TNZ2Ã`3%#˜4nÌ'ÄióÆ»Ô”zñPÀíSP 2>~¹aùú×¼–Şğ¦7ÛsÉe`Cy&“zr^|¹=^Ï£\zš4f8uxN’çñù£d˜Ğ‘,1DBk(gÙ_$4ídˆt†Ó¥1Âú±ì†)«ÎxŠj	º¼ÑE¯˜á£k*FJîª@»Ú?›ÀÉPB\ñÿ)@äë—ÏRö‹’=„IŠ7­°û>ñ
+"Bb™šÒ»ËÃ•£“Z2Ãhãd…uT·áŸ‚á9ô×¿†Õšgµlr|[,|f«´ ‘Ë®½ŞñÎw¨u¹cÉ(MÂºÄèñÈÇ<¯ç­û4il¢\L&%³İğâ>ûéB›ãT™w6!„†t†ªmZ·!A*iá‘åÃlµÓæR¯;Lî@Œ–/˜®ŞI†[}Á*ºxÍÅôÊ«/R/Fœ;»I]cY'qÃşÇÔ[Rïºt)-]<ÏÚuÏD~úéô³iÊÕµ¨. 	‘Ë¡¬Tvè6Nj2O‰Èv‡=ê¢%Ké«ßïQ`¹¤R³'©G›	üô«ò1uíëŞ¤,Ï˜K¶ ­IÌx96‰ªç¡ç”ÉÛÆH[q&télJê‰¤²‚H­!–SE*›óÎ&Lë6 D†'ãhÓ8†0ÖTcùåÍ[ºèÑ'6Q.WC• ×ÚÀO^•w%_8¨ÓBbuù«”æ…<0ŒÂ´æºGŸ¦O¬ïVTßÒx±zòu®ıTÈ¦•DÖ-Øâ;ùX/ÑqR“ùÖgÛhljV¾lpÛ_#Ö¾\ÒMbó16ÀRMyùàâK_ ¬Ìæ+o6	©;œ“°@Â7–XcÎ‰¾½’M¡ŒdŠTvR¹ËJeÄJÕÖ€Æ)Õ”Î ´¹¼Qà¤n;Ii@$µ>¤*uÀÇùŞh‹z•ñ¹İØ^Wîs¬?İŸ¤Ú‘6e¡†[Ş÷ŒR§!‰Aâ·¿ôtÎÒ¹%µSšØî¶'[é‹{‘q?÷fÒ4ch]Ô»‘¢.‹¼P¯'"2P
+KC8·cˆCù
+$>t&„F»”¯BB•>SƒÏ†pƒWm•}|¶äÁ{ïQ_sLdtÇ_yŒ˜ÓBîTVrvo?sHäİ;‚ôÑ„è±mI~095ïûşù uö¹êÓ#Vbd.¾ı¿%_‡™Îş#…ré¹`_îM|œGY ™Ah„å34'‰ ÎäÃqI6nÜDëî¹[}ÈWÖ~l]€İ;<nÊb<ˆ†hïY/C–Í>[#qÀ:MIş#ùÔk>1H)o@}¾’:†˜Ô¸-|îÎÏyäø¡ÀáÎ 7>«®çû…“ç®rŸ[íJ¤¨¯³ƒª2ıê[Î®Rçï¢X,FK/¤5sêéªé!ºnV”.Y4^¸l&{Öjn¬SÙç3,i©«³“î|dı|SİÔMÔÙtEYÂcXœâ²á;ÌnR{È“ÉÒ7ÿŸË*OYÕZêÓ®ÓÓúÃqY{,“Õ*"CªÀI£#‰ÆH«"UTÄè—_¦ i±8ê3^5Ä›J
+¸„^Àş]'Ë¢¬ÆæéåÁdŒ¯qB@@ÂNqÁé:î„6Ôír’Y¤±“TÔl VW$4 RZ™Ëà$u+·“”ĞÉ8PèêjgÌ[·Pëv ÀBdI&Ş‡Ã;óhcxã	ç÷íÙ«TõŸ=¼U}Øî?úÔ”> Ü2FÆ8çjXL+3»èÚø³î+YHì¨VëRùJè±Oé8ÀI2¯Z½š¦Í˜I¿;®Ñ†É,Ÿ!-‰]I2+é9ê‡ÂZ¸p÷RÚ»se†úÉëõĞO§ÕÔëêİT[ã£n}ñ?ıôç;-Õ_|üê×ş‡.¿òj[b	Y¥<ğâtˆ/Ä6‰×óÓÏìtê^ù<îaC2+ÇP±õïñ¡r™l|â	ZÿÈÃ,X­:s”Ì 0$¬&•uÈ·›åÃhIhŒ£EBøÈœ8|ˆM—Ò ·Ëí-Ikq€„ñ17l°àÛÉƒ©4<ĞFs¢.ªªª ıûZéo¾Ÿî:8@Ïîï¡mÛvÒÓÛ÷)w÷ÎnúãÆ½tÿvúÅö>úy—‡s5Ğ®Š¹®¨+•³«èUÀ8è,øé ÿsšÕşë2[işğõs5õÚH(_‡¶GíÚvæ“®ãPf‰±î{şéŸé_ÿı“ä‹Uª·œ`ÔÂ†Gßø#Ÿ’ÔWcƒàÚ«¯¢Ë^x…
+k”£¸‰Î}xÌôæ8åhyM0†6¥³)Mcâ”·¬1¤²'•r2	mÆ ­uk·“ïo#$4¦¬ğ¹XÌ	ã­§Í•uj\ıËâú–kQÉá®­å<%…õòé> D …wæÂt‡kİæ_L¡Ğ ­õ³+ŒÁ1”Ä&N*2ãÍ)]Õ5RÆqŠEÔMÕÀ…xıĞ­v]üûøúÁÏ©,ÓP£á@è¯|=­Ş‚Â›CØÙãd¼{<v
+
+@X`N?¯§Ó¡Çéé&Ê0Î«ÕH4u[ÙlB—S»Õ7…ĞĞÅai}Q‰“¥Û‰Ôº=ªÕtz<Ğ“wÑæ–é!ıàÔRËÀÜU´34«ğéÕª’¯;§r ¬P­«Xò‘q/pòT1 Û#ËèëÁKU‡¡cLw‰œTdtBCšLjÑV\¾N+Œ¹GX¦±I €ĞØ$ a¼G|.1NÆÎÖ5¸VòÓı±}ì	Ìt’Pîz@O§ç§ÃN/ÒÙĞJ@`!´“ALêÔéUSG !NÒuË¶ Ü·•@ÙøNÈ­“I…BÃ‡kj-…X%>$í_«f+‚í±7¥×ÏœH,ccÙe³TFíöd|,À<üï*FçããL`'ŒÌæ´¾wk¢‘%B#s˜+ş÷Ošşë¾¦ÖYCÅÄ{ÄËW¯¢/|å+jÕÒY×šĞò9§ÿ¯„átèqNçÄ7ÿË>¢…èê¶ÈzM¶pÄ¨×º‘ÇÉà#„	­±¤®NjñáğÒ†şâÆÆ‚¶Y_£À±¤‡Ú¼!`IK3_qå€ò@ëCï¸Ja©'!±y|áÄŠù‚ƒ)=Äší<8ı<Âpr®¨^1|Ñ‹¯£/åËjKÜ–éjC ììaAÒ:AòÓ!Çf¼‰Î•ƒÓ5zÂöıB:ë±Lb!²s§çÇİ9ËÙÑjë ‘fBŒ}É<UDı%"Ã‡ƒ
+.q"ÁA<cZŒˆ3ÃºÚ¬oe$> ÿ§øâ@`}ïkÈÜs9Íc‰' rÄe|¶÷(â„’9b^ëTÚvWHìòúJT5Pi¼Jr£q; s–Ãâ€«®{‘z[éÆ[n¥k_üR{Á€îH0•ë%Í!ş†¥q³}­Ä)Çõ‚ú§ğq#Të6•´Ö­;® C£d‡†+„•°ît ‹Ó¡Ç ˆø@}Î2ÁaáƒÔrŒ°§d¼Ä5ÃÄÀzz	c¹)Âğ¡VÃ…Ä¦Dv‚{LLBàã…#m½‡Œ‹Î]ö¥şŞ¾÷æ³™pvxPmÁóŠW¿š–-?›*+GWÉ§^tà…ñL*>Æ?ƒò@™ÀN¡ºõwtãw¾­¶-Ò3–ÒÈ+>¦Â‡Š\0f‡ÆÃ›¦†X€º†Ç¡'À9ıøDCÊ£û‡Ï`å+ıÈşgÈ}çì”DáÊÊÍ™ó‘[nÿ›õ•÷ÃÄ	#3
+aH†p8@µÍ3©¢²Š¡¥“cÕÄÁ‘Á¬Ó¶6êí°>&.¶ú"ı)=hm8ˆúD#§>™qBCZ`ÑÆ‰†Œµô1 ›aÀ¼Æ)¬ÇMS½æPó®a­ÇÔ| %î µû¨îØ:IæäÍóğO@½>
+_€ëäz¤ÕÓ8ÅÁ˜ù*Ìûp
+£løÏ‰Ò–ƒ¤/(wŸìŠzZ‘ùùˆ@ _µ86c¬²oB€E_ßf÷H¾{T ÒÀubëDu‚Ğ	®ÿ!$”cù?=<UÎ5€yİTòAÔ=ˆ¬´ÓÓAÍ¶£ÔN•‡S‘gpr Îı€iÌœ*p- _/„ŒøSN.„u”‹wÈ' Ùñ™¢F?Èyà´$³7ZIuÓç;5H…`eÉœÂ‡ëŸ®ˆ4Ï¤x»õ	W\4.–ámTUVÒÀà ò	›¾~îx#
+QÒ¶HşD˜Jš#·?İı—?ÙG§‘=Õ’ë^K«^ôju{?!S0'ê‚êIå•?ì«¢XÖ^˜qÆ(9)ğ•ÊZï¨f¡÷n~œ~ôÿ^¯ÂøfÙiCf^Ö¼íı4ãUÿL•µ¥€9};ÈŒ—…8}ãpŠ—¸r×+Hİ˜pŠ/—såÒè÷eŞkÔçQ+ÊôE<^¯Dİq¶ÃnnÀù"%<.
+æŠ”Ò®7r¬KYÌ²K¼—÷_Pn…SÛ@ıõl¸[‘D™ÇÎòŸ@àkh\€øipoOÕŸåHé/qå®9TLTnİ	ôcøBLİ	Ìx8“ÀˆÓ¡ß—¡¥áiÀLLiÜ €8'€È ˆ€¸¾lQ9FŠL”2×šĞÿGÂSuú59N%ù~´xış¸qæêDÔêK á1õv”qÒY Ílp âôófÚr~Uh
+»':Àéa˜˜JšÉ0QùM§ÇKX|Ó	Ìx!¯¤¿p_å:.iœ¦´‚”BŒ!†xN…‹VÔ¹huû<Ú˜ÍZ<$t¹ë¯Ÿ›(ÿ#…º'»ã .8Á†ú¨/©3iRB||0ğhãğZß1„)9¤ñMÔà¤Âœ|8©T3ŞéXßëNw
+œâÕôğT€z3¯‘ºœ,¯©ş/Úû8É5	Á …á|œí¬(ÑÙUì*ótNu.ªËÑYšéÏª4B^q“AÊbú€v:§FÛq&d¹±“tœêL:¿©N!
+&~šÇ0®¨†§‘VÂ"Y¥ràëNâœ| \0§¸CòÀ†¯ç'áÃñ%ÈñTœSz¯;9_f#VŞØUä)-DŸ…²>pñÿr•­¨÷ÓÊZ¢eÕ.ª÷ğF¾Á‰xúõBT3åt_¥Ãõ8FûXùŒ -¹`œ .%Mêèsùä“ÌNĞÕ©*Ò"åKeIXwRéğM'ç§âô´]§¼ößğåÿ%Ş<çä›qRNi|@ƒ3ëQO˜Ç&$!N‰@|/€OÔo&2¤+|=.‹ü9­ŠÊám9\'ÎBcÄ§$õªÚ"ÍåÔupSÅ˜²ÙåRäÄ1È‰cDÛa„‘ÖSe¶¯uò%oxÊñ}éÏ@§'íW$óóBÍàæÅéO*Ã¬0@*T³O•*Ù>Æ9'Èù©@O{¨×Éÿ#,N å6}§sŠHšoÆãX®ÓÃ8'sz^ |‘ºŒ;æ RAm¿D
+öAVDVÄµ¡Kh —¤øÚ>RvÆ³Ê¦óÊ¥rVÃ‹4«ÂGk]´6–¦¥Õ1Ép±é$Ór¾8»N”§ÇÙğñ¡Ü‡:fqcí°@¯_½®µ§„dÖÕ9½qJÅé(@¥;Å‚”Vc=¤ÄÊÅéñfšr~ˆkØ,‡œàx¢²:“8óœ~<QX?ºFçCõzTZƒÃsĞŸêÇ)!‹¨ÑBdX'5HbÕcæÍ#ZßNôd¯åê,ÒsıÚ<è¦ç†<´­/CéQœËşP¼#¤,å|_"$Â\DER»¨rÎé™•`_§CêXêª³G'”ÌòÆ@—ÆR	ÒP1ÒÀ ±Táì›ÉŒôë@4¤Cœ^Â€Ä™ĞÓÊKúy3N?Ö”×É™u >â%¬§srõañB|<Ov˜jüDK£:¯*Kç×äha4OU¢şj$)I<8f‡ú‹zrTåÍÑÁD‘viûˆ‡v'¼ÊmôÑú"=ŞU¤Gûüt_—é.ªøîŒW]¤:ĞŸ}9xŠVš> ×™yHİI>Ö8¡dÈ¢Wj@¨‡zÈ»¬õ»å@ÈÖÌå}yøˆ“ëàëqzz=OK€œ“ô€ù_H£_§ûúuæy'Hy`Öøˆ×ïa¢<.E|ÿ\4j½¾Í0¨ÉŸ¡•õº ÁCç±ÎxuuFkÑq — °ZëQU~KM‡S*¿ LØ, n¤Xş>z]•ƒË^/.u)ÇN@~prúıKLĞŒ=D2Ë:Ø’¶{1¹y©İ	@''çt0Ó fºriÌx3,¾„ó< §qò\¹sz¼v:ÖãtH3Q=h~_€ª¹c¿kì‚*ÖçE,®Aê‹ê]Ô°Hc,-j«ò5µ5ô±óùñõ0:qz¼Ú;u,¾ÄéNa
+ÄÒë-ËêÇæy‰Ó!ÿUúO`
+ÿ{¸p(Â‰ƒô`p‚1ac¢
+<•aŞ<wøåîU7Ó8]#qğÅéÇ&ÌÆpå(\Ò.7ê*^ZTíUÖçsj\TÁª·¨ß°3‹z¬ş¯¡JVÙ1n6!ªïDPç¹ÃBÔw çà %ècu…	%õ`Ö·LÇëì¿šì^Œ¿>y Ã„YY …Sxª×˜×MgÆëçâu§§‘°îÃ¡Â$Nœ\k:ıÜDéàÊÁ±AÚjrµ¯ ¤q:_PÖæÁtNùpø,æŠgUøi«ßW4æhm}–æ„-¼D:!O‘‚Å¬7¦Òøõs®¡9»2«V“ÁalCÎ‹Ó5S»¤®ôº×¤ÑQ./”õP¦Öeşöä„S%¡BÑè¥óu
+OÕ	¦èñúy§xİéi$¬û“A®5~N;9ÔIl©cİÀ#€ê"°6?Ü‘U–gøp{sÊò¼o(C3–øÆP	jyĞ=v9h1ŸVùÉ9!›„ 
+ÔuŒçÏªvÓÙUEµ¢ìâ&ûª÷[†’ÔycŸ>³}™$Õ!}´?!¶ ¡%NÀ_¢œLïy¥RxX¦€
+FÅ‰³â\%§C?vJã”Şt‚‰Î	$N??‘¯;‰3}8·3Nàt¬Ã)­ÄÁ7‰-uªÍ@ly&¦ÀöÁmû•zóˆ_¹gú,Ëó½.z´-Kv‘rÏù©5>ª{KÇ ¾½Lä‹2Â:Ãgà²¾Û|v­—.i°$6,ñ ®‘ò I;ÓÛ—Ôœ^g€Sœ\'€¡±æüXÁáï` “& <@yˆzEèDF%êŠàXœ~¬Ãé¼&o„~¹s€~­¤ÑÓšqNitÈÿ	pl–ÅüÂr,a83O@ÓÏIİ¢AJ‡Ó‰-ãåßÚCL·@Ã*«s{Ú;ÆpÎÉ³…±7àI¨Â4‚	DC²èĞµe˜ã! Ê‡E(:ğ1v¬&S–÷º¬"5$uÔ…T8µ/³®œâtXD·Âz=šå?Ú8ÆÙOÃİn¦ôÆ~¸˜èAIÜDÿ#çô4ÅæáXœ‹ëäX ç¥ÃLHœ\ƒc34F@aÌIg-Ú‰a½´é„á@jXu_'¨F>ØË[©Ûúj@GbªüN¤@ç R‹X0–'ãy”«É@j%©k]´¤‚Çì¾\é~õ¡´Sİ•ƒ™V'ôñÂ	%³®f;í^!¶TÙk:áPÀ‘`¢ÿ‘szš‰âæq98¥›ìÚC½Æ©1Šô)0?ì!k9 9‘W$oíëüĞ9Èb<}NWâàK¼äN!‘'Ú5T¤'»ój<÷TOé÷°ºïRcúÎŒ›R.ÿ¯uÊbŞïTŸ…óš©´×£‰Jfö\ÂbÙó–ëá§ÂÏ <&kŒ0TA‚Šj,+Ë&ƒ>V–°nCfç€6 #™Ùt ]à¼t2öîÈXcô®d^¹-C>ÚĞ[¤gz˜ä<¦ïÌÒã<–ßØC´7á£œÅjÜ/ìGÔ¡8ëØrå`®‚<œdÖa><Œß c&aJJÔ+S*÷Tr^Ê:Æ‰+“ĞzZe•fÂˆj<Uè„GXŒ_ÈG †5 °.€ä-WV1PÁ‡*.”ct\¯Kõ$+‚pÃ™<¤Sç±µ“ZmqªÎ	(£”SuÍ÷šGkó$ ]R1¸y© ô–¨½¡!lV¢†z®Òp>’V…À©¼µ°3^§êôkğ2„‹¬Jøh8õ?RìäX õŒ†nÕ»ÕÉ
+QäëœC#^8©‡rç0¾ÕÉbKŞúøX'¬ét İ qÈ_ï@p^ò÷zÊ€‡|„\~èu"õáTNN¥Õ®¬6:*¥ñ>°‹qüáÔ#¡be|lB*A¯¤µœeõEX‡T,vl‘
+?@~p&ÊÅOzõÏÙÍ²;õdÖ ÄÀ94DE:Ö „¡ÚŠ%DÕÃr§Ÿè’y"?V[é¤0!–pŞ^ aÕ$œ­@ÒK[’ö$(‘ÓöNe—ÿ˜è¾‡YÜc‹¬ñàGÉêÜâPQxÀPGE%Õ¡?![9ÒM•¤=h9'×9åy¨8y Èg¢²ëõ'^5vEıêg„õq¯VÂ€yßß	²:®œ`àoÊu. Ôd šÚ
+?$=Ö‹’7ò˜
+y¦’æH0QÛ=š˜à±|0{P©$XB—U”kÇ½ï*„ÒñDºtB•#òÕÿ¾Ä	$lÆ9¥
+yKå>\HŞpNùèÄ1ë8—K«q§Í³1 iD-âF' ÔZ>ñ-´8%™µÎ’›ŠDÉøzHz‡[Êev
+¸?ıËùPëÛL¯çkÖé±Â!ùØ•P®‚G%ÆØ'K(æñæÎ¼˜‹üöX§2ÙCÂyH âôë&ËC y	‰Ì|uLôºÊ}8@^2?ÈØÏCP“¦U®¤"Í˜•b|ä’°n€ÒQ:ĞQ˜¦BşÏ 4: 8Æê€ny–²éeô¶d’Êlgæ3˜*ä›0ó?Ö8Œ¢]`˜ş)íùŒƒSõ¯–ÉŒíe€º›¦Mşé 	Qî:=lıXÂfœï”®Œ¶9æ¸\0§Ú!HG)u1&H#2äõT%Q™S0*ôbLBz4by+	Í>È
+ÂÁÈÈ>,Ûèœ¦†ôçÓ9[-GYeå CMÀê¤¸^òrÀ©c.·8'H=š> á‰ò(ıCÛ=Ú(sÇò- ÃóSK£Ãø	,ğCs»©1Jvg'”„‡ä‰!›.éÊ=Èr@NB`•Šr^V-šñæ±¤¼¢†ê$møÖ†{¢ÆÊ˜T B†ÜÎ†L@2 N,ÙÒÁÀ—Îÿ%ë ıùb_Æó¢²£\Ö˜yô:Àå`Ö™Ô±éNu,m¡ÜLôßGŠc˜õ¡Ã|` â¦Ÿ-Œ†›|y;áÔ r‰½¤C'1#”Qcó€ÖğfYĞ(¤ã¯7@/Ÿ„á‹“FåÔ¸ §8 R5ìeÒ°€ĞB&„-g­qEûñy­„@å ä•0 ò´ HR aÕ9Øe‘ç«?c9FE:ÃÇu²šÀ1`MiNkFRİ›Î<ï„R'¢İË±€}k'Nk³Í‡80~Jæ%í(ZÂî’ú5tò”{ B6tXÛ‹×ìæETéN+I}¨ĞÿyƒX€ø¤ƒ“C¿N çô²K¸\‡ƒó•,øÎ¯ÉÒÂ*ëÕA-]¿"©d˜bÂ¹XóDİÖëXÙTŸHf a1‚MdøÒ‰àX©çš.˜O”:ÙâşË=kHã1ªAÏsLç1µ*9"·xü¡¿5…£7³QŒöp£a,¨"¹#à‡­læUX½8àôàäêN×!z~ä?¿ÊK‹êTï³-º×M’·\«ç!y¦íì”‹JŒ7•åßñÒâh^íéµªÑ§6
+@ØB*ÜoU`|SA¼HA“ÈğÅéÇ%)oKw:Äcl.R\Pz†š/ÃäI/ª:ò„U§ *¸^¿âtÈ˜_ëùšq’Ö	fşÇ‹ĞeŠsü ÉXMvÈq¾iÄYc ;BÃè+o£]:F#ëP‡MÕÕé:I<HÓtQg\‰›¦ŠJJCfr,58şÏé?tÈ¹©¤$\¤&¡q¬×‹t~µåÏô “º–h.k Hã•ŒqE*£ÒXÎ	tÂ‰‰%¬¬âüó®Q2ç5K7ˆ©Ï’XîÖ±µ¶ E ÉlÆ¿o‹ŒNõi®s˜:ÁNÿ'ö‰c…Nf]2‹”ÕI_OÔ˜•Dk	fÆŒÏ@8qrìTù€2îÆ+v£º5¤[ÓĞ^ÚôèıôÈÍ?¥»ÿögÚûôƒŠÜåòÕÿ[ ‡q~ á™$Eœ4&]m•Æe¦—<q«`ÏÅb»®7e<ä{YRíSûx-‰ehfÄZj©¿„Ô÷ªsL*!+Ôtñ]%à¹²øŠ—Ùgí€ı·e%˜P†F®}í€´	5^¶;E´ÔÉhÅ.Á$@âõóåˆí”ÖÌWö(ÇÔÚïáÃøûãç1óX_‡Ş»á¼cO*úEø‹Eh1X•’iĞ+]œëÀCÈ¸h÷€-·|ÁtVWİtğé~zæ»OÒ£?ŠÚ†êzüçd}:øpNÿop"÷DĞïÀ?;rìg•“N
+ZÍÜ
+k¨;PÌŒ‘È ´¨Æ:@D‘œ"QAn^ˆ¬CY¢¹ƒÀ5¸'ˆ_:{Ø&DÊ£“‘q³^D'N„réD8èBÂ	ú£íà¸¶°c.ìÛ=~˜ÑÔpU*™<¿XÈ«'3OÓâÖÒ¢sÏç'Qi&‚Œ§P16yø¡»¸á4ùá±0p»Pû`€•Çh@Øè­ÂÇñÅ<y‹9J2K\¬^"?ÀMå¼Sp $I·Xx‹°sÃœİ\MÓg‡È}V#-\5ƒæÍCÜ¢°eÿ¿Ò“¡˜7?ÆUñØçáêü9ªñç•û¼vgTYœ?ÊVÔTS ŞZÒhÅá$ã^¤ÓJ¸gu¯¿3îW›ÊŒ¨‡ı©í)Pwª¨Ü0·Õ–“Ùeİ7êZPp{•ñ¯;eu:Šl\F•¿í€<?%Ç³<æçTäq±›B¨7.+àçxj(#âº“JXı÷xÔ3F%pXâqª6PPåC~äõÛ÷Œ¹ì™¢Ò`TD¼Ô‹?İêH‡œÓÓ ¹^ ÿc•ÃŠ“º@ÂØ·gí-ÉÏÀî««®şÛs;w°®8<ŒmÇ&™=¹4Í]m‘¹ˆXñ|“‹¯ÒX©âLdô¾X¦¨ñ14®rv¸Ø’ 1–ÒU~7œ¢jTA/“‰¨Ş19ÙÕFıTÃ™Â5òª“¨ğrşaRaq³İÃ…K„Ã4kZ=]4¿‘ÎZ0‡fF]TÍÒº×²käüBÜñh®#Ò4pĞÈKã÷UòQ€—¥£7Pß{±X`égİ³j<ÊÚ<Z¢"âœ« é6z.ìÎQ4`òf)[ôPºàfBÂ‘Fr–Ë31pA¾T'2Pä!äËğõÈ&T‡Ë)ñ¬bÜ¡Nãzus:!3òA#‡šŸæ|úYÇKg+í@H¡®±Ÿ¿tºA÷ku2™%ÎÈ‰:Ò}!-Ò‹tß<g]€ózœIæ,«dG“ÌœÕÉ¨›	‹Õ
+®Æ›VÖã…Ñ´Z‹×¡FÃºl§´}Áè±z`…†;«"¯œ/bQ»0Z¤yá¼ò±eìô¨µÁ;–‹ê®º¶;«úĞ- …ù)®Pÿƒ2Õ°ÄgÅéÎ*O_nÆùG¨k÷VhÛOÉšÊ•¦Ä–ò½›/ó£1êcf4T'=bc
+*­¼f*ª¬@ÿİh¥ÃTµ'U8ÉÓ\˜êÒ} ãfïÊ³‘½}èÀ5zpg ÊAêGÒL”¶Ì<NNğß…4 yxrc^Ó(Øq”Æo‘VoT–Æ8z¤vr,ë®¤‹´¼T×p¡YRÿ«]£³N€ä£ÓŠËfs´~ızúóo¥¿şùôôC÷SWwf9Õ™Xv€Â¸12œ	3ÒÀÂHUİ&€XcV~•êÉÎ•ŒM|½ÏM'5ş+Ägä¾-ˆAM€å˜€ÒÀø^Ä©8ÛÇÿ ?túØ[ˆŒû¹œ: “tåHè²×™“……Ğ'cŸÌqÀ„cæPë"–úµÀøË•unjŠx(Æä…DTjëZpP©0†góÊ†ŠÅy _(Pbxˆİ±ŸÚ»úJ.ÈĞÏkÿŞ}480@‘pì? Â^fhooíØ×Á§)—IÓ–İK×uuvÒ¦Í;8ó%“)zzãgùÚAß;” L|ˆvì¡;v9×ºÿ x8€¼·?û4õÅóÔÜP£Êºî¡ÇÕùşîvêO²ÚÎ²¡±‘ªfPE4D~¿ŸË ` ¨ê ê¥‡ÇÖØ=IÔ:iXÒHg·ky|^rSÚR‘Uc<ÊR€ñ
+Jô¼¾í&/™1<Qú­7“0Çjx‚ÿ¬+Íj1_Âq7Sz†”g&w@0J"XåÉ€Ôwq'‡ç–fuãpŒµªc@®ÜA¹Ä¼<ç¡J…ßRÓ‘—
+pŞÈ#“ÍRo–‡$v= fİ(2òØß+bX¯Q¯uU[ú°ÓVÍÖ­Ù¦¶µQâğIÏ#yµ!›8Xa±QÛ3ınå°1;âa•‘EŞ¹ñ1úåŸ¥÷½ífåİº›º::éoR®§·Ÿyv
+ooí¦ûŸÜªÒïÜs€†††é¡g¶¨c„‘î»ßx”zã9Ê¤Óô§uÛ¨µ­›úûzUxûıê?q‘á§÷rÁ@š}øA•†›‘"<òüÈ?ßFïy×_Tÿ²¾Úã.ŠTVÓüóiú¬™äÕŒ„ ûÌ`f0áDòJ#_®ë0Õc]ªBõV’”[#:°1aû@=]ê*{iÉNkJcHƒ´”KòRvCËĞN¡ÀíòqZ§×EQ›ãöúGÃå f™qæÈu®Cÿ?§çp´P¦HÇIf7TH>àğàÔ1»ıñõg`qQOÖ¯zÜL‘F¸æ’9Ë¥ò.Šü*~8[¤¾T¥v<vjil Ù3éÒË§ÓÒš©"äçŞÛCµ!/5UEUa0¤ÂÑXš›•ÕéÍª£ÊX„Â‘5.™N¬·½šjB4³¥B¡0Í›ÓBµÕ•TQue%-[8šk"ãÿÃÿ¯˜×LUUÔ\WI+/l¤ó—Î¡ªê*nİ.š³¤­™Os–…hùEÍÜq¤é×ßy†şzë&ÚçÎb ê+B‹EÕÿ¢@Ïî-æ•*ïÒ$†HÂp0†ÁÉmiQ§ êZ É73ææh§9í¸Ù@²ÍHY´Ñy²äD€‹tÆ3¹óÊ „åÙ€ÁDª¢\xÈOñŸVl»} œX-Öt)mM†1ÎÈ÷‰rµ'ùÒRÇ£<QIQöÑYÀ±bW:'qºCz	z¼ä§âù¿áäĞÏõí=6’™³>¾¸èÜe_êïí{o>›Q/*f‡éÊwŒ^úÖ÷’«²¡4¯Šˆ0|HOd|gÂÉ¸ƒk¤wÇC„TéÊªW$=ÜøÓin}1¥YÂÊúŞ,wã:ıéĞ9°K0˜ßteFJù°°ŠÑ/‚(	ÇP–xÔ<ˆcÑ „H¬n¢|}#ô›{Ÿ Gÿ´—¦[M3fTÒšs–¨9m_@^-ªùal/›ÑŞ-ÖUI¸'¬+ÇØ{K–v0¸¥‘â< ;ŒnRn«¼ã›ö¦ÆÖ¶ıY«tH^ÈÆK|.&¨-
+ ğ\€TÑ«îéÙA+?i:/Ê§ŒŸ~N ;HË¾ÔùwèØjWÊT®>@D> aÜzÜd¾@—ĞFvÜ÷GúöGŞEq®7l÷®¬|`Ñœ9¹åö¿=j¥:<”¹½ã}˜	Õ#3@ÖˆßZ{k:œC™HÜ/è@*@»­ï#=Ö•§}EÚËqÅ"!(ÑŠ*e…†“0c#ßrAe€CcXI#–m1®)õÄU7(7­óboni¡÷¼şÅô½ï¿…>öÎëèM×^LóÌ)|@"õm§”ŒºH”ÊYW@¸I}£^s©æXàœ¸ñ*»ÉOşÓ	Bd@Tw”ÙšDpÎ,Ÿ2Ş¡¾ùä§Tm»CwªNÂ€p:ïäë>‘˜ä‘{8­ › ]Œƒ<¤rñrÄîe½=é¦ƒ	‹ÜØ İZ•QäÀ×°°Déx ^Î¡ za%^O#¾ Çr¤³Óà5«7ˆ¤¢ºšB•5jzGÖCÛGH­BÛ“äQ¡İ˜ÊÕA9`I%H£O¥îA]‘Roäx\Ê¤bMôì&îF"êK4‘§ä«‡ei·ËWº„te d4‰(ñ‡\#¤Ö¯×ŸÇ¡>›ÃÁqø‹‰1æ[S\<(ø‡êäz	‹äÖ!ç!Í¡’
+¹w±š	5ä†z×™ÀçLĞÀ…hz#D‹‘Vcéú89^Àèä²|+l-“Ä—Çú ãö—r®\´qĞCOõ:÷ê%z¬›è‰^­ïsÓ¶¸v±–±˜Ç^9K›¨œ|Öë†(—ÎAğR<êqœŠ{Ç±µË‹¹|R.é
+Î!ÆÑq€z¬Td[“Ñ;@ò ¿ø%™{¸"^¿wxr|´ y9=3È5´¬Oœ$³	½¦³ÒL˜ç@n¨äX‡Õy´Ñ!àÜ³<®…Õ’}“_GPd.*‡Î„“;0V¤„–Ğ´V?Áuñ^Âøğ|L‘%¸óÓ¥	îeªSêEŸ'Õ!õµV‘‰+¡4°‰kAˆX¾Ù! QœœÿyšÎ†Ô»X£'‚ET»L¶cB×&#±=½}È¾œˆ}¬a?¾sÌ¬MŸ^!;¹r<œ #vÚ˜L+ƒŞÂ[Cje—mœR×V{¡‚ĞSÏî _şéú·ÿùİ¿£¤Špph,P…“Ek@%N|@|f™qŒ©=^î[ê ÿ-aqNÀQàiğœ¿HX+œMcal¼’ğ†$5Q"§²ğ‰„ˆ¥zÇ\8vÙ´Ş
+ÄW4t6B(\ç Î‰ô–ºpª!eÚ¾¥©ø¸FH-Ï¢ÔyŒŞÖ1Ãqø‹#‡ŞH¥ràëa9gB,»R¡8†5K§Òêí ¬&³›<	»(›ÉP_?=şØôã?= æ€ÿ÷3ëèÁßì¦t·5oŒ<ÓYÛrËdÑ­—%'e´Ë1Î×îAwrÎé>Åô°ÔÍdé •úkÌİ‚àj<ª × ‡-@›)äù^ÏºÖf‘O‰˜Q‘ òâsãÎë0j·FêD “XÂğ§â$- ¤Ö¡×±@µÃòÕtÄ»?aÖ&ã¤QzX €¯‡ú3Éø‹iªõeè¬*kÚE–„Z*—Ç6>ÁÁ(ö8]×µèiÛREó+•»úƒk(Pß¤ÔVüÆ¢›eÕ	f›zÚ©BÒJéuW‚-õN/©°Šz‹ÕÃLB7æ¢Ë“o,p­¤›	uŠò >¥ƒÆÓDªksä&œîß$¡óPa’» KhÍüÄ &kÜÊ @Â¸Æh@˜™^>®÷s17‰(ĞøFIlãà}{[éáGTn×=JmöVTÓ¼s.PîÕ×^Eo~ÉÕ´ö²+É_İPZ9¤ÿ¯Y@›
+ôÆS®AéùJgb¦±$¦éF‰i$CÆ± ÁDÂ›’¾dP+Î!MÅVmNòÃ	Bë*70ª90De·Ul„q[ú½™(Wg‡]ÂNˆ<ƒ£ùÁ8V'ºd”D›¤T¨0'g’re¨ÑŸ¦ù‘-®È)ãÅk™'_d…Ó‰!Z÷Ğz5şøÇş¤–UÂ=´§S‘\ÔèœÛšë•²Ê›O€ò	¤¼zXwåâM§§“°îëS7\fEnğNUÆ£
+2-ñ†H³QŸJ°¯/èC¾RZ^ :HÉFzìS¦¤JšƒX®U@Ùq¼Ü›~ÿNuv¸Ğó1ó*×€ÔÑçòÉ=fvz f…é0ÏaÅ6ÄÇ˜«FÕi4 $.ª% ›·î¢ßßı„Zqğı¸œæÌ¯¦Lı|FYt§Ç•ƒ^féµõ2êaåâ'ƒ®6šÿŒ/+4·"¬w¢ â3ˆ¢ ¬ ‚„­xÔ+®É.<KF)?@âÌ‚Yy‚¬;;™j„+Iùô°V	{›èèõ˜u¯ÿÿ±,‹QŒ‡hU¥ãM;5Ê‰ é›l[’x4ck,\PcaÌùb9ãª¤ğœeô²w]Fÿòå——Ük?ñ:Z1½Ú¾rbÈÿêN‡yl6€©`²kÌÿ Ì²H½‡­°NEJ[réu¢HXâ9f¿n?€/a@ÿOæ1C[òävA™R>°wÀ—²ªÎF¤±t%é<š‡ÔY:ä?$,¾v:ÖÇò‡…"uÙ¡#‚]´ã¿Ç·ßEî„æWãM`¶¨uóÂõ\Ô“´ŞªÂê)Ìïö§‰ª”k<ëì’›¹ìlçô&4ˆÉˆi&œ‡$^·‹ï.o!£†Ú¦%`¼+DWáñÊİâ‘¾å@28³qƒàcVÆuêxLÇØÒŞî L¨a€ÙÙ€Ğ*NòGà^TPÁÑòÌçQf)7|ı³^åX¿O3 ·]Põô´Ú!áphÏ@<}Ğ><l8áØÂïóp{]ŠÌ|fd`Ğ>š¨8İ™@\gÖ§$¯µTÓ’ÀXØq0å£|€†‹îLücÈŠÆ.N VœÄ›0Ë¥;ó¼ë¾@—°40ıœ \¸_4*»³a«Ó1Îà¥”’Mañ =^ØaMeYÅ¯¦¿JÆFÉ%ıØÒDã;ÒÈµ’ŞòeRÀ|nRV©7qS~­î—êÿßv ›|b(d§S,öÑƒË|Âë÷©köÀà(‘qÃÒ‹•«xÀìÍŠLr]´â2d‘V®ÓI)] “z2”+ÛÑÂd˜,¤î	é,²Ú¤`‰&»{ •…Bİ—ôc}1‚	¤L£„4óÒ0N­»î[€ÿĞ	nAÊ_Ò[Û—ÃTêôP ©­ZUİÇÓijïè ”ôœŒÆúÚÇ/záÜnûğ°q”ogr\¶fvÂçöª½FÅ<oo¥êÁ½*,J@åˆ“cİ•¾™Nw7™¯‡ƒ>–dv\9âá |@Ê"ÇÄëåtÂDç'ºFœ	)Ÿ@:,.Åk-©;t¤V~:9$îF÷A2Q‹ÅK<3/Óñèºo@×¢d5:Æ¶Ò[¾äÅ>¡ÍpzF§zÕã$^?HNu`¤j •’{6‘_†n·âÂg>óëÜ#€qKÇé€;	‡ÿ*7µÙîÔ ì£yO
+§J5+W‡^Ñù€v‚ü·ş¿fXw	›çõx \óœ'a gwğzZ¸¹'™Rmğ°&İOiŠ¹Ò%§yEˆkÂŠW†4ÖÙA^Õ)Øäƒd-Muâõ|åx4Nïçèq¹<5°´Û™Œ}¾zéuèT¯_¿n* ¡!Œãƒı´éñ'È[*¶ß»óÜs›wØÉ“4Û£ô@7Ã&ªvWOusSÂ‹€ôd“A¯\Tş¡Vöd0ó5ÿ[/ƒ@›JØô3Œ­wÌtzœ¾5Yó¾¥áB²y¼VÌ¦”eü<²L›Ç£0‰#—k…°p8çœ'Ôdİ†¶cË@ç|Í(¬óVzı¹éa½ÍºÕÏ™õ=pØ6ª´¶‚š?zÎŠ82”¹ÅcŒ›}~wÔlôP#vSÏî§í³ÎGf¥ê*ñº›fzİéùˆ3ır¤”0`ú‚ré Äë´:¤å "G{vĞ¼ö;È÷øÿQÿC7Òà? ¡M¡TÛ&ò¤G”:
+ã—Úp¯$õÄ„tNç-CZIıµ	=ªæÊµâr˜av¬&£#Ğ;	—_¾=%éMc•PÕO9Bô:”ç˜uk¶…© õxòj²¥Z$Şt4Tl`’Û;6¸sİºı.o»ÇçWªv‡Í^Œ'pŸå$3*U¯X³Ar^|ó¡Lä€rHÎ‹¯C/‡d4Ë'ç$¬ûB^3¯\ò—´:Ì{jFÚ¨¶óAŠÿö£xàË%ç¹õ_(÷«wSş¯RıÆSl¨mÌÔ£¤ tÂXÏl¼ï‹är­ø€fØJƒkÅ(YÂ˜)(Óäxìº³¦B`@Îé¾™Ş°½;¶Ñë×Û1Lğp`+Œ_öáÃ¡)TÅ*Pª¶½  kÓS´/ôN©Tøzã.‡É*ÙÒ;D çàëé$¬“O Ä3¸r÷`^ NâòÓ¡7>±®{˜Ğu©=ä·q')ñøo(vÛ¿PäşOÓğ–;•´ÆVÂcÉQö9{|jZŸÇ’	a9/ñzzóœu½H6H×@cz=Oz^HcYÄÚô”@oK€ÙVô:–sNõ¯_¯ç¡kw´í¥­›6Yãe,ªñy·ùeöwÇ7CÕFÓS[÷¶«›-©$Óè•«‡M˜£\Ú©ä¡“Ô$±NÒri 	›iô´åÎÁ‡3ó ÌFå×6!tHôm~”Š­OPú©_ÓĞs·SoeÓÒÉNF ë<ÔjÑ°03:ÆàK>ã‰;îœ¬ì²¯pXR^®5¡ç…4cÓ¡.Ì©C³-º°ÀßUöï¡ÜäÍ¥Õ±œäz½5‘Êfh`ë£Ô—°4êp8@ÕÑŠÛ0»£"P+'—_¶ø¥j{¼‹…©cëÓêfó,Páâ §ÊF…ŠÓ!ÇúyİÉ9ñ…º˜ñú9@?èœÀ)No€¤™èzİ/gJ›_­˜u5äš¹J¹üï?D;?NÉmwQ{[›Z«ŒfŠ0B	›jíxÉ,¾8À)<zŒÎhü¼?Îƒ¬úu‰çòÀš®•AÚ•@êJ'£Ô$z´wÅöİA1OšrŞÀ¸gfÖµÙ^ñáƒéG6PM8¨¤r®èŞÛÑÇ¿ğÓ^;ÙÃ¸­ãXğ”ªíöváæövöĞs[¶QOÏ€¢<¤á
+d/%øúƒ’p©Sà^Uöa26€8qr¬û€SšÉÂz™%^?6}3®ô…0ÆÌ®á	ÏTq™H‹òMô‘¿nå\9*Æš”¤lÿ#¹¶ı•†úûmBDú‰´¦¡D-ÑtæuÃm ¤/åõcoHw ub’O¯3íÌİ¹ƒªû±Š‹VZ_H;Ô¯+‡­mC´ıñ)èó0™ı	¯ÏÿÔÑ”ÊÀŠqlpÿıÏäÍ_ĞL]_,óÉ$¹½^:íU«o,-14+J*~iÔË5bùÇ±çáü%.ç{,€/ù#ÕL?gú–tzyÄ$é·¤—4æ±V ŸÓË(aøxM\œÚ>¦DlÅ®¦íKş™ªÎZ£üĞÌ³)³àZ*D¨€¯Nd(Á×äÉ·ó*¬~+kK|ù_¦b>G…D?õP=¥ıQõÍ(oiÙ'şÈE~h#9/a£S·Û£Ş\ó«‡4€î›a+£ÇØkŸ ª¸)ìÃ¦üZ…ŒIoÂŠKsa’Eëó«S!Ÿ;YHäº'¾¢öCO®|kÕgl¥NÅÇ­É¦ÿTşK=«öô»Ÿ|›}j>òú‚ıÍŸÿÁ/o{ÊJ}tpÂÈìjmjª¯»¢/ÖyÜÅHoo/M_º€ZCQYªQjÏL'²ŞÀÂÒà“8ÆyI#ÇfXÏc²´fâNy–Kw¨åÔåZÄ¹³iÕğ 4º,qÇ©¤®È| 6Rºj>e+)T=“ú§]¬ˆ>2ÿ%,‘g¨k\İÛ({àY*4.#oM¹·ŞA…Ù“;3LÁî§©ÏÓDfyÂ´I‚X…q±:cRs'€2µ„ùì—|°@’—œ+R†ï%Ÿµ6,P_°PŸÎò‡½æ
+/Xd6Û”NHøXîß¯$²§u=e\£ê@=âVÕí2t_œÿìÚs~üåOQ è'·ÇC±ÊÊuáXå÷Ğş­G'”ÌÀÙæçRùì|¾óYíCT
+ĞìyË¨®¹qLÅ‘©$4ZiÄfãœ¼KĞ%ĞÓ8]k†õtzx¢sz¸Ü± Ç¥-fxLgkğu áó5!W\ş %ó^ò²¦2ä©Z¨h T¸²MË©§neƒÍª›¦,à4ØFîöMÜ¨¯Ud.<ù+u.°ï^òî}€
+,¹úò1*øå+D#y—z?ì'jğŸãs6¹œI§§‘0à¢\.§¾PQ„ÅÁ9İXŒÏs¤2Yë^9ZÚ•OˆŒ¡Të†û?J¡7Qö†¯Ñà’WSÊÇ°©…•^€ñ3,~:Ëí‘«ù)éÜ¶ƒÖ=zıå÷¿§(«Ø>®ûÆ††_|ÕÂg ÚÙœp2¿ãMWtoßÕ~n&“]’O`Ù¶—bÍµ´ü¼ó­
+²+% y¥1ãÁHc6aÆéÇåÎé$ÓãDêSÉ(w®\~åˆª£Ü±Jk# ø¨ü|i´ ´44 OñŒ¸t¹ÓË)W1ŸB!>×)"{:6Q ÕCÙ’§wyŸûƒR¿}}[É•‹S¾{»ÚŞ'å«fB{(ÂdÆ.›£/QàÏì?,AâìB–ÎãØŠOç‹£[ +2ãÓÆ¸h¨èSÚ ÷èÒ¸zûo¨ê™P`Çí”æÎ«oÍÇ(íö[ g'õ)v)>Txİ@6¼İôõ/S¶§«ÕGşpxwEuİıè¦?öÙIN8™/¹bE1?ìjïì_·îÙ§¤óE×¾LIT–`*ÿpà”ÇÑÈWG¹üÌøCù_=­^7£ÎĞşP‡h´ÑıTQLR$;LYn¨øğ÷ŠØ 8ÒB¥CÕ4P¹ˆRÓY÷7ó˜ÏOE/«‹#íäîØLT7—
+µó(¼îËTHëàÓTxê¾2OÉi«(B–¦ÖZB¸Q’†9†ŒúyfQ„¥Ûè8İ9İ(FÏ»8œÈ»‰…»"²Xİ{ûVªÛıGŠ=ùm
+?ö-òöí¤tÓJ*¬}Ö,UÙQêN'7 R¾.ŞF_»ñôÀïo¡ŠÚZòúC]õuõ_ºçÑÇî²“Uœp2CÕxÕ×öl{îà¥ù|~¶HçK/8Ÿ"MÓJEÈŒŠƒ+GjŞ*}á€!Ç¦ïtNp¨×èa`¢ôGóœ	©i„BhŒ£¡BÖnû9ùÚŸP.Ô¿‹"OSo‚UğTU{rŠànX¬™Ü¨w!6ÆÜ‰Æz(ç2AräÊ&Tëõul¤ìÌ‹Ôq uå›Ï¦ôÜËYğÇX’k
+ç@F¾m|.7.éM_‡e0dÒCn©¸bç­äÛğ3
+tlP©aéÏ\ønJÎ¸œ2W2Mì÷P—h¨c	£nñ…´Q´Y¼gĞ±kıü›ÿM™nòÃÅÖÅ*«¿|´ÇÊ§;?!xÍµW^¸{ßşO^‹¯ã½ıŸ¢W¾õ}êœŒS„Àå€6“æ
+Vm‡Q.˜ÇSÓ5‡úSs‚¤ÓÓ›qğË!PÈPæàvj|ú)ôôOíXhÀVsK¨©§\óyÊğÕ[®æx3Ñ:¥nbŒé4äåé¡‘Á>µLÔÛş¹ãİ¬Wv«eÉsßLí×|C} tÛ&47„K”x@O7
+ë“Ah’ßø4Ìÿ±€ôööSõğ&5İæÙq*«HäÌŠ7Ñğy§î÷	_ £	‰dïúÎO~F?ûÚQKe„fÌ¦™Mõé—'Â	—Ì‚7¾jM²u0‘H­,f“‘ wsw…kjÇHb®H*¬5âåÂ€~Èq¹0àtM¹óÀDéõ¼âÌÿÆ±X7ó€/Î”äøSeU5«Ñn*î~˜<¬fÆ¼²¨•< ÀÎ;¨Ğ½‡‚Ûx¬<D‘t'esÜ¨ae\ËpÓIúcä
+[ÒÖğHólÊVÍQÓ\˜ŸÎÍ¹TãÚT>œN6„å¼‰ÑëÜ<€+œFÃXÁ–íÚJ¹¶g(´áGä_ÿC
+lÿ+yy¨ sğùßEé…×S>\¥êÍëñP
+JŠ­©
+Ìó;ùıô»ß$b€Ñ
+*ºè7W^¾ô¦»Ü8ùšåÃÄICfÜä»ŞzÕ®­;Û—üî¥Û·ï&W!E+Ö\®¦XÌJ”ŠF;	¦=}¹°‰#ùÀéú‰ş{ªÿ§ß¿jŒ–ºR`©VpÇÈ;ÜªTco0B…œõb|	hìHbƒü¡§)Ò¿*‹Ã”ˆÎVª8,ãJ­l ‘êE”hYE¡ÙQçÌ+­wÕNš:™Ë‘P
+étN|=,Ğã$ï"YÎ¤”ëŞN©‡¾GôÀ7)øÈÿªûq§ÇnQåŠ5RzÖZr]ùae¹N-"ğÑöJÂƒ%5®ÂZG‰!¨âñdšnùŞ×é{ï£iÓ9ïîæ–¯o^P3p´-Ø:N2 ôâÙ³›’éÔ´|*ÑøÌÆçhíªeT;m¶’2VÑ!UğTıé
+ışõ:“zÊcòÉİú8·<Œç"ä†Q‹È,×‰ğÈİµ…|­+‰IPãíŠT7â¥]~Õ˜ÑÀ‡<–ôös¸.Àÿ3n‡Í€1D‡sNÇ	ËyÀòAàx|„
+½;)Ùú$åş"qhóoJRX¿'„“s® Ä¹o£®%oã1ÿcTêíâ£îÒL™R]æG‰-S‚Hûôºèçÿ÷]
+2ñ]@WeuÕ/.»î¬¿­WËá¤"3°¯½cıâ¹s}©Têºáş~êêí£es§SÃÌ¹”a©#„–Š–†z“C5F®CÔ[(\KÅæÅäÛôÕ¸á„ÌºoÆÖƒ,­!±Ñ!øÚÖ+‰+ÓĞp–Š¡J%µ£"ù<nÛ`¥Çp\!ÊËI‹Å"e“#”gCú&ö<F‰íëÈõÔMTÜü
+Ş÷Õñ˜ª4î£ª¡äÒWPbùi`Å{)3ïRòÔ4+¢Ò¶àVÚŞ c­FÚšj{LdœDÈîÙAÿ÷õÏÓ¶g¦p$BÕu5ß~éµ+¾øÉÿ¼itLsŒpÒ‘¸àœeîş¡ó½^OãşımÔÙİEW]|>ù+ª¡QqRÑG
+Ì¢ƒ€)İI¼é;+w­SÜTÎé¾YÎ©øå R%ÏC¤òñ
+ìC^@ü\*®$€4Ê@tá»•µºÀª¥¯w‹šÊq@ìHß&ElHí@ªÓšs.¨Èd€ä	á,ié¦|)<–¸rŒ›A¡3”æ²¤’<äìÛE©½ë)½“µ„m<¶ß~¹7İJ=÷P1ç†!_v˜;ë>à¤#JÖM‰ŞCƒËŞFÁ™+(­WÒu"!ÄU~ÉèfAÅå2Êv¨Òwí¡¿şş—t×ãr$(l¬­kzÿ±V¯vqO>\ºrÅ?uvu~!“ˆ‡Ûãôñ~ˆ^üÚ·SíÜ¥ŞPzÍr¤FÃXPtâÌcåÎéñúñd×Ìÿ,——Sy€ÆM”¹ÿÊº-¤Õáò);Ü[:7¼øyíw(Û±¹t,×0x6ŞBÁ}* â…¦¥Ê9^â˜*2=Ö«™°>ãEÀÍÿê&_E=Çµó7—şCá¬—ÿÏVeA¹Ñ!ÁZŸ;ïÔ5ï5äŸ¶+Âê¬ô¶Tµ1A*•¦›úúİw¾I}í©®¾fcc}ã§ïzôñßÛI9 [à%Œ|1WÏåW†¹ÛÛÄjK>—¢Õ/x!7Hkœ¢zÃ2İ‘Şh!ùÄ7!qæ9§´’‡Ó9@7Ó™×8åU®ŒÀdåÌór|Ô‡~^¤·§è¡îØYÛs§?{BÁŠ J:sX—Òx#e‰ ÷Ş‡(_;Ÿ|W}”"g¿Œ#}êzFI¿ìü+©ÈR/Ô¹¼,µÕ<tKñ¶§©Ğº
+;î¥\Û³”ß·¾är}­JÊêq¸¾Íàx'¹FºU0h»š—’ïÅŸU/…xâí”…ËUTk©]=Û)<¼—ï×ºa¥Q\ø%"‹$ímû¢åŞ®Êµ1 õšH¦éÎÛî [¿ıÚ¿c;UWWQEuõM—½øœ‰,8iÉŒ‰õ÷ıİ‹Şº«s.?¥Ù##qß}=BM1?5Ö7S¬¦üû¹ºt’l6ôÃÁ¡äa’Ï<vÊk¢ü'Ê«$M¹ÿ¡Ó¾0E*«©à	·{+y2ÖzRd ÎŸê¡\û6E°PßVÊVÎ"÷‚Ë©àQnÏÃäÙ}%×~˜BW|<M‹(Yô)ÒÛı‚÷‘kÏCézŠ²î0š—“§7ÿNu¹YkÔÊ2H{¼ÜàZp“ıäØG¹k?­ÂºÅi+¨˜¢|ûfµ¤ÔwğI&ğNòäñ»­ö‘ÑaY¦Ÿÿ;Õ´œoÂ÷š‚@'2Ú9dÑÃÄÄÓôà¯Dßúâ("×Ö×R´¢òö—½dÕÇ8YÇèœ„€uûÒÕ+÷ŒŒÔ{]®¥Á\’yüiè¢K®ºN=Bd§ïåºàpÍ¡sŞúƒ5ó¿u¸˜J^z™œÊ 8ÔIe8Àê¤K‘Q$±y©™\˜“<É>Jõ²”İ¨aÀà„ñ´§zš:Âùyüœ]ûÏ˜«Çí”KSáŠSpå(ªVcíÔùÿ@ÕkŞF&ñêelÉÕ”èg‰ÌD-Îe¢³”†ÔÅ’QÿîûÕ\1ÆûŞ|¢T&”½T~¤rò‚÷R®åÕqAeHÒªN¸¾àĞp,ÚÔ#Â¹t†ıÃÏé»ßüv‰Èş c]MíWöëSÁ‘·ìcŒçvî>ğÏï|É=»öö]ğx[
+Ã}¾Ÿ|†ÜÉA*ò8hÚôF;¥½âBìÃ!²`€ÓãF:ÄÃ¹³Yòp˜vÌXa‰“4z:=Î<WÎwº&\ÌQ†ÜªÓrñPDÊ%eœ¹h#Xâå;SGÆ˜}ıd5Ü]È¨E&¾ÁÜ"{ğ e;•U9¼óòRR¡Fµ‹Œg¶Rºî,òE*(·õol’òL4cãHëı”aõ?½ƒÊËCı{×‘§o‡’ºp n–Ÿ?ˆ¨ÿåò˜âÛ/ùÊÕÍtìËÕªêIê
+Çh;rqhK;vĞ=¿û9}ñÓŸ¢¡öjí5$2ˆŒ]tåâr8ôÖ}€Š¹dÕŠ]ñLÊ[ ÷ÊXÈOwİ·’{hé‚TY_O^ŸÕx¥Â!1Üáù™„ÖÃr$ ñoÆE&8õ8y®œo×å½>õŸ »¾ìá‰€z‚)Ô‡[‚Q¥F»úv%‡Mhµ0‚Ã"ıÒ:µ&cgHiX}îÛ•º²Ê€‚™œP±•$mßH¹m÷*ÕØ5tPIXü/1vÇ[u‰vEHÓ2q9¤y.XE-*ã}ìH¹‘>²æ­÷V+ËóDRYuø\Bjó>¾`’:°‡nüŞ7è–›ş}}¬²ˆ\]Yñı‹¯YzÛñV¯Î-ã$$ô;ßı’»vnëXìr»ƒ!W±zÃæ­´kË&çÅ©º²jª*F™Ì˜ŒÄº45œbèqâ@"$C:I¯ûÀ˜8­Œ:ÊsÊG ÇBr9§§A¸œ“F@ªªæ’·ªQ©º äPD±m .1÷Jr½ü[äµ’2Û×)u79ëRJó&Êó8ßÛªTo¬ºÊG[(¬£@~„Š¬n#¾ÈdÌy±hÅ§$¯Úª(TCùP:‡2€¨#½Ÿ23ÔÚoä›÷Ò¡ìH/w ë¹ğqòÂ£å³ı¼/J…oàüêùF=ã]¨n!* uaúĞ²Ğaß}çıô§_İD?şÖ·)•ÉQ´º®+Z»¹¦¶áCw=üÈcÇÓàeb|Ë9‰Š:gé²G^ï@*“¹´*òíİ±‹vlÙH©dœjkê)V[O¿%¥ dÄyø a#„§kÖ%¥œ“tr8Å™(wN7Ó”»ÛÑæÇ¬¼² å \z`(Š5R65DŞî-ê-(%åTâ±ê6üôœË)rÖÕä
+TR~ëíJ†¤Ñ±JÊõîQRÀ‹şX»í:ğ”EîÊY”>û5jÓ¨Ùj©%KÒä´(wù‡YêVS ÇÏLf÷Ë¿ÆAƒ’îè
+±*DjÔ(¡ı©ë¤\z‹–äLæ4w"`,î÷) Y…°N@İ€Èñı{hıı£ï~åótÏí·SEE”ÂáhW¤2ò‡šê†Ïa/xû’†SŠÌ ¬ÜX%vÖ‚ùÃ.·ÇåræCÕ¹ûáõJJ×†½T3{)E‚Öò:ıÁáÁHcr	qõ.aóœãS'² z:SÜ±ÄTË¦#W™ĞuÊ°Ä(IhÛ@šˆ3>–¬®¢õ3-×tùZ«4˜^2®ÿ¹Ò}äÙ~—%]«ç­x5…–¿TĞÔÂ&eºeù—^C&x`Ëøï²”ÆT§¡†ãÚP¶_¿ıÏ¨qû œ6¡u2CëÁsÃáùêmDl©L:ŸÛ@_ÿêWèg?üíÚºÃ"reåµÕ5ß½úe+ÿóXl4p88åÈ, ¡—-Yú@&—á…‚Q¿·ºu×Ú¹k7EİYšÛÜD¾
+îÙ¹í¡½âÉCƒ‡(árD+”# ª›†Æ£ÇëJ5¬<7BŠ¯_'qæ5“9ÉCÏKœ§œGËAÊW4RF£]©é(!pÉ8HvQv°K9·ævs¹"e3Ikê¨u½"8oÄƒJ’z;ŸU»YR“½JZ‹dÎ±Š*òxÓÂº®~Øãé`aDíb’-z)Y°ÆíYwP9_QÛÔ.'ˆ_õ6ra~šï›f'm:´›'¾õGß¢›~3ıêW¿V®¨®éÂ^fÏúÄ%kæİ¢ÆÇNàbŸÚø¯¾¹ö»}ÃÀÈĞ«Ò‰äª¡Á!8]ÿêWÓ²åËé%×¿Œ¨vÅ¢ÜHò£ÒV|y|¸ !t(ãñ‹ïóÚrğdY+Àv ÊÅòß&Ì²(õÜÎ#Âªvzç}j5•·¢á|€RÌÍÆâ|^K"b}}õ¤¢¬ƒÕ[¶õÅûÒ@ İ£âñ¶R*2,œ¥JQ—>X¨K¶ú°w7VxaŸjOvì×A÷Zè·‘×ÒP›Î¦î@€Šä %âqZ]Õ›G>*ÒFıë¿áëˆÎ¡æ÷@*KmC	j©Sˆëouáí®(‡Q?xWo@ÅÛZéŞ?ßB_üÔgÔ‡Şf77$X²wÔÕÔ}-Şz2¨Õ&Ny2Ôæöÿ]|0~C:1Ü€% Øp\'u°a:ù`´QTGS%& Í$İDçáBÁ6ºÒÔ›qQ{ÒEÃ²1cfÄEªYÿBÇ×ßLëŸÜ.;ÓÓI3i¸®Z¥"]”Û¤4/»ÃWUİÓ}{n:G¦gïw_ä;Ë×ZJ#$í z¦bmş›á—•îj†/¯ò•<‡Cò‰8‡¶†g«ôW"MW’¦hvÑê 00w­ò¹ÇîHe9ñ•˜ÏCÛæQÉ=yµ·H¡@ü¬)ôüåûôà/¾O™T’üáH"Zû9¾@q<—g*N2Ò÷Ş·õ]ı}ï‡”–uİxp¯|ó›hşüyj_î†%ç¨­ltbåÈF-Dr"—\§Ç$@<4 ñ÷Â$£À©<NNYkŒ0‰[ãEºã`š2ÙmLä©/›'·/@U<naı²%è£WÍ	ÓªFõÅÓô¥M)ÚĞÑA»R¬úÙñ84Ÿ¶§€r9šÌĞüÁİ´2³K‘pñÀ#ĞÌì§«ßëÛëŠÒ6ÿt•öšôV•Rä~Ä»Übî¨^ÌÃ–yŠÖÔ,òïM¨<u<èN‰Xú®+ä‡<€‚·²”?`^‡s…øU÷î¢ÀŞgÈ÷Ô_)ppk"
+ık¸æªe7Í¯OœVdˆ”Î$“dR™³Ñ»
+©×\y%wŞ¹´àü+é¢esJÒÚ$ —# µ6íö–Òë¾á‘u¤ı´¥/E¯šÒ˜%ZXé¦YÕş1¤Nf­%‚&°c‡706m9ñQ–şá4íqÓÆAµöĞŞd‘g÷gƒªë$€ Ë"^º~z%mLÓïºñvĞøÆ/×–Î¥úiqb/­õÒş¬‡î¬<Û"¾}^¥e¢¢X”9 HÎD+½lãşÏÀDçÊAÊTÓ¹M‘¸°ûªÙ³ò‰øIe©
+NK2ÒO?İ¾ ¤Îfs‹ ©óÙLx ÏÚebŞÒ¥´öµ$ÿ9+iÎ¼%*ÎSÄne Ñ‘³?k3£"¨ÔÏZv_iÆª Ò!¢=CYº{¼D¢¡Œe«ğ»hi€èºUty“—z™Å ˆŞOQnl!DœLS, ?KÒ&†ª9|S+›0‡:XôQ?·t{YÛ·±XŞ—ÎÑ`ŠEsĞR‘iü&	pl½²èW¾N6œ&$“ZAû¯ÉP®,å å ä:™BäÎ$(Ğ¹‹"û™ÄÛŸP’ãb|:¦¡¦æf¬ä:Ù¥±Ó–Ì‚O}ê­Á‡ïØ|İH*yQ6]>22ü*ÂÖ©Õ×SaåµT¹t%åy,6dŒuVÔK‘ 5Etve–‚>¿"7 ’ùàP†¶è¡®=Ù7LÓ¶qˆ	8Ù4UûRte¥ÚRYzhÄÏÕ Oo°èt•8êóqœ¥‚e
+Ô—ˆ+õ¹5ã)5b'è|2HÚrşD@"±‰5Æ¹:âÅÃÜ¡rÇ%ù›@¼;7HÑŞ4ì«¥bMÓ„åĞËéÚ]"p²«]Iá\b8‡‡BEƒ¡G\¾à§Š4ÖqÚ“Y R?rÏîútbäeÃC/Èe3çåsù¦ô´ÅátÕ4rÏ=‡:–ß Æ8Ò	˜|Ò¸@¨ÕaOÉp"€ôÜ2,©²
+åòp¾
+“¥3!×9AòrJƒse®5I!÷+(G¥<XBÃ0U=lÊrÁ˜ò½)çÙÏ`å+TXÒ¿š HUäƒtCgÙ±£ĞËíHà‘Aòø}»!…1&ÆGÏ—\0íéc½µÏ±Äó†Ì: ‚/ó%ÎÿüŸ¶]i‰Ÿç	GúæœO¡†fŠÏ8‡’3–“§º†}Vãr„FH
+ 4F<Ä íáä/$€Ì:LbëĞÏ™é„H0(Åâ]ãÈ‚ Â
+~½^%­#Ù‘Q “RÙUğ}y2ÖWD¡Fû‡:KãàÀÀAòîİˆ¶uùÃ­"…O5Uz"</É¬C,àPÃãÃC×d2¹ù"­Hìôìs(SÑ¨,©ªá*‘"*Ù*+H #î‹*‚ˆºz40¹K0:
+\#åC±B¸®˜²®Å½ ¸Ş™y!İEı¡Ğn¯ß@W£/záÜîSY
+;áyOf°‚wv÷®§Ëÿ{ßU•¾ÿ%™>“2é	„„’ĞAÒˆR•* *ÖÕµìºÖÕu]ğ§®eW,¸XÖuWAA¤Dj(¡CBI!’Ş3½şÏ{fÎp‰‘uÿ+ÒæåÉÃ”;wîÜ{Ş¯ßE$ÜnsÅºÉ¥¹ñ~`jYuÑœÜĞ†ˆªVzÌiAp¶1ÀU’ÁíYÄº ÏÂÏ`²‹À }.´ĞX ´Ú…´W{€02¨ÃÎ‘ÛK:Aé{çıxI*¬TH	ß÷`Ú6P«ãÿq/ô¾’cÀg õqNÔey$k¬ôi_mãYnBã¾ß² ƒZ«Ù„ü°>,´òJ7£ÿüdnc23¾ò»Û•§Ó~ÿê¿M¦	v—Cc3YÓ¥ä¾¶CÇÍräuW—ûü9 ^n£
+»‡Àí=älíVì—›ªLRâ€lR öÏµ„Æû¢ÌB£I¿»=ÿT
+±íO$\ˆè;Ÿ^´Gâ9`h^)yš²ÙjäŠÀ*…B]!WÊó ¯Ká'óàû÷ŸØ1­_\ú¨;VIƒgx¯-¹f›FÖ¥7'·ğ¹Ûr¤$ñùŠm£¹m²†è>mîT„¯-ÛâÇŞk­âÁ(DŠ9™½ä
+h¨¢`»Çeü)™¬1)ü1&ì·ˆß€c•šû >¶iÌH‹DÓÚà3¬÷‘ÚpÛL%j•¦PJŞ¾}ãŠ®ø¿…ŸÌ?øÒVe ±=©ÍÿİvK†Íîè8¬_Jêê-{‡Ã,Çë–©œÉ‚Ü0Í¡½A‚Vm4×¢0¥Ï3Ï/„‘÷B~N<ş‘}‰À|ğ@Ùù•fÁÌ]…0¾¯4àäƒ”¨â{.ï6\{ı~,“­4ÕEÜï%7Õ,|`T°®S·ògß\ºöÉ»ÇİæLÃµJ`)üdş ²C‹°ê``cSsÈŸ›œ”`³™ãÁİ.G´5¡;'8 ¬™Ãb=æe;$;ŞÅ€  H J,Ÿ™Ú–Pÿiß^€Ôçí£=ˆıJ¿Clûcß‰×Ùs¾vì:sS»+ Åhhk6#p5rh’	B–oÈp­˜Ğ?~2_@«oİyZ¦Uv·9í	HƒàN—[çr¸uĞàRí-kB{s“Ú‹€Ær®¹¤&1>ƒçR“^ø¶Ü†_ •¢M)C[³X ŸóEï$„BÅqöÁ|f<ƒğáÃÃdÁ*¥¡†“ ¡uƒ ®İé0 ï«ËÊa67­g¯ÆÈóÅ€ŸÌ¿ Éaã¹¨JO®VEpí-kğ½¡½A4·x¢É‚R2¶GöŸ
+l2s‹Aøè §Èˆı
+A@‰H3 5Ïˆ2“Y£QŸ’ú»m]aıxŸúqøÉ|	!kç‘ÛaKÕÏ?UamêÒ¯ÿ¨i.ÑÜ>HÍ\Úi$ äG—“@	y¢à€´)â&2ƒĞ°0A`Ah©É³YhŞ€ y¡Të¶G^?şÿá'óe<36¦÷_>İÒA˜çc¤İqø¬©cKsU––Õ4÷¸ØPW Z@LÇWªIáõ]/_0¬È9Ş“6)´Íñ¢OÙ—&R«÷Èeò¦k1Mt)à'óeûöÑ“QÇ÷}íô)¦Cr?æyo«©:ÁZô‰Ã…ÖÄF™†´ÑÚRgBKÁˆ«k<Å·©Œ[ÁHƒV!ÍœÀ"M$RDÖæzO••\qP˜Íx¥’~ÍûËÁOæË ó#Æ5ÔWNÔÆ%|‘µê¯ŸØs¶/ªÕĞ4âvÚS55˜ãÆôa¾"AHAf©ŸkŒNæ¥uÔ0ãá“·lü5mş´âm‚eÇÉÒTOªğ(“B!;)Lg4*øÍæK?™¯ €¼?Fä¼5e¨f£éFi7˜ĞØ ­0›áû¢}ÄmÁ¶óú|[Z¤pZ9‰Åôø¾Wkó•?™¯2œØ±âÉ_?¶À‚‡¨PC7˜QÏ´uj¯L³õAÍäI7ñ²Ï3¯à;ähÖy˜o§ÒR\£P+·ƒÄ—ë@»k?L<úqEã‘9S¢ìÔ¼Öa•T(äÛ6k¨»¾*$°äVwrÉLÍä
+$«>Ür-‘RM
+KEìù’ä;–å¬&wE19,f’‡’:L_®_ù–.DÿIæØôìËeN´çÃ¯™¯2´5Éa†#õUÓĞ0ËÔÒ<c“t×e’aÚ³ÔœD±y«øğ:ÇÉ\
+27“ÑN¬!uHH‰è8ºšz~¯føÉ| ¤›¡šóM^ëİ%ei-ÑiÜô–oú7§aJÑ	Id6–§%w~ÕW~súÊŸÌW ™½Ï´õÆ÷ŸïòÁ’gG.û`'°Ëbâæ´Ón§¤ôîtï¼û)]Ûüñê£GÆgÚÛŸ?ØuyÂOæ+ ªÅ¼OIÔ}{Ÿrˆ"ïÓv”îwn÷¾r	)]iä#I£ÕÒ×_~ñº÷åó ’—!Ší}Ê!j¨½OÉ¯Í/üd¾ Z*)I¥äD™§İæĞ³+æ+õrØlÑ°á}Jè­VÊ4&“•‚‚dät»/”xna/Éİv
+’{pK·Ãc£ÕAZÜh‰¡íç0ÅÃûPgÍK5er^6&”™(ˆÊPù…çRòû'..üdş…Ñ¶ÙB´Lr¢Œ¬nF\<c‹øë.—oº”d€ $LeAR{«'˜%nÅ"W)I«ñXÌÒí¤dÆë»“Tò ßû‚ô³Rpâúº>P\âùßÓ…*1¯¡ØÿûIş¿ÃOæŸÂÇ„I,mÄk>Ò2ÂB«â5x€¨í‘ä‚O€˜ ( ’†…‡§5OW×ñÿÓ:Å:$’™Ì2Md0[¨¡Òc	²ŠÏ‰ï ÀwÄ*™`şt[ˆí´Œïí½/E[Áá#;z–E•T£mîoÆøïà'óÏ å•Òá‚´Ğ²>ëÕ® T«!]$Š›İ…ë|ïa;¥2ˆœréÔ*NN $4ŒĞxq:ÿ¸,euMÔ·gêÛÿ:Ê0€:tìHjµgûò²3”{$—¶oÙJ5e§@0Ü`ÀÈ©G·420òû÷î¥¢‚¢óÌr@ÁÅÜRG0é¥„•ş *,ŒßY±=œGn/ÉÅ`Apépš¬}øÉü_¢-qñÈ‹ièIš–oÌ R
+[eus²ÂÜï#ğr*Õjª­ª¤¼}ûù=±n3šâããI­ñìÄõhB}xÜ¿—˜s'×ÎF“…Ò{õ¢æ/ Ş}ú>"‚m%½¼n2´4SÖ†ôîÂ…”Ÿ—ç3»AÀQ'Ò3Ï>K=˜0Xùõ×ôÄc¿ûığ“OÑĞa™TÅu_ÎnúzÉ¿¨µÙÓSˆxjºçFëU•Uü~ÙhÄ€6Çï`Q@««ÂpŒç ` ã1„™Ãè$Ìt9éùğ“ù? >.îY%È‹€”‰÷Ç4.ĞÆ‘éB):2œ›¼ĞŒ
+•šo-÷ú›¯Sl¬'0ıç^ õ³èÑG~C¿}â)Š‹‹aW	3¹~x©ØOƒæ¢Sr
+ıé¥4zü
+
+bÄm¢“E'©¹¹™âÙ>’Óºù^ÿÛë¯Ñ?şö7‘«mj¢%K>£ÑcÇ’.ä\'UÑ‰£t×¬9?ĞäKW­fÚ.¿›Îœ:MO?ù­Zõ-×ÂwÜ9›yîy²Xm”³3›§^28ÉóOW’¥¾’kõŠòšó´8 ¢GDEøÎ¥ ¾×w~å
+Ï=¡~dÀ Ÿ¢qäØ3qÔ†y]Ä$¶ZW ¾¶/J¡q@,>¼ÔÍ™{7¥téÂ	[XO‹-â•Vú¦-ßÇ÷sæÔ)º—‘a×}çÈÌ43HsøÀşÙÚÚZ²˜™@¨©eÏiïlj`Zù7^£»ï¹‡‘Ñ£¹ß|õeZ·f-ÕÔ5pm;qâÍ¤Ñh©¤ø$íÈŞI¹{vq‚‚Ìˆ^oŞ{€¢ccÈlh¥Vƒ‰}o×ä ş‡ÿĞ§!|V¬\N]»õäßc·šiÓ÷ßÓ“¿’šëëééçÿ@¿aÚÈŞ¹—ºï.¦‹é¥/Ò¬»î!CsUTVSC}54°ÇåeÜ¬oiiáš¼ª¢Â'<à6 8¯8WB  m&"ì0ÍÑÅ%4·èäºVÈí¯Íf ûwOí:µ¾¡îWõMMSš[š§+*ÍpÛ»Ù¬‡Í¦w»œr·ÛÅÜ:ÏôJh
+‡ÍJiÌ¬½ñ¦é¦qcHÁLÇJæŸbºN
+Š¢©Ó§Ó¸	(6¾#…GDRé™Ó”½g/«”˜Ø‰nŸ=›ï/g×úæ›o©¡±‘ºuK§ÁC†R˜>Œœ.#üF®ıŠ
+
+¨º¶iÜjd„h©ddp=øĞƒÔ55>'™Z[èY&òaßÇÌs59*//§JFƒÁ@u5Uœc'OfÇ0‡™püèQ*>YH™ğ‘+”d±Xhõ7«È¿˜	=;şÛf3Ó^ïó%““VLVS+íÛµ‹&NB½ûöcï¸éDŞ!Z¾ô2±}ÜÍÚ !C˜Ö¡¤ÎÉÔ­{7ês]<øzº~ğPpı êŞw …«hÕwYÊ¬F¡Îìü(T*ª:[AµFµ0Áå¶X)Ğn¦ ¹âÜµpØ´n—;†ùşİÉej0›Ó[[¯/,®ìÛ#9YÖ¥sŠ±¸´´…o|•âš$³”¼ñ1‘Ó­­÷W×VÏjiié´Ùú8möD·Ó¥w:ìòÚêªaš
+H¥>çë 2Ìå7Jwİ5‹FGız÷¤ì»Yjø­V›Zäb -µ+[ÈÑ¤RÈØ~4tôğ!**;K&Œçæ-Œ¤U+–ÓáÃ¹œÌ‰II4b8#3#n1«V*)½[wNˆ›˜?=qòŠ‹¥Ï–Ãå¦•:%P@PU3Í÷×W^¦f›ƒ^zù%šqÛí4hĞ@º®ÿu4bÔME[6näA¯˜xzä±G©KjÛ‹›>ÿ×?é#ôö= sTd$mÊÚÈƒYq;Òsçr?Şér2À~“œ:²×çRæˆŞ}PŞ‘Ã´~í:
+c>o‹ÙJV3;N'étvŞ4\xÈ!AV}x8E„ié,8ß~»†z2ÿÿ¯û+İ<i
+Ì¼‘úõïC]R˜`B÷©V‡‘Í|næ¸ 5ş·Ùìø)z\G›ÅÚßh10[L7%'tèŞ-)Q—Ñ³{ØôÙ™uÛ¶9ß–¿ÂqÍN¹1!&f´Ğ¾-M-ÓÌfÓ0›ÅÒ™Ğ1 ¯Ğ¼ÂŸMîšÂµî Ìad4[ètQ±/¢l7´P§ôôÌ³O’ZÌ'ë°Û¨¸¸„ê™Ù©dNÓ*öş¡C¹&S*ULC¥={÷ÑŒ™3h ó{Éí¤·¾MåEù\û¤§§Ñ¨Q7>2Šö†¿XfzC3Ö1“û³Ï>ãÇ2çÎ9>2C›~üáG\#Şsï½Ô·_?ŠëĞí#–ÎÊ^ÿú‹¥TVßLsæÌ¢)·Î`fl07«ÿşşbª©ª¦7Œ"}¨ı.×ÖÇ`‡è dFÔéì˜ì7À¨¬¨¢pvŒ!!Á$“É(<6‘;y¦Ÿ€Ì×o µJIÕÌœŞÅLùZfôÏÈ&zIQ}¹t)7»k™Å±#;›ŸœóÙ÷ÜËIı]—‘Á´ø`<4“zg¡=˜À`‚µ¼Š¹-Mü¼B855¶p®r˜ÉÅ
+^‡UÅ¬¤D‹É4Ä†Æ.-®MMéĞ!ıú>=gOjŞ´#÷Âw#¸pMè²ÂÊLû¾(Õ¾0Í˜f‘#7ÛÄÌb<ˆœ&_f«;'ñèğ¬9wÒ°áÃ©¤¤˜›ÇaL³€ìfŞašhÒ´éÜäeûc‹\I;wf>\ Ù¿¾¡ÉH-F#õaægTl,3Ku\C0’ÀüîÖ£52ÿñeæoBÛ·²ïÖÇ&Ğ¨‘Ã)&.‰¢Çhıº5´êë¯hû–MôÅ’ÏiÅW_‘±±Ìv}#¥¥u¥@™‚iqíg>v-3÷é‹Ï?ç¦6L|¶ª²‚“¿ù­·ß¦¤¤NlÑËx %–´'˜·Ì‚Àw3!GÛ³wPK]ueÇ:‰™å
+¦Ïœ*ašüSJMïF¡úpyÔû¢ï[7o¢Û³I!cÚ’­¡º†Â££Ùo¾™“¹¥¹™¶nÙL?üØ·Ÿ¶oŞLGöí!9ÓÖn™@C3G°½¸é-L0!9 ÁìÜwe¶KJÕÕÕSNÎ²6ÔPs«™×š_Ÿ™ÉŞK!¦î™a¤ÒÚn²CHãÏépèíVk¢Õlj4™FØ\NƒÙ@5ÇN–œW¢z%Âc›\åiDŸv›/€“‹lÜ˜Ñ4÷î;é¡'¤ä¾¼
+
+A%¤‹ 	á'†°Å×)1‘cÄgƒØ‚‰g¦.pæôi=†vCZhÛgzŸ~¼¸BÊóÁK?ÿŒk=D•»uïIÓo›Á	“>,¦yØäü;-ÍÔjñLÔ4Z¾l9½óÚôÏ÷Ñ¦µ«yp+*Òğ:°?¾o¹RÍ|è‡hÎ}÷1áÇÿBBCIÅH.€è:=‚cŒ<8|nÄ¨ù~3öàXaâŠÈ³Ü{Ç‹ª#ãV:rè Ïàê<7Ğ¼B
+-5-•kq ïªJÏ$Ïj&ŠçAC 9¥ÿñƒÁHw2Ÿ~ÎÌéôäãÓÇ‹ß§-[¶Ñş}ûxÚ$îÁLqßÿÃ‹ô§ùóydÿéçÓäÉ“x >~Í¼<2îfJëÊ¯d\3föısn¬-.­íh5™ûÿ
+D®h6Ò»‹Ñ´·Ñ£F1ß,ƒi7•q0~ZLª»™¤7S~a7µ•*ó!‰FÇÍä‚ü”µ~_|Á<yÎ”•QÅ©SäfßY^UCI‰	Ô£Woã‰‰fšRÇ÷¦ùV-ûŠÔŠ îóÅtˆ§áÌgîÄ|ghÇ ö¾îĞ‘#iôÍ7Ó­·Ï¢ÉS¦P3óçÉåÇ«Õª˜OÙkÆñqü¸n3–¦°íÒÓÓ¹E``¦ñf1ìËÉ¡{çİGƒ˜ÙŠß‰ÓÚoWÒ¾=9tâXUœ-§&”Ô5ÓôÌt·Ziß®İÔ»oo¦5'róõôÉz÷µ×©¦¾3mî	Š‰TS ·òór™[¡àZ˜<}8¾ªüe³ß³:&"ŒŸ›Yˆ®ßÿĞo¸;ÈöÇ´)µ65pß8vçú;:¼g7Ï¯Ç'%ÓsÏ=M·1Â'uŠçÇİ¹¡ÌÌáÔÜXOeÅ…ü„B#®ÿ{Ö®İ{ø¯p\š@zö(àh‘z®™z1ÿòşy÷Ó¼_Ïã¯ùå2¦l\K!_›ÁâyNQF&æ{ÓÁƒ‡é[¼Hï`û‘LÃM›1ƒkf»ÅÊË)W¬XÉMr|WRr
+ÿ³2¢ e$€ôòÑ@ó¥DfºO1“î{àAš}÷½4îæ‰4Œ"ÀÂ,‚…o¾E+–ÅóÏ.'3ÕÃõ<µKßqøà!jBî~ïŒ¡ì“ì·°mQ€òî[oÓæÓKÏ=ÇSMGóK¸pRj‚™`É¤P¶Ÿ®Éñ:~3ÎÅFÆï7bĞ=Î,õÒØä¹õ«¨Jƒ¹€ˆgJÏ5XA¸:mê3h/Šáâ¹ï?2wçå¿¼FÏ<÷Gš{Ï\n5¡ØBo×3Á…s^É,˜eÌ…€Ï;tˆÿşÇÿ8/ÌÁµD´:íAğ'W®zÍŒ¢ €ĞÈ”ÄÄĞ§ïÌtŸ1*çUœ9Å51ÄƒMi](%5kIÄâUTáaT[SC½˜¹­©î`şã×_¯àş5;·ßy77ÅİŒĞ¸ı)’û‡†Ô‡ÓÉ’StŠù®ğKQ,Oi©)Ì'Õñí*+*éÓO?¥šS…$Cù%[”nfÂ§"CÍMMü¯¶ê,3]k¨¬´”['Sö¶mTœ—ÇMX¶äì¦UkÖÑñcÇø{ßoXÏş6ĞG‹? /™ïœ³}+U­ WÓ¬%…´iãZ»f}·v-fÚ©*«ÍÆıãº†Z*;UL‡˜ÿ€^ÎÖÍ—Ğ‰ÒÙqA íØ¾633Ñê¹ÇhÈàÁL+2íÌÎÎãûo/äQp¡™P¼ëî»™ÆíÀxï¤İ;wÒÖMßS3µ‘)@œBï®ûïcš~0²!H†ïijld»¢Ø˜æŸG2ëb/í=|„ûÃÊ>‚Çs@şz;®f}Œ7–_üü|:~ä0;µAü:B+kƒµGï±öj‰j{DèUÜ4Eâ¨“–Ét-¸Oµ¿N7òá‡¥¤˜H.¥áOÁ_†ôF!4¤<,|ah	hF¼wìè1ÃLJ UMÿğ_…€tX´ë×­£×_y…ƒÄ‡jy¡Èï¼îıœ›¶mŞL3³ÒTWå+Œ€ö€ÏO+3ïQ‡- ´6š'pcqh4ñ9h+ Ú¾¤@k«ç3Òî)hF  ö!´÷)àk¢¾ïÇ'uæE5>‡}MbVˆ¨	 İáÓâ38FL1Y±v·†¸ïûòsÏú¾1Ä!.z—n™4‰kpºß=ú?ï¨ ƒe¤cV|u”¤¨~{õÍ7¹¯ó‰œ÷‰…´5ÌoOfnÏêÕkIÚÃ­Öjrc¢b^DÕ&›â5ÑÜq¥vp]5dFê	m… °±µe¬´}A/,Ê?½4Ÿ›‹(Q,-)æ‹¦‚NX@S™ß\YQAÕ•'u"'³]v7‹‘WE óÏ<I÷?ø0_œøAÈ“¢ª)ù®So½•“ºüL)-ÿr	ıõ•W9q›9n<7‘KÏœáÍõLëR2	— 9h,)@J ¿åü‰îHÚ¥@#ƒ¯µòG€¾h«ÕÉIˆïÄù‚AZ_-W6¼Íüî¢÷xôxë×èíwŞã‚dŞ´}‹·ü4	Ôzî:de}OgŠ‹©©¶šoÇ·÷\¡»ÿÀtÇìYÌŸ¿ÅS’Ê„¨¡µ•×¢¿ğÇ?ùÇÏéô¡†ë£44ÖüÑØlœŒóQÑ›-—Ë
+´JM&‘^)Ä¾âÉã&èï°Û®sÚì|ª»Ğ,BsÀïzõÿ^â‹(!2Œ_X¤¦PnøûgãµË‹Ù‚;y²˜ûgĞÈçà‘ú/<ÿÿüG-¦é3¦sŸò½…oñ-ÛÀa™|q0‡( #9»|Ç%4|] m+#€«İÍ»ˆğ\t¡'Øó\Öˆÿ±èğÿ… ­#C~
+Ğ<â}Hm{­!(ñ´m]:È,|iq~€°¨î¯‹®/hWt‰8ox¼ëH÷óùòd¤D±	"õ…Ìµva?nAš+œĞŠÊ*îÓß1{õíÛ›IF·’	ÏÎÚè¤@BBÂ4háü¢ÂÅf£‰ßÓK kÙÔš‡‡‡.GyhBlìŠËıö:W$™‘7Şµáøx©vØ-|GÛÅà9.Ê·YYt”™l³˜v†É‹‹‹tº”–¯^ÍMã•_}I¯½ü
+%¦¤ğÏğÌ¡ ÷˜¦ĞÎÿd¦5LuÑœP_ßÈ›°`°p4‘±œÜĞR3Õ¯æÔé‚=öŸ¤Ÿ—?gÍûí¥Q~ŠæÀ9û©ÛJGIºuïC¸|c€tÈ‚¸Ëcv·ĞŒ ,È.jØqNp4%İ:ë.nwLHäAÇÈèXÌC0Ø¶y½ÅÌjÔÀ¼†e´nõ*zöÑÇx=¼´éäóOÿA~æi_zB^Ò#-m6¿¢ºê¶
+ "¶¿öpoĞô’ÍïŞAªù A³Ëq4ÒEf,²­krçaÑˆ;7@3ˆ‹ %r{ÿÃ?‘Û}pîÜ¦e£Afa¶,(â&º…şÈL3ÔB¹~ _0ƒ`ş«–›n¨XzëoiØ°!\ ï·âô)~ø>á“Bˆ à¢Ğ(ó™:«FÚTê§ñ®DMLPñ>õ?>)ï63™;C»c0ƒ,À•,Æ8_ -:Í'=ú&êÒ5•“{/;ßÿøğ#gÿãÏÓL&˜a' ½öêÿ- ÃÒÃ¿}”'Aæeìš£•‘rìW©Õòé£eUUÓë~#¬İ;ğÆ¤*Ñ‚u „4„PdLL¢àZfí²õßçğ7/\ödZ¦4HÌı—#Z\|@øq¢³F,±-$óà¾]
+Ø*™[R^v¯¡±™çŸÑssñ ¤<ü¹OŞ[Ä}Sô	cĞÊ2³‹E4æèÕE°I¡Ñr“¤…ÏÕvj¶¤½–zpqñ¿˜¾‚Ç :şAJrRºÓ Í!d…ŸˆÉ(ğ¹1€ï‹
+}Ø¿ùİÓ4(£O ¦˜jÛaª#…6{æL_ğK&WÕtì÷k\’3e2´4ÃëXXH¿Íœ1[ìz§$w¦§xŠNåçRçt5Çp ­µÁ!.ü²%3 † @z¢·Z‰‘$•L"@àâH5³ 4d¯é“±˜ÊÎıRûDñÈÊoVĞ7Œà‘PTk­\ú¹ÏÄ‚B Ò€„‡™,È«Q«÷ˆ¶;¼Òú§bügH5ºtÌ’0Ù…¹ŞÜÜ-‚€°8ÿ¸n¸&)}2hÎŒIÔ?c ÓŞ]HŒÍ«ñì?@ófßÎ¯#¬0¥N»=&:~”C]Cİo…‰ˆu€õ4aÂ8^ƒ`İ|¦ıQP”š–Î«ò*Ïò6Ö²â"|ä½ÕrÅÁèğğ%—rXÂeEfXiui·lÍŞhh/LéúêZ~±TŸ;ı®¹¼Ø`3óqïùÍCÔ»OoFæŞtìh./|„–Bhgœ|}Dø{c&÷aù¿6ÃÅÄ{bÚ“Ø>Í‹h.€÷±p¿%>³JrëR¡qı³ª~>k…&‡PçiF»#voğMDÛá&	_£`E!S°aÕr>EXlú¨È×'ë÷—kö¾bhn-Llì1xĞàÁÔ99…ïó‹%K£‡~ô.äQ=¡±)k}ôî»>M¬)/•¶¾¤dRYHd˜\ĞÂğ©@2q‚á›"ƒ‚4Ü¿¹ğm.!—|òw3v,/Î@ı0€@Ô¾­›|QKAbÂ S9¢âb¶)(‘Ñ3íqAaEÚU[Ì¤;¯á]×¯uyH	¤têÖ‹ÍlNFŒÈ¬(~çJÉx"D±¡=«*Î¬AÇ:Ùo¼y"½0ÿ%Š‹‰¤Êê:úèıwÙz[ÇsØC†¡œıyä²¶òˆ:êäôÄ&±nCG%šˆ¡ÔUÍÅÍæQuˆ5óKI¸èdŞ§?œÍ$mÛ<‚X¸(˜?ŸÏ›Âøà}fŞ,XğgáDŠ	Í˜âôé×Ÿ_€—_}ç.…ÔÆ3eoŠ@ÉeA^^MBRç,Šò³•G$œ›âÌl–ŞsXœò“÷ò‚°âÚ*»ÕŞËl1¥Â¢³™Œ!Ô…J‘›Ş5õäjjjŸ±!ÄQ„òÛ½zó@š[5ëİ÷7»ÇÚûÛÛïpŸüÉ}f`–ÿöwq`6Š„`†ÃG‡5§Vi
+åJ9zŠ›ÑK×ÿË»èåœ=º$w¬¬®ı}KkÓÄ¦¦ÖÛFÃ‹Ù<6³e“¨‰˜An—ıÄ(µÃŸÅ@õÌ„ù3#3ü TE„‡ñF‚‚8hå?Æı£ë¡ºÚ**È§¼¼<^Şè@í0“ÔĞûú!ôû§¢ë®ëÇ<6m\ R(Êe*Íf‹Õœ.“9Ôİ!}˜şı¤„„Å‘zın»İÎ°¯‘²w=¼ú]¯& ×ÓCĞ¾XR^‘ßã³ë«m›;ÅÅd1Ÿù„:XwT&“·Úìöxr»åìù·úĞC5õãlVkÖˆ­Üh&õbîÚ¾½ûhé'‹)ïD/×İ•½ƒn=š˜ÇM5¥ÌË[/;wíJ7OÑQ‘¤`Ÿ‡­R©øh§¾×ePsS­İ¸™¹	*-]˜MÆ.h»´X,ıZ[c˜y~KcsÃF³iÂ±ü²Û
++'––5ªÎTVíõşÄÿÌ˜èà48]Tm³[RNW8×¾ŞA ÒàH@Z¢Ëï$1©§Ós³Z§–SZz:}öùR?áff2uäõ½E…´{×.ÚøİwÌ×I&'¹‘B ÛæÌ¢	S§ñ}FEG‘ÅbãPyÇËËËKµ£'öYÜXëØÑ16f“’ÛŒ&s\èÆÆ–Iõõó,N{—†³†z,¾?.kŒÙW†¾õÊºÚ™
+™¼&>&z3©—„h59AJEiXhäë*…,¤¦¾áv›ÉÔkoê¬94ç{é®»ïäd5U´é»,ÊÍ/ 3ù¹Ty¶’&õèFr"Ã_Æ8§äô¾|ÌQŸ¾}™6ïÃ§§FGEPLAß­[G¥E…¼.ÀÚÆºFÿ¼GqyÆ1w21(0 9H!?¢ÿàmtÑÉ	
+ÉùÀİ£‹ëšè«À € —Ëì¦€`şÃ$À­r 3syUz`M­Mäpºy3Ä²¥K©¦º’JJJhÕÊU”µ!‹òöíc’³‚úÀfÜqİ4f<ï‹µZÍÔØĞHá¤Q+øDŒõk×'šÉåˆÇÅ››nc–ÂpHQvŒìd¨²úòªš,ï!ùqCé
+‰kli¸)G“ÉÒšÏMîFìò˜ÈÈ}ßnŞz<D§yÔl2Á"Ôk´*ê’ŞÒ»u£={‘œiØoV®¤f>şøc4uæÔ))‘²·m§oV}Ë§¤,|k!mÛ´…YwßsR£}õæ›'ğ pl\Ş*ûñâÅd5´xz¼*+¯hC‚—wíœ¼à†áéË>X²ºŠoğÿ‰‹Nfa=4wìA‡]¹˜Ïçv“&¶&¶ø±CÃ#hÄ¨QLwâ¦Î‹Ş¡œ»éàşƒ´kÛV:Å$'ÆãtïÑƒ¦ÌœÁü–#„”q>Ì„A7ŞQ”’Ò™r46ÔÓöß‘ÅaĞÜÜ:&—Ùhè@Zœh 'Ò“=pöéŞsÓÕ>îj æº1áÿÆáZ²ëÃ'ŠxG%ÄE±#vg'¶¹Üå
+ ƒ0WMG×e¤ü“gèë/>£$fİ=ùÌ¨¾¾†ÎŸÿãŸğ¾q{s5š-|ÍaV[€:”ú÷ëÃ•Òa1Ì„ú÷gKÈn2øÈ,Öµ\¥,a¾ü¦n]»<¤Z!ós¸q¿™pĞĞÔ µË¡ÜÚd0DQ ©àWx7ñ˜#^B·65Ñ={éè±c´üóQîŞİª¡ÒêzR³“6ï×0iG3n›IS§M%“Ši[Yq–´ºFú}\;—S+“¸è`ú×ï‘ÓÅ›Şõìäg\ÍÌxfø›‚‚äÆÀ ™Q¥T•ÆE…¼ÆÊ\Í@fäDşÙÎòàP­Ëfåë‡g7é›	"W³É‹Äj¬o¤ˆøtó-7S¯Ş½iÍÊe´nõ:7~¸a$Íÿó|š4õVJKK£O½Ç×ÚãÏ>C“'MäÃšªJéHn[W-ÌÔRT|2ğ.¹µ´G6'² 1€`˜.88;:"â]ˆşøçT¿8™©™ÖËAÀ¢Éhs9İ‘ğ'ÄEÀIÀŸ¡±JŠNr-|Ï¯~E£Æ§³è¹§IS¦ñabRÓ%à7Ç'¥‘Ûicûp±×Mt`ïÊÙ³–}¹Œöçì!“ª˜<É†LfR©•'ñ©´Ú•¡Á!+˜ÿ¼„™Okğ½ùÂ«m’ãÕ†a7ös——¶6«òY•)åÇjÕA•RSët»ev‡Ã©k
+Àà¿Ìá™4~ò
+tYiíÚuÜ]K`š899…­§x>øsç0²xŞƒó¹eH…1œZØç‹zz\P¸nÕ
+>ÌD
+	ß…Ú†Ğ°Mú°°ƒCõ¯zAUşÁŸ—EÑˆ´X¤¦±á·V“9ÃÒP«Áü,t¨ôÖoXÏLéş´àÅyr_ä˜÷ìŞÉ+tĞÃŠ|4´qÎîİ¾Añ"ÿˆ¿B­.Aª õµH?!ïˆ}ûÓOW>°–ğ¿H[á±´²İu¨*³Ù]ºÂítPª‹9çëÖ­çµà<ô>F˜›6,3“>ıäºeÒŞA·~íjb>7SFŞ½…QNñíOÒšoWûn0 +5êıaºåcG÷\rÅç™ÿàB¬ı:çmrÄwJÔ Mîğ¶ïù{3õoJïÙ»M™2™^š?Ÿ_ ¤pÿ%D»‘Ğ?š—K¾ı&¯£ERõ¶¸ªsPv‰‹’K‘ßóWm]h›—F®¹mÃòÆÈ5ß;ï~^QˆöÇÒ–M›èÕ¿¼J¥å•|<zâ:Læ¿Äë¸Ì¿uÜrøâÓ¿å­¡¡a¼tø—º«Æ%3³ÛCŒ:*Œ´½£_~í5ê?xUÔÕÒĞQ7ñ¹\ƒ†`Òğ0íA¤Ó(ÉÆü¢!Ã†óèac]e1­½)+‹ªŠ‹¨¦ºŠˆ	ÖäêôúoÓ»¤<-Sh>Í›½èã•§á«ÀÔ÷›Ï×Úæ¥çşjlnj÷ßX»“v¸İFµV­j©¯×c¾·Õb¢3§Kèù§Ÿ%¥JESoÊ[g7²5†	ÀOŞM[7o¥üÇ),,”zõíO¡ÁZÚ²y3--ÅĞÇ ì;¡{lÎ/±Î.ÍŒ!­­ÔUU=9õÙ¼Áu°§ŠÊ-H?H>Tå@û¢E7&ƒ¹ƒq­Ë¿üÊ7ÂF˜7h~@¬¿nÚZ¥¢¨DO€=[o´DbxšzŞûôß<°
+°gz2ıãÃÅ|€ÊŒQˆµ	 –ƒ!…ê3QuöK´J^6dÜ·çk-ÍÍ·š[Z’ç>øÅwL zŠ2GáÍ°×N•óÂ¢w2ÿ8ùÃ´ôßŸŸëd
+áå˜ú°ˆ®¤q/~\> ±Ñ­3¼±©ş~eÁ ¦tÔpË­³(sP_^Ç½u3-ı|	÷—_i` 	Ã'öŸ(ïyáâá²0³¡•ëk^pXíé¸eJJJ
+?i›¿[KÏıy>EEERç¤DrÉt”½%‹róÒgŸü“æz"‰A2fæ—„éõŸ¦$&¾>`T×uˆúMh?ş[`Í3œÌŠıÈ²Ée*«Ñ¨/Î?AÛ³wÑ–íÙ<¬¦`'¿ŒÊ¯zæ.;?¿ì°ËNg|¿îé'.v%á%×ÌÂ¼DBtFÅ†kèÛU«hßşƒ\Cÿ“™;˜-ÅGÀ¨\ê!*í×Ä~\ˆÎ>¬Qth!Ó‚‘¢(<®ïê–9ŒJN¤e_­ CyÉyƒL½Øæö%'óˆşıæ‹çıó˜Y3…öfgq·.MéÜt	şüJ›èÇ•(üR£3Ë`hn43R3O®sŞ iÏÖ´´şb­ÕKJfœ êšŠÏ¬ãpïKøñb~€Ü0ªgĞ[¹á¬œ}+áßøIìÇ/hkÔDˆ’ÈYm-m¹lL¹ÁÈ¢!c»w1Öí%ó™qBòŸzÜØb¼‰wx+sDuê[ñ§	.Qj´›âb¢_IèĞaé°¡)ÛâÓ¢Ã·ñûÄ~\
+ Åuç}£Owï»WôÈåÊV—; ŒŞÍ|Õ`xÏêrÆõéÚq%öá}ûgÃ%ÓÌ£˜ÊÇœ"a/fj‰Ñ+hâ¾”3•üğã§B÷Íp—®mïĞ˜ß1±q^ŒŠ°KFføÊF“i‚İåĞHÇÏŠòJu–W"¤9kß`Bï4§Ë­s9Ü:T"¦uîüôå4¦÷¢'ÄûĞ?üğÃ?üğÃ?®8ı?iù°ÿİ~Ó    IEND®B`‚
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Alunos.jsx ===
 
 import React, { useState, useEffect } from 'react';
@@ -1326,6 +1821,8 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { AlunoService } from '../api/services';
 import { useNotification } from '../contexts/NotificationContext';
+import MaskedInput from '../utils/MaskedInput';
+import { MASKS, unmask } from '../utils/inputMasks';
 
 export default function Alunos() {
   const [alunos, setAlunos] = useState([]);
@@ -1623,13 +2120,17 @@ export default function Alunos() {
           
           <div>
             <label htmlFor="telefone_responsavel" className="block text-sm font-medium text-gray-700">Telefone do ResponsÃ¡vel</label>
-            <input
-              type="tel"
+            <MaskedInput
+              mask={MASKS.PHONE}
               name="telefone_responsavel"
               id="telefone_responsavel"
-              required
               value={formData.telefone_responsavel}
-              onChange={handleInputChange}
+              onChange={(e) => handleInputChange({
+                target: {
+                  name: 'telefone_responsavel',
+                  value: unmask(e.target.value)
+                }
+              })}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -2543,6 +3044,7 @@ export default function Dashboard() {
 
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import brasaoLogo from '../assets/images/Brasao.png'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -2571,11 +3073,18 @@ export default function Login() {
       {/* Left side - Login Form */}
       <div className="flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 w-full md:w-1/2">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <h1 className="text-center text-3xl font-bold text-gray-900 mb-1">Coracao</h1>
-          <h2 className="text-center text-xl font-semibold text-gray-900">Login</h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sistema de Gerenciamento de Transporte
-          </p>
+          <div className="flex flex-col items-center">
+            <img 
+              src={brasaoLogo} 
+              alt="BrasÃ£o de Navegantes" 
+              className="h-24 w-auto mb-4 drop-shadow-md" 
+            />
+            <h1 className="text-center text-3xl font-bold text-gray-900 mb-1">Coracao</h1>
+            <h2 className="text-center text-xl font-semibold text-gray-900">Login</h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Sistema de Gerenciamento de Transporte
+            </p>
+          </div>
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -2664,7 +3173,10 @@ export default function Login() {
       <div className="hidden md:block md:w-1/2 bg-blue-600">
         <div className="h-full flex items-center justify-center p-8 text-white">
           <div className="max-w-lg">
-            <h2 className="text-3xl font-bold mb-4">Sistema de Gerenciamento de Transporte Escolar</h2>
+            <div className="flex items-center mb-6">
+              <img src={brasaoLogo} alt="BrasÃ£o de Navegantes" className="h-16 w-auto mr-4" />
+              <h2 className="text-3xl font-bold">Sistema de Gerenciamento de Transporte Escolar</h2>
+            </div>
             <p className="text-lg text-blue-100 mb-6">
               Uma plataforma completa para gerenciar Ã´nibus, rotas e alunos com eficiÃªncia e seguranÃ§a.
             </p>
@@ -2807,6 +3319,8 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
+import MaskedInput from '../utils/MaskedInput';
+import { MASKS, unmask } from '../utils/inputMasks';
 
 const Viagens = () => {
   const { showError, showSuccess } = useNotification();
@@ -2815,7 +3329,7 @@ const Viagens = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Added missing state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentViagem, setCurrentViagem] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2840,7 +3354,9 @@ const Viagens = () => {
     hora_saida_real: '',
     hora_chegada_real: '',
     observacoes: '',
-    status: true
+    status: true,
+    telefone_motorista: '',
+    telefone_monitor: ''
   });
 
   useEffect(() => {
@@ -2906,6 +3422,10 @@ const Viagens = () => {
   const openModal = (viagem = null) => {
     if (viagem) {
       // Edit mode
+      // Buscar os dados do motorista e monitor para obter os telefones
+      const motorista = motoristas.find(m => m.id === viagem.motorista_id);
+      const monitor = monitores.find(m => m.id === viagem.monitor_id);
+
       const data = {
         data_viagem: viagem.data_viagem || '',
         rota_id: viagem.rota_id || '',
@@ -2918,7 +3438,9 @@ const Viagens = () => {
         hora_saida_real: viagem.hora_saida_real ? formatTimeForDisplay(viagem.hora_saida_real) : '',
         hora_chegada_real: viagem.hora_chegada_real ? formatTimeForDisplay(viagem.hora_chegada_real) : '',
         observacoes: viagem.observacoes || '',
-        status: viagem.status === 'completed' || viagem.status === true || viagem.status === 1
+        status: viagem.status === 'completed' || viagem.status === true || viagem.status === 1,
+        telefone_motorista: motorista ? motorista.telefone : '',
+        telefone_monitor: monitor ? monitor.telefone : ''
       };
       setFormData(data);
       setCurrentViagem(viagem);
@@ -2937,7 +3459,9 @@ const Viagens = () => {
         hora_saida_real: '',
         hora_chegada_real: '',
         observacoes: '',
-        status: true
+        status: true,
+        telefone_motorista: '',
+        telefone_monitor: ''
       });
       setCurrentViagem(null);
     }
@@ -2983,6 +3507,29 @@ const Viagens = () => {
     }
   };
 
+  // Atualizar os dados de telefone quando o motorista ou monitor Ã© alterado
+  const handleMotoristaChange = (e) => {
+    const motoristaId = e.target.value;
+    const motorista = motoristas.find(m => m.id === parseInt(motoristaId));
+    
+    setFormData({
+      ...formData,
+      motorista_id: motoristaId,
+      telefone_motorista: motorista ? motorista.telefone : ''
+    });
+  };
+
+  const handleMonitorChange = (e) => {
+    const monitorId = e.target.value;
+    const monitor = monitores.find(m => m.id === parseInt(monitorId));
+    
+    setFormData({
+      ...formData,
+      monitor_id: monitorId,
+      telefone_monitor: monitor ? monitor.telefone : ''
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -2997,6 +3544,10 @@ const Viagens = () => {
         hora_chegada_real: formData.hora_chegada_real || null,
         status: formData.status
       };
+
+      // Remover campos que nÃ£o pertencem ao modelo de Viagem
+      delete apiData.telefone_motorista;
+      delete apiData.telefone_monitor;
 
       if (currentViagem) {
         // Update
@@ -3243,7 +3794,7 @@ const Viagens = () => {
               id="motorista_id"
               required
               value={formData.motorista_id}
-              onChange={handleInputChange}
+              onChange={handleMotoristaChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={relatedDataLoading}
             >
@@ -3260,7 +3811,7 @@ const Viagens = () => {
               name="monitor_id"
               id="monitor_id"
               value={formData.monitor_id}
-              onChange={handleInputChange}
+              onChange={handleMonitorChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={relatedDataLoading}
             >
@@ -3304,30 +3855,64 @@ const Viagens = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="hora_saida_real" className="block text-sm font-medium text-gray-700">Hora SaÃ­da Real</label>
-              <input
-                type="time"
-                name="hora_saida_real"
-                id="hora_saida_real"
-                value={formData.hora_saida_real}
-                onChange={handleInputChange}
+              <label htmlFor="telefone_motorista" className="block text-sm font-medium text-gray-700">Telefone Motorista</label>
+              <MaskedInput
+                mask={MASKS.PHONE}
+                name="telefone_motorista"
+                id="telefone_motorista"
+                value={formData.telefone_motorista}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    telefone_motorista: e.target.value
+                  });
+                }}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={false}
               />
             </div>
-
             <div>
-              <label htmlFor="hora_chegada_real" className="block text-sm font-medium text-gray-700">Hora Chegada Real</label>
-              <input
-                type="time"
-                name="hora_chegada_real"
-                id="hora_chegada_real"
-                value={formData.hora_chegada_real}
-                onChange={handleInputChange}
+              <label htmlFor="telefone_monitor" className="block text-sm font-medium text-gray-700">Telefone Monitor</label>
+              <MaskedInput
+                mask={MASKS.PHONE}
+                name="telefone_monitor"
+                id="telefone_monitor"
+                value={formData.telefone_monitor}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    telefone_monitor: e.target.value
+                  });
+                }}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={false}
               />
             </div>
           </div>
 
+          <div>
+            <label htmlFor="hora_saida_real" className="block text-sm font-medium text-gray-700">Hora SaÃ­da Real</label>
+            <input
+              type="time"
+              name="hora_saida_real"
+              id="hora_saida_real"
+              value={formData.hora_saida_real}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="hora_chegada_real" className="block text-sm font-medium text-gray-700">Hora Chegada Real</label>
+            <input
+              type="time"
+              name="hora_chegada_real"
+              id="hora_chegada_real"
+              value={formData.hora_chegada_real}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
           <div>
             <label htmlFor="observacoes" className="block text-sm font-medium text-gray-700">ObservaÃ§Ãµes</label>
             <textarea
@@ -3411,6 +3996,540 @@ const Viagens = () => {
 };
 
 export default Viagens;
+=== /Users/micaelsantana/Documents/app-frontend/src/pages/Motoristas.jsx ===
+
+import React, { useState, useEffect } from 'react';
+import DataTable from '../components/common/DataTable';
+import StatusBadge from '../components/common/StatusBadge';
+import FormModal from '../components/common/FormModal';
+import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
+import { MotoristaService } from '../api/services';
+import { useNotification } from '../contexts/NotificationContext';
+import MaskedInput from '../utils/MaskedInput';
+import { MASKS, unmask, formatDocument } from '../utils/inputMasks';
+
+export default function Motoristas() {
+  const [motoristas, setMotoristas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [currentMotorista, setCurrentMotorista] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showSuccess, showError } = useNotification ? useNotification() : { 
+    showSuccess: () => {}, 
+    showError: () => {} 
+  };
+  
+  // Form state - Ainda usando status como string para a interface, mas vamos converter para boolean na API
+  const [formData, setFormData] = useState({
+    nome: '',
+    cpf: '',
+    cnh: '',
+    categoria_cnh: '',
+    validade_cnh: '',
+    telefone: '',
+    endereco: '',
+    data_contratacao: '',
+    status: 'Ativo' // Isso serÃ¡ convertido para true na API
+  });
+
+  useEffect(() => {
+    fetchMotoristas();
+  }, []);
+
+  const fetchMotoristas = async () => {
+    try {
+      setLoading(true);
+      const response = await MotoristaService.getMotoristas();
+      
+      // Process the API response
+      let motoristasData = [];
+      
+      if (response?.data) {
+        // Case 1: Standard response with 'data' inside response.data (common in Laravel)
+        if (response.data.data && Array.isArray(response.data.data)) {
+          motoristasData = response.data.data;
+        } 
+        // Case 2: Response is a direct array (fallback)
+        else if (Array.isArray(response.data)) {
+          motoristasData = response.data;
+        }
+        // Case 3: Paginated Laravel response via items()
+        else if (response.data.meta && Array.isArray(response.data.data)) {
+          motoristasData = response.data.data;
+        }
+        
+        // Format data for UI - convert status to a standardized format
+        const formattedData = motoristasData.map(motorista => ({
+          ...motorista,
+          status: processStatus(motorista.status)
+        }));
+        
+        setMotoristas(formattedData);
+        setError(null);
+      } else {
+        // Case 4: No valid data from API
+        console.warn('API returned unexpected format');
+        setMotoristas([]);
+        setError('Nenhum dado de motorista encontrado no servidor.');
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Erro ao carregar motoristas: ' + (err.response?.data?.message || err.message));
+      setMotoristas([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to process different status formats
+  const processStatus = (status) => {
+    if (typeof status === 'boolean') {
+      return status ? 'active' : 'inactive';
+    } else if (typeof status === 'number') {
+      return status === 1 ? 'active' : 'inactive';
+    } else if (typeof status === 'string') {
+      const lowercaseStatus = status.toLowerCase();
+      if (lowercaseStatus === 'true' || lowercaseStatus === 'ativo' || lowercaseStatus === '1' || lowercaseStatus === 'active') {
+        return 'active';
+      } else if (lowercaseStatus === 'false' || lowercaseStatus === 'inativo' || lowercaseStatus === '0' || lowercaseStatus === 'inactive') {
+        return 'inactive';
+      } else if (lowercaseStatus === 'ferias') {
+        return 'vacation';
+      } else if (lowercaseStatus === 'licenca') {
+        return 'leave';
+      }
+      return status;
+    }
+    return 'inactive'; // default value
+  };
+
+  // Search and filter function
+  const filteredMotoristas = motoristas.filter(motorista => 
+    motorista.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    motorista.cpf?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    motorista.cnh?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    motorista.telefone?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const columns = [
+    { key: 'nome', header: 'Nome' },
+    { key: 'cpf', header: 'CPF', format: (item) => formatDocument(item.cpf) },
+    { key: 'cnh', header: 'CNH' },
+    { key: 'categoria_cnh', header: 'Categoria' },
+    { key: 'telefone', header: 'Telefone' },
+    { 
+      key: 'validade_cnh', 
+      header: 'Validade CNH',
+      format: (item) => {
+        if (!item.validade_cnh) return '-';
+        const date = new Date(item.validade_cnh);
+        return date.toLocaleDateString('pt-BR');
+      }
+    },
+    { 
+      key: 'status', 
+      header: 'Status',
+      format: (item) => <StatusBadge status={item.status} type="motorista" />
+    }
+  ];
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  const openModal = (motorista = null) => {
+    if (motorista) {
+      // Edit mode - convert any status to our enum values for display
+      let statusValue = 'Ativo'; // default
+      
+      if (typeof motorista.status === 'string') {
+        const statusLower = motorista.status.toLowerCase();
+        if (statusLower === 'active' || statusLower === 'ativo') {
+          statusValue = 'Ativo';
+        } else if (statusLower === 'inactive' || statusLower === 'inativo') {
+          statusValue = 'Inativo';
+        } else if (statusLower === 'vacation' || statusLower === 'ferias') {
+          statusValue = 'Ferias';
+        } else if (statusLower === 'leave' || statusLower === 'licenca') {
+          statusValue = 'Licenca';
+        }
+      } else if (motorista.status === true || motorista.status === 1) {
+        statusValue = 'Ativo';
+      } else if (motorista.status === false || motorista.status === 0) {
+        statusValue = 'Inativo';
+      }
+      
+      setFormData({
+        nome: motorista.nome || '',
+        cpf: motorista.cpf || '',
+        cnh: motorista.cnh || '',
+        categoria_cnh: motorista.categoria_cnh || '',
+        validade_cnh: motorista.validade_cnh ? motorista.validade_cnh.split('T')[0] : '',
+        telefone: motorista.telefone || '',
+        endereco: motorista.endereco || '',
+        data_contratacao: motorista.data_contratacao ? motorista.data_contratacao.split('T')[0] : '',
+        status: statusValue
+      });
+      setCurrentMotorista(motorista);
+    } else {
+      // Create mode - reset form
+      setFormData({
+        nome: '',
+        cpf: '',
+        cnh: '',
+        categoria_cnh: 'D',
+        validade_cnh: '',
+        telefone: '',
+        endereco: '',
+        data_contratacao: new Date().toISOString().split('T')[0],
+        status: 'Ativo'  // Isso serÃ¡ convertido para true na API
+      });
+      setCurrentMotorista(null);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Limpar dados para API (a conversÃ£o de status para boolean serÃ¡ feita no MotoristaService)
+      const apiData = {
+        ...formData,
+        cpf: unmask(formData.cpf),
+        telefone: unmask(formData.telefone)
+      };
+      
+      console.log('Dados a serem enviados:', apiData);
+      
+      if (currentMotorista) {
+        // Update existing
+        await MotoristaService.updateMotorista(currentMotorista.id, apiData);
+        showSuccess('Motorista atualizado com sucesso!');
+      } else {
+        // Create new
+        await MotoristaService.createMotorista(apiData);
+        showSuccess('Motorista cadastrado com sucesso!');
+      }
+      setIsModalOpen(false);
+      fetchMotoristas();
+    } catch (err) {
+      console.error('Error saving motorista:', err);
+      const errorMsg = err.response?.data?.errors
+        ? Object.values(err.response.data.errors).flat().join(', ')
+        : (err.response?.data?.message || err.message);
+      
+      showError('Erro ao salvar motorista: ' + errorMsg);
+      setError('Erro ao salvar motorista: ' + errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEdit = (motorista) => {
+    openModal(motorista);
+  };
+
+  const handleDelete = (motorista) => {
+    setCurrentMotorista(motorista);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      if (!currentMotorista || !currentMotorista.id) {
+        throw new Error('ID do motorista nÃ£o disponÃ­vel para exclusÃ£o');
+      }
+      
+      console.log('Tentando excluir motorista ID:', currentMotorista.id);
+      await MotoristaService.deleteMotorista(currentMotorista.id);
+      showSuccess('Motorista excluÃ­do com sucesso!');
+      setIsDeleteModalOpen(false);
+      setCurrentMotorista(null);
+      fetchMotoristas();
+    } catch (err) {
+      console.error('Erro completo na exclusÃ£o:', err);
+      const errorMsg = err.response?.data?.message || err.message;
+      showError('Erro ao excluir motorista: ' + errorMsg);
+      setError('Erro ao excluir motorista: ' + errorMsg);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl font-bold">Gerenciamento de Motoristas</h1>
+        <button
+          onClick={() => openModal()}
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Novo Motorista
+        </button>
+      </div>
+
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="border-b px-6 py-4 flex justify-between items-center">
+          <h2 className="font-bold text-lg">Motoristas Cadastrados</h2>
+          
+          {/* Search box */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar motoristas..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        <div className="p-4">
+          {error && (
+            <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+          
+          <DataTable
+            columns={columns}
+            data={filteredMotoristas}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            loading={loading}
+            error={null} // Error is already shown above
+          />
+        </div>
+      </div>
+
+      {/* Modal Form */}
+      <FormModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={currentMotorista ? "Editar Motorista" : "Novo Motorista"}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      >
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome</label>
+            <input
+              type="text"
+              name="nome"
+              id="nome"
+              required
+              value={formData.nome}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="cpf" className="block text-sm font-medium text-gray-700">CPF</label>
+              <MaskedInput
+                mask={MASKS.CPF}
+                name="cpf"
+                id="cpf"
+                required
+                value={formData.cpf}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">Telefone</label>
+              <MaskedInput
+                mask={MASKS.PHONE}
+                name="telefone"
+                id="telefone"
+                required
+                value={formData.telefone}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="cnh" className="block text-sm font-medium text-gray-700">CNH</label>
+              <input
+                type="text"
+                name="cnh"
+                id="cnh"
+                required
+                value={formData.cnh}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="categoria_cnh" className="block text-sm font-medium text-gray-700">Categoria CNH</label>
+              <select
+                name="categoria_cnh"
+                id="categoria_cnh"
+                required
+                value={formData.categoria_cnh}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Selecione</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+                <option value="AB">AB</option>
+                <option value="AC">AC</option>
+                <option value="AD">AD</option>
+                <option value="AE">AE</option>
+              </select>
+            </div>
+            
+            <div>
+              <label htmlFor="validade_cnh" className="block text-sm font-medium text-gray-700">Validade CNH</label>
+              <input
+                type="date"
+                name="validade_cnh"
+                id="validade_cnh"
+                required
+                value={formData.validade_cnh}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label htmlFor="endereco" className="block text-sm font-medium text-gray-700">EndereÃ§o</label>
+            <input
+              type="text"
+              name="endereco"
+              id="endereco"
+              required
+              value={formData.endereco}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="data_contratacao" className="block text-sm font-medium text-gray-700">Data de ContrataÃ§Ã£o</label>
+            <input
+              type="date"
+              name="data_contratacao"
+              id="data_contratacao"
+              required
+              value={formData.data_contratacao}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          {/* Status como select */}
+          <div>
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+            <select
+              name="status"
+              id="status"
+              required
+              value={formData.status}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="Ativo">Ativo</option>
+              <option value="Inativo">Inativo</option>
+              <option value="Ferias">FÃ©rias</option>
+              <option value="Licenca">LicenÃ§a</option>
+            </select>
+          </div>
+        </div>
+      </FormModal>
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirmar ExclusÃ£o"
+        message={`Tem certeza que deseja excluir o motorista ${currentMotorista?.nome}?`}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* Quick Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Total de Motoristas</div>
+            <div className="text-xl font-bold">{motoristas.length}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Motoristas Ativos</div>
+            <div className="text-xl font-bold">
+              {motoristas.filter(motorista => 
+                motorista.status === 'active' || 
+                motorista.status === true || 
+                motorista.status === 1
+              ).length}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Motoristas Inativos/Outras</div>
+            <div className="text-xl font-bold">
+              {motoristas.filter(motorista => 
+                !(motorista.status === 'active' || 
+                motorista.status === true || 
+                motorista.status === 1)
+              ).length}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 === /Users/micaelsantana/Documents/app-frontend/src/pages/PageHeader.jsx ===
 
 import React from 'react';
@@ -3840,6 +4959,8 @@ export default Onibus;
     "axios": "^1.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-input-mask": "^2.0.4",
+    "react-number-format": "^5.4.3",
     "react-router-dom": "^6.22.1"
   },
   "devDependencies": {
