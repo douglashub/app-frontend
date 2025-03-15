@@ -990,6 +990,11 @@ class MotoristaController extends Controller
     {
         try {
             $this->loggingService->logInfo('Creating new motorista');
+            
+            // Log input data for debugging
+            $this->loggingService->logInfo('Input data', ['data' => $request->all()]);
+            
+            // Validate basic fields
             $validatedData = $request->validate([
                 'nome' => 'required|string|max:255',
                 'cpf' => 'required|string|max:14',
@@ -998,9 +1003,41 @@ class MotoristaController extends Controller
                 'validade_cnh' => 'required|date',
                 'telefone' => 'required|string|max:20',
                 'endereco' => 'required|string',
-                'data_contratacao' => 'required|date',
-                'status' => 'required|boolean'
+                'data_contratacao' => 'required|date'
             ]);
+            
+            // Handle status field separately with flexibility
+            if ($request->has('status')) {
+                $status = $request->input('status');
+                
+                // Convert status to appropriate format
+                if (is_bool($status)) {
+                    $validatedData['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_numeric($status)) {
+                    $validatedData['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_string($status)) {
+                    // Map various string formats to expected enum values
+                    $statusLower = strtolower($status);
+                    if (in_array($statusLower, ['active', 'ativo', '1', 'true'])) {
+                        $validatedData['status'] = 'Ativo';
+                    } elseif (in_array($statusLower, ['inactive', 'inativo', '0', 'false'])) {
+                        $validatedData['status'] = 'Inativo';
+                    } elseif (in_array($statusLower, ['vacation', 'ferias', 'férias'])) {
+                        $validatedData['status'] = 'Ferias';
+                    } elseif (in_array($statusLower, ['leave', 'licenca', 'licença'])) {
+                        $validatedData['status'] = 'Licenca';
+                    } else {
+                        $validatedData['status'] = $status; // Use as is if no match
+                    }
+                } else {
+                    $validatedData['status'] = 'Ativo'; // Default to Ativo
+                }
+            } else {
+                $validatedData['status'] = 'Ativo'; // Default if not provided
+            }
+            
+            // Log processed data
+            $this->loggingService->logInfo('Processed data', ['data' => $validatedData]);
 
             $motorista = $this->motoristaService->createMotorista($validatedData);
             $this->loggingService->logInfo('Motorista created', ['id' => $motorista->id]);
@@ -1010,16 +1047,17 @@ class MotoristaController extends Controller
                 '_links' => $this->hateoasService->generateLinks('motoristas', $motorista->id)
             ], Response::HTTP_CREATED);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->loggingService->logError('Validation failed: ' . $e->getMessage());
+            $this->loggingService->logError('Validation failed: ' . $e->getMessage(), ['errors' => $e->errors()]);
             return response()->json([
                 'message' => 'Validation error',
                 'errors' => $e->errors(),
                 '_links' => $this->hateoasService->generateCollectionLinks('motoristas')
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
-            $this->loggingService->logError('Server error: ' . $e->getMessage());
+            $this->loggingService->logError('Server error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'message' => 'Server error',
+                'error_details' => $e->getMessage(),
                 '_links' => $this->hateoasService->generateCollectionLinks('motoristas')
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -1029,6 +1067,11 @@ class MotoristaController extends Controller
     {
         try {
             $this->loggingService->logInfo('Updating motorista', ['id' => $id]);
+            
+            // Log input data for debugging
+            $this->loggingService->logInfo('Input data', ['data' => $request->all()]);
+            
+            // Validate basic fields
             $validatedData = $request->validate([
                 'nome' => 'sometimes|string|max:255',
                 'cpf' => 'sometimes|string|max:14',
@@ -1037,9 +1080,37 @@ class MotoristaController extends Controller
                 'validade_cnh' => 'sometimes|date',
                 'telefone' => 'sometimes|string|max:20',
                 'endereco' => 'sometimes|string',
-                'data_contratacao' => 'sometimes|date',
-                'status' => 'sometimes|boolean'
+                'data_contratacao' => 'sometimes|date'
             ]);
+            
+            // Handle status field separately with flexibility
+            if ($request->has('status')) {
+                $status = $request->input('status');
+                
+                // Convert status to appropriate format
+                if (is_bool($status)) {
+                    $validatedData['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_numeric($status)) {
+                    $validatedData['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_string($status)) {
+                    // Map various string formats to expected enum values
+                    $statusLower = strtolower($status);
+                    if (in_array($statusLower, ['active', 'ativo', '1', 'true'])) {
+                        $validatedData['status'] = 'Ativo';
+                    } elseif (in_array($statusLower, ['inactive', 'inativo', '0', 'false'])) {
+                        $validatedData['status'] = 'Inativo';
+                    } elseif (in_array($statusLower, ['vacation', 'ferias', 'férias'])) {
+                        $validatedData['status'] = 'Ferias';
+                    } elseif (in_array($statusLower, ['leave', 'licenca', 'licença'])) {
+                        $validatedData['status'] = 'Licenca';
+                    } else {
+                        $validatedData['status'] = $status; // Use as is if no match
+                    }
+                }
+            }
+            
+            // Log processed data
+            $this->loggingService->logInfo('Processed data', ['data' => $validatedData]);
 
             $motorista = $this->motoristaService->updateMotorista($id, $validatedData);
             if (!$motorista) {
@@ -1056,16 +1127,17 @@ class MotoristaController extends Controller
                 '_links' => $this->hateoasService->generateLinks('motoristas', $id)
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->loggingService->logError('Validation error: ' . $e->getMessage());
+            $this->loggingService->logError('Validation error: ' . $e->getMessage(), ['errors' => $e->errors()]);
             return response()->json([
                 'message' => 'Validation error',
                 'errors' => $e->errors(),
                 '_links' => $this->hateoasService->generateCollectionLinks('motoristas')
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
-            $this->loggingService->logError('Server error: ' . $e->getMessage());
+            $this->loggingService->logError('Server error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'message' => 'Server error',
+                'error_details' => $e->getMessage(),
                 '_links' => $this->hateoasService->generateCollectionLinks('motoristas')
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -1087,9 +1159,10 @@ class MotoristaController extends Controller
             $this->loggingService->logInfo('Motorista deleted successfully', ['id' => $id]);
             return response()->json(null, Response::HTTP_NO_CONTENT);
         } catch (\Exception $e) {
-            $this->loggingService->logError('Deletion error: ' . $e->getMessage());
+            $this->loggingService->logError('Deletion error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'message' => 'Server error',
+                'error_details' => $e->getMessage(),
                 '_links' => $this->hateoasService->generateCollectionLinks('motoristas')
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -2119,6 +2192,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Motorista extends Model
 {
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
     protected $fillable = [
         'nome',
         'cpf',
@@ -2131,9 +2209,79 @@ class Motorista extends Model
         'status'
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'validade_cnh' => 'date',
+        'data_contratacao' => 'date'
+    ];
+
+    /**
+     * The attributes that should be hidden for arrays.
+     *
+     * @var array
+     */
+    protected $hidden = [];
+
+    /**
+     * Define the relationship between Motorista and Viagem
+     *
+     * @return HasMany
+     */
     public function viagens(): HasMany
     {
         return $this->hasMany(Viagem::class);
+    }
+
+    /**
+     * Set the motorista's status.
+     * This mutator ensures the status is always in the correct format
+     *
+     * @param  mixed  $value
+     * @return void
+     */
+    public function setStatusAttribute($value)
+    {
+        $allowedStatuses = ['Ativo', 'Inativo', 'Ferias', 'Licenca'];
+        
+        // Handle boolean values
+        if (is_bool($value)) {
+            $this->attributes['status'] = $value ? 'Ativo' : 'Inativo';
+            return;
+        }
+        
+        // Handle numeric values
+        if (is_numeric($value)) {
+            $this->attributes['status'] = $value ? 'Ativo' : 'Inativo';
+            return;
+        }
+        
+        // Handle string values with normalization
+        if (is_string($value)) {
+            $valueLower = strtolower($value);
+            
+            if (in_array($valueLower, ['active', 'ativo', '1', 'true'])) {
+                $this->attributes['status'] = 'Ativo';
+            } elseif (in_array($valueLower, ['inactive', 'inativo', '0', 'false'])) {
+                $this->attributes['status'] = 'Inativo';
+            } elseif (in_array($valueLower, ['vacation', 'ferias', 'férias'])) {
+                $this->attributes['status'] = 'Ferias';
+            } elseif (in_array($valueLower, ['leave', 'licenca', 'licença'])) {
+                $this->attributes['status'] = 'Licenca';
+            } elseif (in_array($value, $allowedStatuses)) {
+                $this->attributes['status'] = $value;
+            } else {
+                // Default to Ativo if not recognized
+                $this->attributes['status'] = 'Ativo';
+            }
+            return;
+        }
+        
+        // Default value for any other type
+        $this->attributes['status'] = 'Ativo';
     }
 }
 === /Users/micaelsantana/Documents/app-backend/app/Models/Horario.php ===
@@ -2595,53 +2743,204 @@ namespace App\Services;
 
 use App\Models\Motorista;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 
 class MotoristaService
 {
+    /**
+     * Get all motoristas
+     *
+     * @return Collection
+     */
     public function getAllMotoristas(): Collection
     {
-        return Motorista::all();
-    }
-
-    public function getMotoristaById(int $id): ?Motorista
-    {
-        return Motorista::find($id);
-    }
-
-    public function createMotorista(array $data): Motorista
-    {
-        return Motorista::create($data);
-    }
-
-    public function updateMotorista(int $id, array $data): ?Motorista
-    {
-        $motorista = $this->getMotoristaById($id);
-        if (!$motorista) {
-            return null;
-        }
-
-        $motorista->update($data);
-        return $motorista->fresh();
-    }
-
-    public function deleteMotorista(int $id): bool
-    {
-        $motorista = $this->getMotoristaById($id);
-        if (!$motorista) {
-            return false;
-        }
-
-        return $motorista->delete();
-    }
-
-    public function getMotoristaViagens(int $id): Collection
-    {
-        $motorista = $this->getMotoristaById($id);
-        if (!$motorista) {
+        try {
+            return Motorista::all();
+        } catch (\Exception $e) {
+            Log::channel('application')->error('Error fetching all motoristas: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Return empty collection instead of throwing
             return collect([]);
         }
+    }
 
-        return $motorista->viagens;
+    /**
+     * Get motorista by ID
+     *
+     * @param int $id
+     * @return Motorista|null
+     */
+    public function getMotoristaById(int $id): ?Motorista
+    {
+        try {
+            return Motorista::find($id);
+        } catch (\Exception $e) {
+            Log::channel('application')->error('Error finding motorista: ' . $e->getMessage(), [
+                'id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Create a new motorista with error handling
+     *
+     * @param array $data
+     * @return Motorista
+     */
+    public function createMotorista(array $data): Motorista
+    {
+        try {
+            // Log data for debugging
+            Log::channel('application')->info('Creating motorista with data', ['data' => $data]);
+            
+            // Ensure the status is in one of the allowed values
+            if (isset($data['status'])) {
+                $status = $data['status'];
+                $allowedStatuses = ['Ativo', 'Inativo', 'Ferias', 'Licenca'];
+                
+                // Handle various status formats and normalize them
+                if (is_bool($status)) {
+                    $data['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_numeric($status)) {
+                    $data['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_string($status) && !in_array($status, $allowedStatuses)) {
+                    // Default to 'Ativo' if not in allowed list
+                    $data['status'] = 'Ativo';
+                }
+            } else {
+                // Default value if status is not set
+                $data['status'] = 'Ativo';
+            }
+            
+            // Create the motorista
+            $motorista = Motorista::create($data);
+            
+            Log::channel('application')->info('Motorista created successfully', [
+                'id' => $motorista->id
+            ]);
+            
+            return $motorista;
+        } catch (\Exception $e) {
+            Log::channel('application')->error('Failed to create motorista: ' . $e->getMessage(), [
+                'data' => $data,
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Update an existing motorista with error handling
+     *
+     * @param int $id
+     * @param array $data
+     * @return Motorista|null
+     */
+    public function updateMotorista(int $id, array $data): ?Motorista
+    {
+        try {
+            // Log data for debugging
+            Log::channel('application')->info('Updating motorista with data', [
+                'id' => $id,
+                'data' => $data
+            ]);
+            
+            $motorista = $this->getMotoristaById($id);
+            if (!$motorista) {
+                Log::channel('application')->warning('Motorista not found for update', ['id' => $id]);
+                return null;
+            }
+
+            // Ensure the status is in one of the allowed values
+            if (isset($data['status'])) {
+                $status = $data['status'];
+                $allowedStatuses = ['Ativo', 'Inativo', 'Ferias', 'Licenca'];
+                
+                // Handle various status formats and normalize them
+                if (is_bool($status)) {
+                    $data['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_numeric($status)) {
+                    $data['status'] = $status ? 'Ativo' : 'Inativo';
+                } elseif (is_string($status) && !in_array($status, $allowedStatuses)) {
+                    // Use existing status if new one is not in allowed list
+                    $data['status'] = $motorista->status;
+                }
+            }
+            
+            $motorista->update($data);
+            
+            Log::channel('application')->info('Motorista updated successfully', [
+                'id' => $id
+            ]);
+            
+            return $motorista->fresh();
+        } catch (\Exception $e) {
+            Log::channel('application')->error('Failed to update motorista: ' . $e->getMessage(), [
+                'id' => $id,
+                'data' => $data,
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete a motorista with error handling
+     *
+     * @param int $id
+     * @return bool
+     */
+    public function deleteMotorista(int $id): bool
+    {
+        try {
+            $motorista = $this->getMotoristaById($id);
+            if (!$motorista) {
+                Log::channel('application')->warning('Motorista not found for deletion', ['id' => $id]);
+                return false;
+            }
+
+            $result = $motorista->delete();
+            
+            Log::channel('application')->info('Motorista deleted successfully', [
+                'id' => $id,
+                'result' => $result
+            ]);
+            
+            return $result;
+        } catch (\Exception $e) {
+            Log::channel('application')->error('Failed to delete motorista: ' . $e->getMessage(), [
+                'id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get all viagens for a motorista
+     *
+     * @param int $id
+     * @return Collection
+     */
+    public function getMotoristaViagens(int $id): Collection
+    {
+        try {
+            $motorista = $this->getMotoristaById($id);
+            if (!$motorista) {
+                return collect([]);
+            }
+
+            return $motorista->viagens;
+        } catch (\Exception $e) {
+            Log::channel('application')->error('Error fetching motorista viagens: ' . $e->getMessage(), [
+                'id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return collect([]);
+        }
     }
 }
 === /Users/micaelsantana/Documents/app-backend/app/Services/MonitorService.php ===
@@ -3599,6 +3898,127 @@ return new class extends Migration
     }
 };
 
+=== /Users/micaelsantana/Documents/app-backend/database/migrations/2025_03_15_133511_fix_motoristas_status_for_postgres.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations to fix the motoristas table status field.
+     */
+    public function up(): void
+    {
+        // Verificar o driver do banco de dados
+        $driverName = DB::connection()->getDriverName();
+        
+        if ($driverName === 'pgsql') {
+            // Para PostgreSQL, uma abordagem diferente é necessária
+            
+            // 1. Criar uma coluna temporária que não tenha as restrições de enum
+            if (!Schema::hasColumn('motoristas', 'status_temp')) {
+                Schema::table('motoristas', function (Blueprint $table) {
+                    $table->string('status_temp')->nullable()->after('status');
+                });
+            }
+            
+            // 2. Inserir valores válidos na coluna temporária
+            DB::statement("
+                UPDATE motoristas 
+                SET status_temp = 
+                    CASE 
+                        WHEN status::text LIKE 'Ativo' THEN 'Ativo'
+                        WHEN status::text LIKE 'Inativo' THEN 'Inativo'
+                        WHEN status::text LIKE 'Ferias' THEN 'Ferias'
+                        WHEN status::text LIKE 'Licenca' THEN 'Licenca'
+                        ELSE 'Ativo'
+                    END
+            ");
+            
+            // 3. Verificar se o tipo enum já existe
+            $enumExists = DB::select("SELECT 1 FROM pg_type WHERE typname = 'motorista_status_enum'");
+            
+            // 4. Remover a coluna original
+            Schema::table('motoristas', function (Blueprint $table) {
+                $table->dropColumn('status');
+            });
+            
+            // 5. Criar ou recrear o tipo enum se necessário
+            if (empty($enumExists)) {
+                DB::statement("CREATE TYPE motorista_status_enum AS ENUM ('Ativo', 'Inativo', 'Ferias', 'Licenca')");
+            }
+            
+            // 6. Adicionar a nova coluna status como enum
+            DB::statement("ALTER TABLE motoristas ADD COLUMN status motorista_status_enum NOT NULL DEFAULT 'Ativo'");
+            
+            // 7. Copiar valores da coluna temporária para a nova coluna status
+            DB::statement("
+                UPDATE motoristas 
+                SET status = status_temp::motorista_status_enum
+            ");
+            
+            // 8. Remover a coluna temporária
+            Schema::table('motoristas', function (Blueprint $table) {
+                $table->dropColumn('status_temp');
+            });
+            
+        } elseif ($driverName === 'mysql') {
+            // Para MySQL, modificar a coluna existente para ENUM
+            DB::statement("ALTER TABLE motoristas MODIFY COLUMN status ENUM('Ativo', 'Inativo', 'Ferias', 'Licenca') NOT NULL DEFAULT 'Ativo'");
+            
+            // Atualizar valores existentes
+            DB::statement("
+                UPDATE motoristas 
+                SET status = 
+                    CASE 
+                        WHEN status = 'true' OR status = '1' OR status = 'active' OR status = 'ativo' OR status = 'Active' THEN 'Ativo'
+                        WHEN status = 'false' OR status = '0' OR status = 'inactive' OR status = 'inativo' OR status = 'Inactive' THEN 'Inativo'
+                        WHEN status = 'vacation' OR status = 'ferias' OR status = 'Vacation' THEN 'Ferias'
+                        WHEN status = 'leave' OR status = 'licenca' OR status = 'Leave' THEN 'Licenca'
+                        ELSE 'Ativo'
+                    END
+            ");
+        } else {
+            // Para SQLite ou outros bancos, converter para string
+            Schema::table('motoristas', function (Blueprint $table) {
+                $table->string('status')->default('Ativo')->change();
+            });
+            
+            // Atualizar valores existentes
+            $motoristas = DB::table('motoristas')->get();
+            foreach ($motoristas as $motorista) {
+                $newStatus = 'Ativo'; // Valor padrão
+                
+                $currentStatus = is_string($motorista->status) ? strtolower($motorista->status) : '';
+                
+                if ($currentStatus === 'false' || $currentStatus === '0' || $currentStatus === 'inactive' || $currentStatus === 'inativo') {
+                    $newStatus = 'Inativo';
+                } elseif ($currentStatus === 'vacation' || $currentStatus === 'ferias') {
+                    $newStatus = 'Ferias';
+                } elseif ($currentStatus === 'leave' || $currentStatus === 'licenca') {
+                    $newStatus = 'Licenca';
+                }
+                
+                DB::table('motoristas')
+                    ->where('id', $motorista->id)
+                    ->update(['status' => $newStatus]);
+            }
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        // Não é necessário reverter essas alterações
+    }
+};
 === /Users/micaelsantana/Documents/app-backend/database/migrations/2024_01_01_000007_create_horarios_table.php ===
 
 <?php
@@ -4651,60 +5071,93 @@ class ParadaSeeder extends Seeder
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\Motorista;
+use App\Models\Viagem;
+use Faker\Factory as Faker;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class MotoristaSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        // Clear existing data
-        DB::table('motoristas')->truncate();
-        
-        // Insert sample data
-        DB::table('motoristas')->insert([
-            [
-                'nome' => 'Carlos Oliveira',
-                'cpf' => '123.456.789-00',
-                'cnh' => '12345678900',
-                'categoria_cnh' => 'D',
-                'validade_cnh' => '2026-05-20',
-                'telefone' => '+5511977777777',
-                'endereco' => 'Av. Paulista, 1000',
-                'data_contratacao' => '2022-01-15',
-                'status' => 'Ativo',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'nome' => 'Márcia Santos',
-                'cpf' => '234.567.890-11',
-                'cnh' => '23456789011',
-                'categoria_cnh' => 'D',
-                'validade_cnh' => '2025-11-10',
-                'telefone' => '+5511966666666',
-                'endereco' => 'Rua Augusta, 500',
-                'data_contratacao' => '2021-08-10',
-                'status' => 'Ativo',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'nome' => 'Roberto Silva',
-                'cpf' => '345.678.901-22',
-                'cnh' => '34567890122',
-                'categoria_cnh' => 'E',
-                'validade_cnh' => '2027-03-15',
-                'telefone' => '+5511955555555',
-                'endereco' => 'Av. Brigadeiro Faria Lima, 300',
-                'data_contratacao' => '2023-02-01',
-                'status' => 'Ativo',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        $faker = Faker::create('pt_BR');
+
+        // For PostgreSQL, disable triggers on the viagens table
+        DB::statement('ALTER TABLE viagens DISABLE TRIGGER ALL');
+        DB::statement('ALTER TABLE motoristas DISABLE TRIGGER ALL');
+
+        try {
+            // Truncate related tables
+            DB::table('viagens')->truncate();
+            DB::table('motoristas')->truncate();
+
+            // Seed multiple motoristas
+            $statusVariations = [
+                'Ativo', 'Inativo', 'Ferias', 'Licenca',
+                true, false, 1, 0, 
+                'active', 'inactive', 
+                'vacation', 'leave', 
+                'férias', 'licença'
+            ];
+
+            // Create base motoristas
+            $motoristas = collect();
+            for ($i = 0; $i < 5; $i++) {
+                $statusSeed = $statusVariations[array_rand($statusVariations)];
+
+                $motorista = Motorista::create([
+                    'nome' => $faker->name,
+                    'cpf' => $faker->unique()->numerify('###########'),
+                    'cnh' => $faker->unique()->numerify('##########'),
+                    'categoria_cnh' => $faker->randomElement(['A', 'B', 'C', 'D', 'E']),
+                    'validade_cnh' => Carbon::now()->addYears(rand(1, 5)),
+                    'telefone' => $faker->phoneNumber(),
+                    'endereco' => $faker->address(),
+                    'data_contratacao' => Carbon::now()->subMonths(rand(1, 36)),
+                    'status' => $statusSeed
+                ]);
+
+                $motoristas->push($motorista);
+            }
+
+            // Create a few hardcoded status edge cases
+            $edgeCases = [
+                ['nome' => 'João Active', 'status' => 'true'],
+                ['nome' => 'Maria Inactive', 'status' => '0'],
+                ['nome' => 'Pedro Vacation', 'status' => 'férias'],
+                ['nome' => 'Ana Leave', 'status' => 'licença']
+            ];
+
+            foreach ($edgeCases as $case) {
+                $motorista = Motorista::create([
+                    'nome' => $case['nome'],
+                    'cpf' => $faker->unique()->numerify('###########'),
+                    'cnh' => $faker->unique()->numerify('##########'),
+                    'categoria_cnh' => $faker->randomElement(['A', 'B', 'C', 'D', 'E']),
+                    'validade_cnh' => Carbon::now()->addYears(rand(1, 5)),
+                    'telefone' => $faker->phoneNumber(),
+                    'endereco' => $faker->address(),
+                    'data_contratacao' => Carbon::now()->subMonths(rand(1, 36)),
+                    'status' => $case['status']
+                ]);
+
+                $motoristas->push($motorista);
+            }
+
+        } catch (\Exception $e) {
+            // Log or rethrow the exception
+            throw new \RuntimeException('Failed to seed motoristas: ' . $e->getMessage());
+        } finally {
+            // Re-enable triggers
+            DB::statement('ALTER TABLE viagens ENABLE TRIGGER ALL');
+            DB::statement('ALTER TABLE motoristas ENABLE TRIGGER ALL');
+        }
     }
 }
-
 === /Users/micaelsantana/Documents/app-backend/database/seeders/DatabaseSeeder.php ===
 
 <?php
