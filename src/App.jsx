@@ -8,6 +8,7 @@ import Onibus from './pages/Onibus'
 import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
 import Monitores from './pages/Monitores'
+import Motoristas from './pages/Motoristas'
 import brasaoLogo from './assets/images/Brasao.png'
 
 // The App component is the only one using BrowserRouter now
@@ -161,6 +162,30 @@ const AppContent = () => {
                   {!sidebarCollapsed && <span className="ml-3">Viagens</span>}
                 </Link>
               </li>
+              <li>
+                <Link 
+                  to="/motoristas"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/motoristas') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Motoristas"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Motoristas</span>}
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/monitores"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/monitores') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Monitores"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Monitores</span>}
+                </Link>
+              </li>
               <li className="mt-6 border-t border-gray-700 pt-4">
                 <Link 
                   to="/login"
@@ -183,11 +208,13 @@ const AppContent = () => {
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/" element={<Dashboard />} />
-              <Route path="/alunos" element={<Alunos />} />
-              <Route path="/onibus" element={<Onibus />} />
-              <Route path="/monitores" element={<Monitores />} />
-              <Route path="/rotas" element={<Rotas />} />
-              <Route path="/viagens" element={<Viagens />} />
+              <Route path="alunos/*" element={<Alunos />} />
+              <Route path="onibus/*" element={<Onibus />} />
+              <Route path="rotas/*" element={<Rotas />} />
+              <Route path="viagens/*" element={<Viagens />} />
+              <Route path="motoristas/*" element={<Motoristas />} />
+              <Route path="monitores/*" element={<Monitores />} />
+              <Route path="*" element={<Dashboard />} />
             </Routes>
           </main>
         </div>

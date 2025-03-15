@@ -1,12 +1,17 @@
 import React from 'react';
+import MaskedInput from '../../utils/MaskedInput';
+import { MASKS } from '../../utils/inputMasks';
 
-export default function FormModal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
+export default function FormModal({
+  isOpen,
+  onClose,
+  title,
+  children,
   onSubmit,
-  isSubmitting = false
+  isSubmitting = false,
+  formData,
+  onInputChange,
+  maskedFields = {}
 }) {
   if (!isOpen) return null;
 
@@ -31,7 +36,15 @@ export default function FormModal({
                 
                 <div className="mt-4">
                   <form onSubmit={onSubmit}>
-                    {children}
+                    {React.Children.map(children, child => {
+                      if (child.type === 'input' && maskedFields[child.props.name]) {
+                        return React.cloneElement(child, {
+                          component: MaskedInput,
+                          mask: MASKS[maskedFields[child.props.name]]
+                        });
+                      }
+                      return child;
+                    })}
                     
                     <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                       <button

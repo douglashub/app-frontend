@@ -5,6 +5,7 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
+import { processStatus } from '../utils/statusProcessor'
 
 const Onibus = () => {
   const [onibus, setOnibus] = useState([]);
@@ -42,14 +43,14 @@ const Onibus = () => {
         // Process data - ensure status is standardized
         const formattedData = response.data.data.map(bus => ({
           ...bus,
-          status: convertStatus(bus.status)
+          status: processStatus(bus.status, 'onibus')
         }));
         setOnibus(formattedData);
       } else if (Array.isArray(response?.data)) {
         // Alternative API response format
         const formattedData = response.data.map(bus => ({
           ...bus,
-          status: convertStatus(bus.status)
+          status: processStatus(bus.status, 'onibus')
         }));
         setOnibus(formattedData);
       } else {
@@ -79,8 +80,7 @@ const Onibus = () => {
       } else if (statusLower === 'manutenção' || statusLower === 'manutencao' || statusLower === 'em manutenção' || statusLower === 'em manutencao') {
         return 'maintenance';
       }
-      return status; // Keep original if no match
-    }
+      }
     return 'inactive'; // Default value
   };
 

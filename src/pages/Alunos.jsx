@@ -5,6 +5,8 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { AlunoService } from '../api/services';
 import { useNotification } from '../contexts/NotificationContext';
+import MaskedInput from '../utils/MaskedInput';
+import { MASKS, unmask } from '../utils/inputMasks';
 
 export default function Alunos() {
   const [alunos, setAlunos] = useState([]);
@@ -302,13 +304,17 @@ export default function Alunos() {
           
           <div>
             <label htmlFor="telefone_responsavel" className="block text-sm font-medium text-gray-700">Telefone do Responsável</label>
-            <input
-              type="tel"
+            <MaskedInput
+              mask={MASKS.PHONE}
               name="telefone_responsavel"
               id="telefone_responsavel"
-              required
               value={formData.telefone_responsavel}
-              onChange={handleInputChange}
+              onChange={(e) => handleInputChange({
+                target: {
+                  name: 'telefone_responsavel',
+                  value: unmask(e.target.value)
+                }
+              })}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>

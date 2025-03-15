@@ -6,11 +6,13 @@ export default function Notification({
   duration = 4000,
   onClose
 }) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(!!message);
   const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
-    if (!message) return;
+    if (!message) {
+      return;
+    }
     
     setIsVisible(true);
     setIsLeaving(false);
@@ -62,6 +64,39 @@ export default function Notification({
     )
   };
 
+  // Tradução de mensagens comuns de erro
+  const translateCommonErrors = (message) => {
+    const errorMapping = {
+      'Validation error': 'Erro de validação',
+      'Invalid data': 'Dados inválidos',
+      'Not found': 'Não encontrado',
+      'Server error': 'Erro no servidor',
+      'Unauthorized': 'Não autorizado',
+      'Validation failed': 'Validação falhou',
+      'Data not found': 'Dados não encontrados',
+      'Connection error': 'Erro de conexão',
+      'Network error': 'Erro de rede',
+      'Failed to fetch': 'Falha ao buscar dados',
+      'Internal server error': 'Erro interno do servidor'
+    };
+    
+    // Verifica mensagens exatas
+    if (errorMapping[message]) {
+      return errorMapping[message];
+    }
+    
+    // Verifica mensagens que contenham certas palavras-chave
+    for (const [key, translation] of Object.entries(errorMapping)) {
+      if (message.includes(key)) {
+        return message.replace(key, translation);
+      }
+    }
+    
+    return message;
+  };
+
+  const formattedMessage = translateCommonErrors(message);
+
   return (
     <div 
       className={`fixed bottom-5 right-5 z-50 transition-all duration-300 ease-in-out
@@ -71,18 +106,18 @@ export default function Notification({
         px-4 py-3 rounded-md shadow-lg border ${typeClasses[type]}
         flex items-start max-w-md
         transform transition-transform duration-200 hover:scale-102
-        ${message.includes('\n') ? 'whitespace-pre-line' : ''}
+        ${formattedMessage.includes('\n') ? 'whitespace-pre-line' : ''}
       `}>
         <div className="flex-shrink-0 mr-3">
           {iconMap[type]}
         </div>
         <div className="flex-grow">
-          {message}
+          {formattedMessage}
         </div>
         <button 
           className="ml-3 text-gray-500 hover:text-gray-700 transition-colors duration-200"
           onClick={handleClose}
-          aria-label="Close notification"
+          aria-label="Fechar notificação"
         >
           <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -91,5 +126,4 @@ export default function Notification({
       </div>
     </div>
   );
-
 }

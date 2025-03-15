@@ -5,6 +5,8 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
+import MaskedInput from '../utils/MaskedInput';
+import { MASKS, unmask } from '../utils/inputMasks';
 
 const Viagens = () => {
   const { showError, showSuccess } = useNotification();
@@ -13,7 +15,7 @@ const Viagens = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Added missing state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentViagem, setCurrentViagem] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,7 +40,9 @@ const Viagens = () => {
     hora_saida_real: '',
     hora_chegada_real: '',
     observacoes: '',
-    status: true
+    status: true,
+    telefone_motorista: '',
+    telefone_monitor: ''
   });
 
   useEffect(() => {
@@ -104,6 +108,10 @@ const Viagens = () => {
   const openModal = (viagem = null) => {
     if (viagem) {
       // Edit mode
+      // Buscar os dados do motorista e monitor para obter os telefones
+      const motorista = motoristas.find(m => m.id === viagem.motorista_id);
+      const monitor = monitores.find(m => m.id === viagem.monitor_id);
+
       const data = {
         data_viagem: viagem.data_viagem || '',
         rota_id: viagem.rota_id || '',
@@ -116,7 +124,9 @@ const Viagens = () => {
         hora_saida_real: viagem.hora_saida_real ? formatTimeForDisplay(viagem.hora_saida_real) : '',
         hora_chegada_real: viagem.hora_chegada_real ? formatTimeForDisplay(viagem.hora_chegada_real) : '',
         observacoes: viagem.observacoes || '',
-        status: viagem.status === 'completed' || viagem.status === true || viagem.status === 1
+        status: viagem.status === 'completed' || viagem.status === true || viagem.status === 1,
+        telefone_motorista: motorista ? motorista.telefone : '',
+        telefone_monitor: monitor ? monitor.telefone : ''
       };
       setFormData(data);
       setCurrentViagem(viagem);
@@ -135,7 +145,9 @@ const Viagens = () => {
         hora_saida_real: '',
         hora_chegada_real: '',
         observacoes: '',
-        status: true
+        status: true,
+        telefone_motorista: '',
+        telefone_monitor: ''
       });
       setCurrentViagem(null);
     }
@@ -181,6 +193,29 @@ const Viagens = () => {
     }
   };
 
+  // Atualizar os dados de telefone quando o motorista ou monitor é alterado
+  const handleMotoristaChange = (e) => {
+    const motoristaId = e.target.value;
+    const motorista = motoristas.find(m => m.id === parseInt(motoristaId));
+    
+    setFormData({
+      ...formData,
+      motorista_id: motoristaId,
+      telefone_motorista: motorista ? motorista.telefone : ''
+    });
+  };
+
+  const handleMonitorChange = (e) => {
+    const monitorId = e.target.value;
+    const monitor = monitores.find(m => m.id === parseInt(monitorId));
+    
+    setFormData({
+      ...formData,
+      monitor_id: monitorId,
+      telefone_monitor: monitor ? monitor.telefone : ''
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -195,6 +230,10 @@ const Viagens = () => {
         hora_chegada_real: formData.hora_chegada_real || null,
         status: formData.status
       };
+
+      // Remover campos que não pertencem ao modelo de Viagem
+      delete apiData.telefone_motorista;
+      delete apiData.telefone_monitor;
 
       if (currentViagem) {
         // Update
@@ -441,7 +480,7 @@ const Viagens = () => {
               id="motorista_id"
               required
               value={formData.motorista_id}
-              onChange={handleInputChange}
+              onChange={handleMotoristaChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={relatedDataLoading}
             >
@@ -458,7 +497,7 @@ const Viagens = () => {
               name="monitor_id"
               id="monitor_id"
               value={formData.monitor_id}
-              onChange={handleInputChange}
+              onChange={handleMonitorChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={relatedDataLoading}
             >
@@ -502,30 +541,64 @@ const Viagens = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="hora_saida_real" className="block text-sm font-medium text-gray-700">Hora Saída Real</label>
-              <input
-                type="time"
-                name="hora_saida_real"
-                id="hora_saida_real"
-                value={formData.hora_saida_real}
-                onChange={handleInputChange}
+              <label htmlFor="telefone_motorista" className="block text-sm font-medium text-gray-700">Telefone Motorista</label>
+              <MaskedInput
+                mask={MASKS.PHONE}
+                name="telefone_motorista"
+                id="telefone_motorista"
+                value={formData.telefone_motorista}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    telefone_motorista: e.target.value
+                  });
+                }}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={false}
               />
             </div>
-
             <div>
-              <label htmlFor="hora_chegada_real" className="block text-sm font-medium text-gray-700">Hora Chegada Real</label>
-              <input
-                type="time"
-                name="hora_chegada_real"
-                id="hora_chegada_real"
-                value={formData.hora_chegada_real}
-                onChange={handleInputChange}
+              <label htmlFor="telefone_monitor" className="block text-sm font-medium text-gray-700">Telefone Monitor</label>
+              <MaskedInput
+                mask={MASKS.PHONE}
+                name="telefone_monitor"
+                id="telefone_monitor"
+                value={formData.telefone_monitor}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    telefone_monitor: e.target.value
+                  });
+                }}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={false}
               />
             </div>
           </div>
 
+          <div>
+            <label htmlFor="hora_saida_real" className="block text-sm font-medium text-gray-700">Hora Saída Real</label>
+            <input
+              type="time"
+              name="hora_saida_real"
+              id="hora_saida_real"
+              value={formData.hora_saida_real}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="hora_chegada_real" className="block text-sm font-medium text-gray-700">Hora Chegada Real</label>
+            <input
+              type="time"
+              name="hora_chegada_real"
+              id="hora_chegada_real"
+              value={formData.hora_chegada_real}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
           <div>
             <label htmlFor="observacoes" className="block text-sm font-medium text-gray-700">Observações</label>
             <textarea
