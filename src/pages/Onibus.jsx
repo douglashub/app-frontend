@@ -6,7 +6,7 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { processStatus } from '../utils/statusProcessor'
-import { unmask } from '../utils/masks/processors';
+import { formatLincensePlate } from '../utils/masks/processors';
 import PlacaInput from '../utils/masks/components/PlacaInput';
 
 const Onibus = () => {
@@ -18,11 +18,11 @@ const Onibus = () => {
   const [currentOnibus, setCurrentOnibus] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { showSuccess, showError } = useNotification ? useNotification() : { 
-    showSuccess: () => {}, 
-    showError: () => {} 
+  const { showSuccess, showError } = useNotification ? useNotification() : {
+    showSuccess: () => { },
+    showError: () => { }
   };
-  
+
   // Form state
   const [formData, setFormData] = useState({
     placa: '',
@@ -36,24 +36,38 @@ const Onibus = () => {
     fetchOnibus();
   }, []);
 
+  // In Onibus.jsx
   const fetchOnibus = async () => {
     try {
       setLoading(true);
       const response = await OnibusService.getOnibus();
-      
+
+      // Log the raw response to verify what the API is returning
+      console.log('Raw API response:', response);
+
       if (response?.data?.data && Array.isArray(response.data.data)) {
         // Process data - ensure status is standardized
-        const formattedData = response.data.data.map(bus => ({
-          ...bus,
-          status: processStatus(bus.status, 'onibus')
-        }));
+        const formattedData = response.data.data.map(bus => {
+          // Log individual bus data
+          console.log('Raw bus data item:', bus);
+          return {
+            ...bus,
+            status: processStatus(bus.status, 'onibus')
+          };
+        });
+        console.log('Formatted bus data:', formattedData);
         setOnibus(formattedData);
       } else if (Array.isArray(response?.data)) {
         // Alternative API response format
-        const formattedData = response.data.map(bus => ({
-          ...bus,
-          status: processStatus(bus.status, 'onibus')
-        }));
+        const formattedData = response.data.map(bus => {
+          // Log individual bus data
+          console.log('Raw bus data item (alt format):', bus);
+          return {
+            ...bus,
+            status: processStatus(bus.status, 'onibus')
+          };
+        });
+        console.log('Formatted bus data (alt format):', formattedData);
         setOnibus(formattedData);
       } else {
         console.error('API returned unexpected data format');
@@ -82,7 +96,7 @@ const Onibus = () => {
       } else if (statusLower === 'manutenção' || statusLower === 'manutencao' || statusLower === 'em manutenção' || statusLower === 'em manutencao') {
         return 'maintenance';
       }
-      }
+    }
     return 'inactive'; // Default value
   };
 
@@ -122,19 +136,20 @@ const Onibus = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
         ...formData,
-        placa: unmask(formData.placa),
+        placa: formatLincensePlate(formData.placa),
+        
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
       };
-      
+
       console.log('Dados enviados para API:', formData);
       console.log('Dados processados:', formData);
-      
+
       if (currentOnibus) {
         // Update
         await OnibusService.updateOnibus(currentOnibus.id, apiData);
@@ -157,7 +172,7 @@ const Onibus = () => {
   };
 
   // Search and filter function
-  const filteredOnibus = onibus.filter(bus => 
+  const filteredOnibus = onibus.filter(bus =>
     bus.placa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bus.modelo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -167,8 +182,8 @@ const Onibus = () => {
     { key: 'modelo', header: 'Modelo' },
     { key: 'ano_fabricacao', header: 'Ano' },
     { key: 'capacidade', header: 'Capacidade', format: (item) => `${item.capacidade} passageiros` },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       header: 'Status',
       format: (item) => <StatusBadge status={item.status} type="onibus" />
     }
@@ -201,7 +216,7 @@ const Onibus = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Ônibus</h1>
-        <button 
+        <button
           className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
           onClick={() => openModal()}
         >
@@ -211,11 +226,11 @@ const Onibus = () => {
           Novo Ônibus
         </button>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="font-bold text-lg">Frota de Ônibus</h2>
-          
+
           {/* Search box */}
           <div className="relative w-full sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -232,7 +247,7 @@ const Onibus = () => {
             />
           </div>
         </div>
-        
+
         <div className="p-4">
           {error && (
             <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
@@ -242,7 +257,7 @@ const Onibus = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           <DataTable
             columns={columns}
             data={filteredOnibus}
@@ -253,11 +268,11 @@ const Onibus = () => {
           />
         </div>
       </div>
-      
+
       {/* Modal Form */}
-      <FormModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <FormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={currentOnibus ? "Editar Ônibus" : "Novo Ônibus"}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
@@ -273,7 +288,7 @@ const Onibus = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="modelo" className="block text-sm font-medium text-gray-700">Modelo</label>
             <input
@@ -286,7 +301,7 @@ const Onibus = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="capacidade" className="block text-sm font-medium text-gray-700">Capacidade</label>
             <input
@@ -300,7 +315,7 @@ const Onibus = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="ano_fabricacao" className="block text-sm font-medium text-gray-700">Ano de Fabricação</label>
             <input
@@ -315,7 +330,7 @@ const Onibus = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -329,7 +344,7 @@ const Onibus = () => {
           </div>
         </div>
       </FormModal>
-      
+
       {/* Delete Confirmation Modal - moved outside of FormModal */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
@@ -339,7 +354,7 @@ const Onibus = () => {
         message={`Tem certeza que deseja excluir o ônibus de placa ${currentOnibus?.placa}?`}
         isSubmitting={isSubmitting}
       />
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
