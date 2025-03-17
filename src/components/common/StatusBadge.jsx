@@ -55,6 +55,10 @@ export default function StatusBadge({ status, type = 'default', size = 'md' }) {
         'inactive': { label: 'Inativo' },
         'vacation': { label: 'Férias' },
         'leave': { label: 'Licença' }
+      },
+      'parada': {
+        'active': { label: 'Ativa' },
+        'inactive': { label: 'Inativa' }
       }
     };
 

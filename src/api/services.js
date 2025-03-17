@@ -364,4 +364,61 @@ export const MotoristaService = {
   })
 };
 
+export const ParadaService = {
+  getParadas: () => api.get('/paradas').catch(error => {
+    throw new Error('Erro ao buscar paradas: ' + getErrorMessage(error));
+  }),
+
+  getParadaById: (id) => api.get(`/paradas/${id}`).catch(error => {
+    throw new Error('Erro ao buscar detalhes da parada: ' + getErrorMessage(error));
+  }),
+
+  createParada: (data) => {
+    // Create a copy of the data
+    const apiData = { ...data };
+    
+    // Convert status to 0/1 for the backend if needed
+    if (typeof apiData.status === 'boolean') {
+      apiData.status = apiData.status ? 1 : 0;
+    } else if (apiData.status === 'on') {
+      apiData.status = 1;
+    }
+
+    return api.post('/paradas', apiData).catch(error => {
+      console.error('Erro detalhado API:', error.response?.data);
+      throw new Error('Erro ao criar parada: ' + getErrorMessage(error));
+    });
+  },
+
+  updateParada: (id, data) => {
+    // Create a copy of the data
+    const apiData = { ...data };
+    
+    // Convert status to 0/1 for the backend if needed
+    if (typeof apiData.status === 'boolean') {
+      apiData.status = apiData.status ? 1 : 0;
+    } else if (apiData.status === 'on') {
+      apiData.status = 1;
+    }
+
+    return api.put(`/paradas/${id}`, apiData).catch(error => {
+      console.error('Erro detalhado API:', error.response?.data);
+      throw new Error('Erro ao atualizar parada: ' + getErrorMessage(error));
+    });
+  },
+
+  deleteParada: (id) => api.delete(`/paradas/${id}`).catch(error => {
+    // Handle foreign key constraint error
+    if (error.response?.data?.message?.includes('Foreign key violation') || 
+        error.response?.data?.message?.includes('Integrity constraint violation')) {
+      throw new Error('Não é possível excluir esta parada pois ela está sendo usada em rotas. Remova as associações primeiro.');
+    }
+    throw new Error('Erro ao excluir parada: ' + getErrorMessage(error));
+  }),
+
+  getParadaRotas: (id) => api.get(`/paradas/${id}/rotas`).catch(error => {
+    throw new Error('Erro ao buscar rotas da parada: ' + getErrorMessage(error));
+  })
+};
+
 export default api;

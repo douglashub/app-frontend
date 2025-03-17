@@ -2064,39 +2064,44 @@ export default function FormModal({
   const handleSubmit = (event) => {
     event.preventDefault();
     
+    // Create a FormData object
+    const formElements = event.target.elements;
+    const formValues = {};
+    
     // Debug form elements directly
     console.log('=== ELEMENTOS DO FORMUL√ÅRIO ===');
-    const formElements = event.target.elements;
     for (let i = 0; i < formElements.length; i++) {
       const element = formElements[i];
       if (element.name) {
         console.log(`${element.name}: ${element.value}`);
+        // Only add elements with names to our form values
+        if (element.type === 'checkbox') {
+          formValues[element.name] = element.checked;
+        } else {
+          formValues[element.name] = element.value;
+        }
       }
     }
     
     // Debug formData
     console.log('=== DADOS SENDO ENVIADOS PARA O BACKEND ===');
-    console.log('formData completo:', formData);
-    console.log('formData √© objeto vazio?', Object.keys(formData).length === 0);
+    console.log('formData do componente:', formData);
+    console.log('formValues coletados do form:', formValues);
     
-    if(formData?.quilometragem) {
-      console.log('quilometragem (bruto):', formData.quilometragem);
-      console.log('quilometragem (processado):', unmaskQuilometragem(formData.quilometragem));
-    } else {
-      console.log('quilometragem n√£o encontrado no formData');
+    if(formValues?.quilometragem) {
+      console.log('quilometragem (bruto):', formValues.quilometragem);
+      console.log('quilometragem (processado):', unmaskQuilometragem(formValues.quilometragem));
     }
     
-    if(formData?.distancia_km) {
-      console.log('distancia_km (bruto):', formData.distancia_km);
-      console.log('distancia_km (processado):', unmaskQuilometragem(formData.distancia_km));
-    } else {
-      console.log('distancia_km n√£o encontrado no formData');
+    if(formValues?.distancia_km) {
+      console.log('distancia_km (bruto):', formValues.distancia_km);
+      console.log('distancia_km (processado):', unmaskQuilometragem(formValues.distancia_km));
     }
     
     console.log('=====================================');
     
-    // Call the original onSubmit function
-    onSubmit(event);
+    // Call the original onSubmit function with the collected form values
+    onSubmit(event, formValues);
   };
 
   if (!isOpen) return null;
@@ -2759,14 +2764,26 @@ export const RotaService = {
   createRota: (data) => {
     // Format time fields
     const formattedData = { ...data };
+    
     if (formattedData.horario_inicio) {
       formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
     }
+    
     if (formattedData.horario_fim) {
       formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
     }
+    
+    // Convert status to 0/1 for the backend if needed
+    if (typeof formattedData.status === 'boolean') {
+      formattedData.status = formattedData.status ? 1 : 0;
+    } else if (formattedData.status === 'on') {
+      formattedData.status = 1;
+    }
+
+    console.log('Dados finais enviados para API:', formattedData);
 
     return api.post('/rotas', formattedData).catch(error => {
+      console.error('Erro detalhado API:', error.response?.data);
       throw new Error('Erro ao criar rota: ' + getErrorMessage(error));
     });
   },
@@ -2774,14 +2791,26 @@ export const RotaService = {
   updateRota: (id, data) => {
     // Format time fields
     const formattedData = { ...data };
+    
     if (formattedData.horario_inicio) {
       formattedData.horario_inicio = formatTimeForApi(formattedData.horario_inicio);
     }
+    
     if (formattedData.horario_fim) {
       formattedData.horario_fim = formatTimeForApi(formattedData.horario_fim);
     }
+    
+    // Convert status to 0/1 for the backend if needed
+    if (typeof formattedData.status === 'boolean') {
+      formattedData.status = formattedData.status ? 1 : 0;
+    } else if (formattedData.status === 'on') {
+      formattedData.status = 1;
+    }
+
+    console.log('Dados finais enviados para API (update):', formattedData);
 
     return api.put(`/rotas/${id}`, formattedData).catch(error => {
+      console.error('Erro detalhado API:', error.response?.data);
       throw new Error('Erro ao atualizar rota: ' + getErrorMessage(error));
     });
   },
@@ -3152,6 +3181,542 @@ tYiÌ⁄u‹]K`ö899Ö≠ßx>¯sÁ0≤xﬁÉÛπeHÖé1úZÿÁãézz\P∏n’
 ·Âò˙∞àèÆ§q/~\> ±—≠3º±©˛~êe¡ ¶t‘pÀ≠≥(sP_^«ùΩu3-˝|	˜ó_i`†	√'ˆü(Ôy·‚·≤0≥°ïÎk^pXÌÈ∏eJJJ
 ?iõø[Kœ˝y>EEERÁ§Dr…tîΩ%ãrÛé“gü¸ìéÊz"âÅA2fÊóÑÈıü¶$&æ>`T◊uà˙Mh?˛[`Õ3úÃä˝»≤…e*´—®/Œ?A€≥w—ñÌŸ<¨¶`ù'øå ØzÊû.;?øÏ∞ÀNg|øÓÈ'.v%·%◊Ã¬ºDBtF≈ÜkË€U´hﬂ˛É\Cˇìô;ò-≈G¿®\Í!*Ì◊ƒ~\àŒ>¨Qth!”Çë¢(<ÆÔÍñ9åJNû§e_≠ Cy…yÉLΩÿÊˆ%'Ûà˛˝ÊûãÁ˝ÛòY3Öˆfgq∑.MÈ‹t	˛¸JõûË«ï(¸R£3À`hn43R3OÆsﬁ iœ÷¥¥è˛b≠’KJfú†Íöäœ¨„pÔK¯Òb~Ä‹0™g–[π·¨ú}+·ﬂ¯IÏ«/hk‘DàÅí»Ym-mπlLπ¡»¢!cªw1÷Ì%ÛôqBÚéüz‹ÿbºâwêx+sDuÍ[Òß	.Qj¥õ‚b¢_IË–aÈ∞°)€‚”¢è√∑Ò˚ƒ~\
  ≈uÁ}£OwÔªWÙ»Â Vó; åﬁÕ|’`xœÍr∆ıÈ⁄q%ˆ·}˚g√%”Ã£ò «ú"a/fjâ—+h‚æî3ï¸„ßB˜ÕpóÆmÔ–òﬂ1±qè^åä∞KFf¯ FìiÇ›Â–H«œäÚJuñW"§9kﬂ`BÔ4ßÀ≠s9‹:T"¶uÓ¸ÙÂ4¶˜¢'ƒ˚–?¸√?¸√?Æ8˝?i˘∞ˇ›~”    IENDÆB`Ç
+=== /Users/micaelsantana/Documents/app-frontend/src/pages/Paradas.jsx ===
+
+import React, { useState, useEffect } from 'react';
+import { ParadaService } from '../api/services';
+import DataTable from '../components/common/DataTable';
+import StatusBadge from '../components/common/StatusBadge';
+import FormModal from '../components/common/FormModal';
+import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
+import { useNotification } from '../contexts/NotificationContext';
+import MaskedInput from '../utils/masks/components/MaskedInput';
+import { MASKS } from '../utils/masks/constants';
+
+const Paradas = () => {
+  const [paradas, setParadas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [currentParada, setCurrentParada] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const { showSuccess, showError } = useNotification ? useNotification() : { 
+    showSuccess: () => {}, 
+    showError: () => {} 
+  };
+
+  // Form state
+  const [formData, setFormData] = useState({
+    nome: '',
+    descricao: '',
+    ponto_referencia: '',
+    latitude: '',
+    longitude: '',
+    endereco: '',
+    tipo: 'Intermediaria', // Default value
+    status: true
+  });
+
+  // Form validation errors
+  const [validationErrors, setValidationErrors] = useState({
+    latitude: '',
+    longitude: ''
+  });
+
+  useEffect(() => {
+    fetchParadas();
+  }, []);
+
+  const fetchParadas = async () => {
+    try {
+      setLoading(true);
+      const response = await ParadaService.getParadas();
+      
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        // Process data - ensure status is standardized
+        const formattedData = response.data.data.map(parada => ({
+          ...parada,
+          status: processStatus(parada.status)
+        }));
+        setParadas(formattedData);
+      } else if (Array.isArray(response?.data)) {
+        // Alternative API response format
+        const formattedData = response.data.map(parada => ({
+          ...parada,
+          status: processStatus(parada.status)
+        }));
+        setParadas(formattedData);
+      } else {
+        console.error('API returned unexpected data format');
+        setError('Formato de dados inesperado. Contate o suporte.');
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Erro ao carregar paradas: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to process different status formats
+  const processStatus = (status) => {
+    if (typeof status === 'boolean') {
+      return status ? 'active' : 'inactive';
+    } else if (typeof status === 'number') {
+      return status === 1 ? 'active' : 'inactive';
+    } else if (typeof status === 'string') {
+      const lowercaseStatus = status.toLowerCase();
+      return lowercaseStatus === 'true' || lowercaseStatus === 'ativo' || lowercaseStatus === '1' 
+        ? 'active' : 'inactive';
+    } else {
+      return 'inactive'; // default value
+    }
+  };
+
+  // Validate coordinate inputs
+  const validateCoordinates = () => {
+    let errors = {
+      latitude: '',
+      longitude: ''
+    };
+    let isValid = true;
+
+    // Validate latitude
+    if (formData.latitude) {
+      const lat = parseFloat(formData.latitude);
+      if (isNaN(lat)) {
+        errors.latitude = 'Latitude deve ser um n√∫mero';
+        isValid = false;
+      } else if (lat < -90 || lat > 90) {
+        errors.latitude = 'Latitude deve estar entre -90 e 90';
+        isValid = false;
+      }
+    }
+
+    // Validate longitude
+    if (formData.longitude) {
+      const lng = parseFloat(formData.longitude);
+      if (isNaN(lng)) {
+        errors.longitude = 'Longitude deve ser um n√∫mero';
+        isValid = false;
+      } else if (lng < -180 || lng > 180) {
+        errors.longitude = 'Longitude deve estar entre -180 e 180';
+        isValid = false;
+      }
+    }
+
+    setValidationErrors(errors);
+    return isValid;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    // For checkboxes, use the checked property
+    if (type === 'checkbox') {
+      setFormData({
+        ...formData,
+        [name]: checked
+      });
+      return;
+    }
+    
+    // For coordinates, perform validation
+    if (name === 'latitude' || name === 'longitude') {
+      // Allow empty string or valid decimal input with . or ,
+      const isValidInput = value === '' || /^-?\d*[.,]?\d*$/.test(value);
+      
+      if (isValidInput) {
+        // Normalize decimal separators
+        const normalizedValue = value.replace(',', '.');
+        
+        setFormData({
+          ...formData,
+          [name]: normalizedValue
+        });
+        
+        // Clear validation error if the field is now valid
+        if (validationErrors[name]) {
+          setValidationErrors({
+            ...validationErrors,
+            [name]: ''
+          });
+        }
+      }
+      return;
+    }
+    
+    // For all other inputs
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  const openModal = (parada = null) => {
+    // Reset validation errors
+    setValidationErrors({
+      latitude: '',
+      longitude: ''
+    });
+    
+    if (parada) {
+      // Edit mode
+      setFormData({
+        nome: parada.nome || '',
+        descricao: parada.descricao || '',
+        ponto_referencia: parada.ponto_referencia || '',
+        latitude: parada.latitude?.toString() || '',
+        longitude: parada.longitude?.toString() || '',
+        endereco: parada.endereco || '',
+        tipo: parada.tipo || 'Intermediaria',
+        status: parada.status === 'active' || parada.status === true || parada.status === 1
+      });
+      setCurrentParada(parada);
+    } else {
+      // Create mode
+      setFormData({
+        nome: '',
+        descricao: '',
+        ponto_referencia: '',
+        latitude: '',
+        longitude: '',
+        endereco: '',
+        tipo: 'Intermediaria',
+        status: true
+      });
+      setCurrentParada(null);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate coordinates before submission
+    if (!validateCoordinates()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Prepare data for API
+      const apiData = {
+        ...formData,
+        // Convert coordinates to numbers if present
+        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+      };
+      
+      if (currentParada) {
+        // Update
+        await ParadaService.updateParada(currentParada.id, apiData);
+        showSuccess('Parada atualizada com sucesso!');
+      } else {
+        // Create
+        await ParadaService.createParada(apiData);
+        showSuccess('Parada criada com sucesso!');
+      }
+      setIsModalOpen(false);
+      fetchParadas();
+    } catch (err) {
+      console.error('Error saving parada:', err);
+      const errorMsg = err.response?.data?.errors 
+        ? Object.values(err.response.data.errors).flat().join(', ') 
+        : (err.response?.data?.message || err.message);
+      
+      showError('Erro ao salvar parada: ' + errorMsg);
+      setError('Erro ao salvar parada: ' + errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Search and filter function
+  const filteredParadas = paradas.filter(parada => 
+    parada.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    parada.endereco?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    parada.ponto_referencia?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const columns = [
+    { key: 'nome', header: 'Nome' },
+    { key: 'endereco', header: 'Endere√ßo' },
+    { key: 'ponto_referencia', header: 'Ponto de Refer√™ncia' },
+    { key: 'tipo', header: 'Tipo' },
+    { 
+      key: 'status', 
+      header: 'Status',
+      format: (item) => <StatusBadge status={item.status} type="parada" />
+    }
+  ];
+
+  const handleEdit = (parada) => {
+    openModal(parada);
+  };
+
+  const handleDelete = (parada) => {
+    setCurrentParada(parada);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await ParadaService.deleteParada(currentParada.id);
+      showSuccess('Parada exclu√≠da com sucesso!');
+      setIsDeleteModalOpen(false);
+      setCurrentParada(null);
+      fetchParadas();
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message;
+      showError('Erro ao excluir parada: ' + errorMsg);
+      setError('Erro ao excluir parada: ' + errorMsg);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Gerenciamento de Paradas</h1>
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
+          onClick={() => openModal()}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Nova Parada
+        </button>
+      </div>
+
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="border-b px-6 py-4 flex justify-between items-center">
+          <h2 className="font-bold text-lg">Paradas Cadastradas</h2>
+
+          {/* Search box */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar paradas..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="p-4">
+          {error && (
+            <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <DataTable
+            columns={columns}
+            data={filteredParadas}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            loading={loading}
+            error={null} // Error is already shown above
+          />
+        </div>
+      </div>
+
+      {/* Modal Form */}
+      <FormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={currentParada ? "Editar Parada" : "Nova Parada"}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      >
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label htmlFor="nome" className="block text-sm font-medium text-gray-700">Nome da Parada</label>
+            <input
+              type="text"
+              name="nome"
+              id="nome"
+              required
+              value={formData.nome}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="endereco" className="block text-sm font-medium text-gray-700">Endere√ßo</label>
+            <input
+              type="text"
+              name="endereco"
+              id="endereco"
+              required
+              value={formData.endereco}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="ponto_referencia" className="block text-sm font-medium text-gray-700">Ponto de Refer√™ncia</label>
+            <input
+              type="text"
+              name="ponto_referencia"
+              id="ponto_referencia"
+              value={formData.ponto_referencia}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ex: Em frente ao supermercado"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">Latitude</label>
+              <input
+                type="text"
+                name="latitude"
+                id="latitude"
+                value={formData.latitude}
+                onChange={handleInputChange}
+                className={`mt-1 block w-full border ${validationErrors.latitude ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                placeholder="Ex: -23.550520"
+              />
+              {validationErrors.latitude && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.latitude}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">Longitude</label>
+              <input
+                type="text"
+                name="longitude"
+                id="longitude"
+                value={formData.longitude}
+                onChange={handleInputChange}
+                className={`mt-1 block w-full border ${validationErrors.longitude ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                placeholder="Ex: -46.633309"
+              />
+              {validationErrors.longitude && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.longitude}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">Tipo de Parada</label>
+            <select
+              name="tipo"
+              id="tipo"
+              required
+              value={formData.tipo}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="Inicio">In√≠cio</option>
+              <option value="Intermediaria">Intermedi√°ria</option>
+              <option value="Final">Final</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descri√ß√£o</label>
+            <textarea
+              name="descricao"
+              id="descricao"
+              rows="3"
+              value={formData.descricao}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Informa√ß√µes adicionais sobre a parada..."
+            ></textarea>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              name="status"
+              id="status"
+              checked={formData.status}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="status" className="ml-2 block text-sm text-gray-900">Ativa</label>
+          </div>
+        </div>
+      </FormModal>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirmar Exclus√£o"
+        message={`Tem certeza que deseja excluir a parada "${currentParada?.nome}"?`}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Total de Paradas</div>
+            <div className="text-xl font-bold">{paradas.length}</div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Paradas Ativas</div>
+            <div className="text-xl font-bold">
+              {paradas.filter(parada => parada.status === 'active').length}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg mr-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Paradas Inativas</div>
+            <div className="text-xl font-bold">
+              {paradas.filter(parada => parada.status === 'inactive').length}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Paradas;
 === /Users/micaelsantana/Documents/app-frontend/src/pages/Alunos.jsx ===
 
 import React, { useState, useEffect } from 'react';
@@ -3600,12 +4165,12 @@ import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
-import { 
-  parseNumeroDecimal, 
-  formatarNumeroDecimal, 
-  formatarDistanciaKm, 
+import {
+  parseNumeroDecimal,
+  formatarNumeroDecimal,
+  formatarDistanciaKm,
   formatarTempoMinutos,
-  isQuilometragemValida 
+  isQuilometragemValida
 } from '../utils';
 
 const Rotas = () => {
@@ -3617,11 +4182,11 @@ const Rotas = () => {
   const [currentRota, setCurrentRota] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { showSuccess, showError } = useNotification ? useNotification() : { 
-    showSuccess: () => {}, 
-    showError: () => {} 
+  const { showSuccess, showError } = useNotification ? useNotification() : {
+    showSuccess: () => { },
+    showError: () => { }
   };
-  
+
   // Form state
   const [formData, setFormData] = useState({
     nome: '',
@@ -3650,7 +4215,7 @@ const Rotas = () => {
     try {
       setLoading(true);
       const response = await RotaService.getRotas();
-      
+
       if (response?.data?.data && Array.isArray(response.data.data)) {
         // Process data - ensure status is standardized
         const formattedData = response.data.data.map(rota => ({
@@ -3698,55 +4263,55 @@ const Rotas = () => {
   // Validar quilometragem
   const validarDistanciaKm = (value) => {
     if (!value) return '';
-    
+
     const numero = parseNumeroDecimal(value);
-    
+
     if (numero === null) {
       return 'Digite um valor v√°lido (use v√≠rgula como separador decimal)';
     }
-    
+
     if (numero < 0) {
       return 'A dist√¢ncia n√£o pode ser negativa';
     }
-    
+
     if (numero > 10000) {
       return 'A dist√¢ncia parece excessiva (m√°ximo 10.000 km)';
     }
-    
+
     return '';
   };
 
   // Validar tempo em minutos
   const validarTempoMinutos = (value) => {
     if (!value) return '';
-    
+
     const numero = parseInt(value, 10);
-    
+
     if (isNaN(numero)) {
       return 'Digite um valor num√©rico v√°lido';
     }
-    
+
     if (numero < 0) {
       return 'O tempo n√£o pode ser negativo';
     }
-    
+
     if (numero > 1440) {
       return 'O tempo excede 24 horas (m√°ximo 1440 minutos)';
     }
-    
+
     return '';
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (name === 'distancia_km') {
       // Permite digitar no formato brasileiro (com v√≠rgula)
       setFormData({
         ...formData,
         [name]: value
       });
-      
+
       // Valida o campo
       setInputErrors({
         ...inputErrors,
@@ -3754,13 +4319,13 @@ const Rotas = () => {
       });
       return;
     }
-    
+
     if (name === 'tempo_estimado_minutos') {
       setFormData({
         ...formData,
         [name]: value
       });
-      
+
       // Valida o campo
       setInputErrors({
         ...inputErrors,
@@ -3768,7 +4333,7 @@ const Rotas = () => {
       });
       return;
     }
-    
+
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
@@ -3787,7 +4352,7 @@ const Rotas = () => {
       distancia_km: '',
       tempo_estimado_minutos: ''
     });
-    
+
     if (rota) {
       // Edit mode
       setFormData({
@@ -3822,13 +4387,22 @@ const Rotas = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e) => {
+  // Updated handleSubmit function to accept form values
+  // Add this to your Rotas.jsx file to properly handle the status value
+
+  // Updated handleSubmit function with better status handling
+  const handleSubmit = async (e, formValues) => {
     e.preventDefault();
-    
+
+    // Use formValues if provided, otherwise fall back to formData state
+    const dataToUse = formValues || formData;
+
+    console.log('Using data for submission:', dataToUse);
+
     // Validar campos antes de submeter
-    const distanciaError = validarDistanciaKm(formData.distancia_km);
-    const tempoError = validarTempoMinutos(formData.tempo_estimado_minutos);
-    
+    const distanciaError = validarDistanciaKm(dataToUse.distancia_km);
+    const tempoError = validarTempoMinutos(dataToUse.tempo_estimado_minutos);
+
     if (distanciaError || tempoError) {
       setInputErrors({
         distancia_km: distanciaError,
@@ -3836,17 +4410,21 @@ const Rotas = () => {
       });
       return; // N√£o continua se houver erros
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
-        ...formData,
-        distancia_km: parseNumeroDecimal(formData.distancia_km),
-        tempo_estimado_minutos: formData.tempo_estimado_minutos ? parseInt(formData.tempo_estimado_minutos, 10) : null
+        ...dataToUse,
+        distancia_km: parseNumeroDecimal(dataToUse.distancia_km),
+        tempo_estimado_minutos: dataToUse.tempo_estimado_minutos ? parseInt(dataToUse.tempo_estimado_minutos, 10) : null,
+        // Handle checkbox status value correctly
+        status: dataToUse.status === 'on' ? true : !!dataToUse.status
       };
-      
+
+      console.log('Sending to API:', apiData);
+
       if (currentRota) {
         // Update
         await RotaService.updateRota(currentRota.id, apiData);
@@ -3867,9 +4445,8 @@ const Rotas = () => {
       setIsSubmitting(false);
     }
   };
-
   // Search and filter function
-  const filteredRotas = rotas.filter(rota => 
+  const filteredRotas = rotas.filter(rota =>
     rota.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rota.tipo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rota.origem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -3879,23 +4456,23 @@ const Rotas = () => {
   const columns = [
     { key: 'nome', header: 'Nome' },
     { key: 'tipo', header: 'Tipo' },
-    { 
-      key: 'origem_destino', 
+    {
+      key: 'origem_destino',
       header: 'Origem / Destino',
       format: (item) => `${item.origem || '-'} ‚Üí ${item.destino || '-'}`
     },
-    { 
-      key: 'distancia', 
-      header: 'Dist√¢ncia', 
-      format: (item) => formatarDistanciaKm(item.distancia_km) 
+    {
+      key: 'distancia',
+      header: 'Dist√¢ncia',
+      format: (item) => formatarDistanciaKm(item.distancia_km)
     },
-    { 
-      key: 'tempo', 
-      header: 'Tempo Estimado', 
-      format: (item) => formatarTempoMinutos(item.tempo_estimado_minutos) 
+    {
+      key: 'tempo',
+      header: 'Tempo Estimado',
+      format: (item) => formatarTempoMinutos(item.tempo_estimado_minutos)
     },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       header: 'Status',
       format: (item) => <StatusBadge status={item.status} type="rota" />
     }
@@ -3928,7 +4505,7 @@ const Rotas = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Rotas</h1>
-        <button 
+        <button
           className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center"
           onClick={() => openModal()}
         >
@@ -3938,11 +4515,11 @@ const Rotas = () => {
           Nova Rota
         </button>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="border-b px-6 py-4 flex justify-between items-center">
           <h2 className="font-bold text-lg">Rotas Cadastradas</h2>
-          
+
           {/* Search box */}
           <div className="relative w-full sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -3959,7 +4536,7 @@ const Rotas = () => {
             />
           </div>
         </div>
-        
+
         <div className="p-4">
           {error && (
             <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-md flex items-start">
@@ -3969,7 +4546,7 @@ const Rotas = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           <DataTable
             columns={columns}
             data={filteredRotas}
@@ -3980,14 +4557,15 @@ const Rotas = () => {
           />
         </div>
       </div>
-      
+
       {/* Modal Form */}
-      <FormModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <FormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={currentRota ? "Editar Rota" : "Nova Rota"}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
+        formData={formData} // Pass formData to FormModal
       >
         <div className="grid grid-cols-1 gap-4 mb-4">
           <div>
@@ -4002,7 +4580,7 @@ const Rotas = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="descricao" className="block text-sm font-medium text-gray-700">Descri√ß√£o</label>
             <textarea
@@ -4014,7 +4592,7 @@ const Rotas = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             ></textarea>
           </div>
-          
+
           <div>
             <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">Tipo de Rota</label>
             <select
@@ -4030,7 +4608,7 @@ const Rotas = () => {
               <option value="Especial">Especial</option>
             </select>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="origem" className="block text-sm font-medium text-gray-700">Origem</label>
@@ -4043,7 +4621,7 @@ const Rotas = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="destino" className="block text-sm font-medium text-gray-700">Destino</label>
               <input
@@ -4056,7 +4634,7 @@ const Rotas = () => {
               />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="horario_inicio" className="block text-sm font-medium text-gray-700">Hor√°rio de In√≠cio</label>
@@ -4069,7 +4647,7 @@ const Rotas = () => {
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="horario_fim" className="block text-sm font-medium text-gray-700">Hor√°rio de Fim</label>
               <input
@@ -4082,7 +4660,7 @@ const Rotas = () => {
               />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="distancia_km" className="block text-sm font-medium text-gray-700">Dist√¢ncia (km)</label>
@@ -4102,7 +4680,7 @@ const Rotas = () => {
                 <p className="mt-1 text-xs text-gray-500">Use v√≠rgula como separador decimal (ex: 12,5)</p>
               </div>
             </div>
-            
+
             <div>
               <label htmlFor="tempo_estimado_minutos" className="block text-sm font-medium text-gray-700">Tempo Estimado (minutos)</label>
               <div className="mt-1 relative">
@@ -4120,14 +4698,14 @@ const Rotas = () => {
                   <p className="mt-1 text-sm text-red-600">{inputErrors.tempo_estimado_minutos}</p>
                 )}
                 <p className="mt-1 text-xs text-gray-500">
-                  {formData.tempo_estimado_minutos ? 
-                    `Equivale a ${formatarTempoMinutos(formData.tempo_estimado_minutos)}` : 
+                  {formData.tempo_estimado_minutos ?
+                    `Equivale a ${formatarTempoMinutos(formData.tempo_estimado_minutos)}` :
                     'Digite o tempo total em minutos'}
                 </p>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -4141,7 +4719,7 @@ const Rotas = () => {
           </div>
         </div>
       </FormModal>
-      
+
       {/* Delete Confirmation Modal - moved outside of FormModal */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
@@ -4151,7 +4729,7 @@ const Rotas = () => {
         message={`Tem certeza que deseja excluir a rota ${currentRota?.nome}?`}
         isSubmitting={isSubmitting}
       />
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center">
@@ -6266,18 +6844,14 @@ const Onibus = () => {
     try {
       // Prepare data for API - converting to expected format
       const apiData = {
-      ...formData,
-      placa: unmask(formData.placa),
         ...formData,
+        placa: unmask(formData.placa),
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
       };
       
       console.log('Dados enviados para API:', formData);
-      console.log('Dados processados:', {
-        ...formData,
-        quilometragem: unmaskQuilometragem(formData.quilometragem)
-      });
+      console.log('Dados processados:', formData);
       
       if (currentOnibus) {
         // Update

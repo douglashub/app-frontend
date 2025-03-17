@@ -11,68 +11,77 @@
  * @returns {string} - Status padronizado para uso no frontend
  */
 export const processStatus = (status, entityType = 'default') => {
-    // Processa status em formato booleano
-    if (typeof status === 'boolean') {
-      return status ? 'active' : 'inactive';
+  // Processa status em formato booleano
+  if (typeof status === 'boolean') {
+    return status ? 'active' : 'inactive';
+  }
+  
+  // Processa status em formato numérico
+  if (typeof status === 'number') {
+    return status === 1 ? 'active' : 'inactive';
+  }
+  
+  // Processa status em formato string
+  if (typeof status === 'string') {
+    const statusLower = status.toLowerCase();
+    
+    // Status comuns a todas entidades
+    if (['true', 'ativo', 'ativa', '1', 'active'].includes(statusLower)) {
+      return 'active';
     }
     
-    // Processa status em formato numérico
-    if (typeof status === 'number') {
-      return status === 1 ? 'active' : 'inactive';
+    if (['false', 'inativo', 'inativa', '0', 'inactive'].includes(statusLower)) {
+      return 'inactive';
     }
     
-    // Processa status em formato string
-    if (typeof status === 'string') {
-      const statusLower = status.toLowerCase();
-      
-      // Status comuns a todas entidades
-      if (['true', 'ativo', 'ativa', '1', 'active'].includes(statusLower)) {
-        return 'active';
-      }
-      
-      if (['false', 'inativo', 'inativa', '0', 'inactive'].includes(statusLower)) {
-        return 'inactive';
-      }
-      
-      // Status específicos para motoristas e monitores
-      if (['vacation', 'ferias', 'férias'].includes(statusLower)) {
-        return 'vacation';
-      }
-      
-      if (['leave', 'licenca', 'licença'].includes(statusLower)) {
-        return 'leave';
-      }
-      
-      // Status específicos para ônibus
-      if (['manutenção', 'manutencao', 'em manutenção', 'em manutencao', 'maintenance'].includes(statusLower)) {
-        return 'maintenance';
-      }
-      
-      // Status específicos para viagens
-      if (['completed', 'concluída', 'concluida', 'realizada'].includes(statusLower)) {
-        return 'completed';
-      }
-      
-      if (['pending', 'pendente'].includes(statusLower)) {
-        return 'pending';
-      }
-      
-      if (['in_progress', 'em andamento', 'andamento'].includes(statusLower)) {
-        return 'in_progress';
-      }
-      
-      if (['scheduled', 'programada', 'agendada'].includes(statusLower)) {
-        return 'scheduled';
-      }
-      
-      if (['canceled', 'cancelada', 'cancelado'].includes(statusLower)) {
-        return 'canceled';
-      }
-      
-      // Se chegarmos aqui, é um valor desconhecido - retorna o próprio valor para usar no fallback
-      return statusLower;
+    // Status específicos para motoristas e monitores
+    if (['vacation', 'ferias', 'férias'].includes(statusLower)) {
+      return 'vacation';
     }
     
-    // Fallback para undefined ou outros tipos
-    return 'inactive';
-  };
+    if (['leave', 'licenca', 'licença'].includes(statusLower)) {
+      return 'leave';
+    }
+    
+    // Status específicos para ônibus
+    if (['manutenção', 'manutencao', 'em manutenção', 'em manutencao', 'maintenance'].includes(statusLower)) {
+      return 'maintenance';
+    }
+    
+    // Status específicos para viagens
+    if (['completed', 'concluída', 'concluida', 'realizada'].includes(statusLower)) {
+      return 'completed';
+    }
+    
+    if (['pending', 'pendente'].includes(statusLower)) {
+      return 'pending';
+    }
+    
+    if (['in_progress', 'em andamento', 'andamento'].includes(statusLower)) {
+      return 'in_progress';
+    }
+    
+    if (['scheduled', 'programada', 'agendada'].includes(statusLower)) {
+      return 'scheduled';
+    }
+    
+    if (['canceled', 'cancelada', 'cancelado'].includes(statusLower)) {
+      return 'canceled';
+    }
+    
+    // Status específicos para paradas (novos)
+    if (['em uso', 'operacional', 'funcionando'].includes(statusLower)) {
+      return 'active';
+    }
+    
+    if (['desativada', 'fora de uso', 'bloqueada'].includes(statusLower)) {
+      return 'inactive';
+    }
+    
+    // Se chegarmos aqui, é um valor desconhecido - retorna o próprio valor para usar no fallback
+    return statusLower;
+  }
+  
+  // Fallback para undefined ou outros tipos
+  return 'inactive';
+};
