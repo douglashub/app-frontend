@@ -6,7 +6,7 @@ import FormModal from '../components/common/FormModal';
 import DeleteConfirmationModal from '../components/common/DeleteConfirmationModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { processStatus } from '../utils/statusProcessor'
-import { formatLincensePlate } from '../utils/masks/processors';
+import { formatLicensePlate } from '../utils/masks/processors';
 import PlacaInput from '../utils/masks/components/PlacaInput';
 
 const Onibus = () => {
@@ -141,7 +141,7 @@ const Onibus = () => {
       // Prepare data for API - converting to expected format
       const apiData = {
         ...formData,
-        placa: formatLincensePlate(formData.placa),
+        placa: formatLicensePlate(formData.placa),
         
         capacidade: parseInt(formData.capacidade),
         ano_fabricacao: parseInt(formData.ano_fabricacao)
