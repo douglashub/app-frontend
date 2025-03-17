@@ -10,6 +10,7 @@ import Viagens from './pages/Viagens'
 import Monitores from './pages/Monitores'
 import Motoristas from './pages/Motoristas'
 import Paradas from './pages/Paradas' // Import the new Paradas component
+import Reports from './pages/Reports'
 import brasaoLogo from './assets/images/Brasao.png'
 
 // The App component is the only one using BrowserRouter now
@@ -200,6 +201,18 @@ const AppContent = () => {
                   {!sidebarCollapsed && <span className="ml-3">Monitores</span>}
                 </Link>
               </li>
+              <li>
+                <Link 
+                  to="/relatorios"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/relatorios') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Relatórios"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Relatórios</span>}
+                </Link>
+              </li>
               <li className="mt-6 border-t border-gray-700 pt-4">
                 <Link 
                   to="/login"
@@ -229,6 +242,7 @@ const AppContent = () => {
               <Route path="viagens/*" element={<Viagens />} />
               <Route path="motoristas/*" element={<Motoristas />} />
               <Route path="monitores/*" element={<Monitores />} />
+              <Route path="relatorios/*" element={<Reports />} />
               <Route path="*" element={<Dashboard />} />
             </Routes>
           </main>
