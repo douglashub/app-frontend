@@ -1,18 +1,14 @@
 server {
-
     listen       ${PORT};
     server_name  _;
 
-    # Serve your React build
     root /usr/share/nginx/html;
     index index.html;
 
-    
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    
     location /api/ {
         proxy_pass https://api.micasan.com.br;
         proxy_set_header Host $host;
