@@ -26,3 +26,12 @@ npm-debug.log*
 project_structure.txt
 backendreference.php
 project_structure.txt
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build
+dist
+dist-ssr
