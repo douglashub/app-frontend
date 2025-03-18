@@ -1,25 +1,27 @@
-# 1) Build Stage (Node)
-FROM node:20-alpine AS build
+# Usa Node como base (sem Alpine se preferir)
+FROM node:20-alpine
 
+# Cria e entra na pasta /app
 WORKDIR /app
+
+# Copia e instala dependências
 COPY package*.json ./
 RUN npm install
 
+# Copia o restante do projeto
 COPY . .
+
+# Gera o build de produção (pasta dist/)
 RUN npm run build
-# → Compiles static files into /app/dist
 
-# 2) Final Stage (Nginx)
-FROM nginx:1.25-alpine
+# Instala um servidor estático simples
+RUN npm install -g serve
 
-# Copy your template
-COPY default.conf.template /etc/nginx/templates/default.conf.template
-
-# Copy compiled build output
-COPY --from=build /app/dist /usr/share/nginx/html
-
+# Define porta padrão
 ENV PORT=8080
+
+# Expõe a porta (opcional se a plataforma ignora)
 EXPOSE 8080
 
-# Use envsubst to inject $PORT into the template, then start Nginx
-CMD ["sh", "-c", "envsubst < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# Inicia o server estático apontando pra pasta dist
+CMD ["serve", "-s", "dist", "-l", "0.0.0.0:${PORT}"]
