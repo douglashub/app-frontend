@@ -3,11 +3,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  
+
   return {
     plugins: [react()],
     server: {
-      port: 5173,
+      port: 5173, // local dev
       proxy: {
         '/api': {
           target: 'http://localhost:8000',

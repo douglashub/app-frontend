@@ -1,21 +1,26 @@
-FROM node:20-alpine
+# -----------------------
+# 1) Build Stage (Node)
+# -----------------------
+FROM node:20-alpine AS build
 
 WORKDIR /app
-
-# Copie os arquivos de configuração primeiro para aproveitar o cache
 COPY package*.json ./
-
-# Use npm install em vez de npm ci
 RUN npm install
 
-# Copie o restante dos arquivos
 COPY . .
-
-# Construa o aplicativo
 RUN npm run build
+# This creates /app/dist with your production-ready files
 
-# Exponha a porta que será usada
-EXPOSE 3000
+# -----------------------
+# 2) Production Stage (Nginx)
+# -----------------------
+FROM nginx:1.25-alpine
 
-# Comando para iniciar o aplicativo
-CMD ["npm", "start"]
+# Copy your custom Nginx config into the default conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy the compiled files from the build stage
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
