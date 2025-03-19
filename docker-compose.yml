@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  frontend:
+    build: .
+    container_name: frontend
+    # Mapeia a porta 80 do container (Nginx) para 80 do host
+    ports:
+      - "80:80"
+    # Variáveis de ambiente
+    environment:
+      # VITE_API_URL pode ser lido dentro do Vite no build
+      # Mas lembre que no Vite, as variáveis de build precisam estar definidas ANTES do build
+      - VITE_API_URL=${VITE_API_URL}
+    restart: unless-stopped
