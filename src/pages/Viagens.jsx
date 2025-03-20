@@ -87,24 +87,27 @@ const Viagens = () => {
         HorarioService.getHorarios()
       ]);
 
-      console.log("Resposta da API para horários:", horariosRes); // LOG DOS DADOS DA API
+      console.log("Resposta completa da API para horários:", horariosRes); // LOG COMPLETO
+
+      // Correção: acessando corretamente os horários
+      const horariosArray = horariosRes?.data?.data?.data ?? [];
+
+      console.log("Horários extraídos corretamente:", horariosArray); // LOG PARA VERIFICAR OS DADOS
+
+      const formattedHorarios = horariosArray.map(horario => ({
+        ...horario,
+        hora_inicio: formatTimeForDisplay(horario.hora_inicio),
+        hora_fim: formatTimeForDisplay(horario.hora_fim)
+      }));
+
+      console.log("Horários processados:", formattedHorarios);
 
       setRotas(rotasRes?.data?.data ?? []);
       setOnibus(onibusRes?.data?.data ?? []);
       setMotoristas(motoristasRes?.data?.data ?? []);
       setMonitores(monitoresRes?.data?.data ?? []);
-
-      const formattedHorarios = Array.isArray(horariosRes?.data?.data)
-        ? horariosRes.data.data.map(horario => ({
-          ...horario,
-          hora_inicio: formatTimeForDisplay(horario.hora_inicio),
-          hora_fim: formatTimeForDisplay(horario.hora_fim)
-        }))
-        : [];
-
-      console.log("Horários processados:", formattedHorarios); // LOG DOS DADOS FORMATADOS
-
       setHorarios(formattedHorarios);
+
     } catch (err) {
       console.error("Erro ao buscar dados relacionados:", err);
       showError("Erro ao carregar dados relacionados: " + err.message);
@@ -112,6 +115,7 @@ const Viagens = () => {
       setRelatedDataLoading(false);
     }
   };
+
 
 
 
