@@ -79,20 +79,27 @@ const Viagens = () => {
   const fetchRelatedData = async () => {
     setRelatedDataLoading(true);
     try {
-      // Buscar todos os dados relacionados
       const [rotasRes, onibusRes, motoristasRes, monitoresRes, horariosRes] = await Promise.all([
         RotaService.getRotas(),
         OnibusService.getOnibus(),
         MotoristaService.getMotoristas(),
         MonitorService.getMonitores(),
-        HorarioService.getHorarios() // Adicionando a busca pelos horários
+        HorarioService.getHorarios()
       ]);
 
-      setRotas(rotasRes?.data?.data ?? rotasRes?.data ?? []);
-      setOnibus(onibusRes?.data?.data ?? onibusRes?.data ?? []);
-      setMotoristas(motoristasRes?.data?.data ?? motoristasRes?.data ?? []);
-      setMonitores(monitoresRes?.data?.data ?? monitoresRes?.data ?? []);
-      setHorarios(horariosRes?.data?.data ?? horariosRes?.data ?? []); // Adicionando os horários no state
+      setRotas(rotasRes?.data?.data ?? []);
+      setOnibus(onibusRes?.data?.data ?? []);
+      setMotoristas(motoristasRes?.data?.data ?? []);
+      setMonitores(monitoresRes?.data?.data ?? []);
+
+      // Atualizando horários para o formato correto
+      const formattedHorarios = (horariosRes?.data?.data ?? []).map(horario => ({
+        ...horario,
+        hora_inicio: formatTimeForDisplay(horario.hora_inicio), // Converte para "HH:mm"
+        hora_fim: formatTimeForDisplay(horario.hora_fim) // Converte para "HH:mm"
+      }));
+
+      setHorarios(formattedHorarios);
 
     } catch (err) {
       console.error('Erro ao buscar dados relacionados:', err);
@@ -101,6 +108,7 @@ const Viagens = () => {
       setRelatedDataLoading(false);
     }
   };
+
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -163,39 +171,23 @@ const Viagens = () => {
   // Format time values from API format (H:i) to HTML time input format (HH:mm)
   const formatTimeForDisplay = (time) => {
     if (!time) return '';
-
     try {
-      // Handle different time formats that might come from the API
-      const timeParts = time.split(':');
-
-      if (timeParts.length < 2) return time; // Return as is if not a valid time format
-
-      const hours = timeParts[0].padStart(2, '0');
-      const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
-
+      const [hours, minutes] = time.split(':');
       return `${hours}:${minutes}`;
     } catch (error) {
-      console.error('Error formatting time for display:', error);
-      return time || '';
+      console.error('Erro ao formatar horário para exibição:', error);
+      return '';
     }
   };
 
-  // Format time values from HTML time input format (HH:mm) to API format (H:i)
   const formatTimeForApi = (time) => {
-    if (!time) return '';
-
+    if (!time) return null;
     try {
-      // Extract hours and minutes
       const [hours, minutes] = time.split(':');
-
-      // Convert hours to integer to remove leading zeros
-      const hour = parseInt(hours, 10);
-
-      // Return exactly in the format expected by the API (H:i)
-      return `${hour}:${minutes}`;
+      return `${hours}:${minutes}:00`; // Mantém o formato correto "HH:mm:ss"
     } catch (error) {
-      console.error('Error formatting time for API:', error);
-      return '';
+      console.error('Erro ao formatar horário para API:', error);
+      return null;
     }
   };
 
@@ -229,11 +221,11 @@ const Viagens = () => {
     try {
       const apiData = {
         ...formData,
-        hora_saida_prevista: formData.hora_saida_prevista || null,
-        hora_chegada_prevista: formData.hora_chegada_prevista || null,
-        hora_saida_real: formData.hora_saida_real || null,
-        hora_chegada_real: formData.hora_chegada_real || null,
-        horario_id: formData.horario_id || null, // Agora permite enviar null
+        hora_saida_prevista: formData.hora_saida_prevista ? formatTimeForApi(formData.hora_saida_prevista) : null,
+        hora_chegada_prevista: formData.hora_chegada_prevista ? formatTimeForApi(formData.hora_chegada_prevista) : null,
+        hora_saida_real: formData.hora_saida_real ? formatTimeForApi(formData.hora_saida_real) : null,
+        hora_chegada_real: formData.hora_chegada_real ? formatTimeForApi(formData.hora_chegada_real) : null,
+        horario_id: formData.horario_id || null,
         status: formData.status ? 1 : 0
       };
 
@@ -257,6 +249,7 @@ const Viagens = () => {
       setIsSubmitting(false);
     }
   };
+
 
 
   // Get the name of a linked entity based on its ID
@@ -440,16 +433,13 @@ const Viagens = () => {
             <select
               name="horario_id"
               id="horario_id"
-              value={formData.horario_id || ""} // Se for null, mantém vazio
+              value={formData.horario_id || ""}
               onChange={handleInputChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 
-              focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              disabled={relatedDataLoading}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={relatedDataLoading || horarios.length === 0}
             >
               <option value="">Nenhum horário selecionado</option>
-
-              {/* Se houver horários disponíveis, exibe as opções */}
-              {Array.isArray(horarios) && horarios.length > 0 ? (
+              {horarios.length > 0 ? (
                 horarios.map(horario => (
                   <option key={horario.id} value={horario.id}>
                     {horario.hora_inicio} - {horario.hora_fim}
@@ -460,7 +450,6 @@ const Viagens = () => {
               )}
             </select>
           </div>
-
 
 
           <div>
