@@ -93,11 +93,13 @@ const Viagens = () => {
       setMonitores(monitoresRes?.data?.data ?? []);
 
       // Atualizando horários para o formato correto
-      const formattedHorarios = (horariosRes?.data?.data ?? []).map(horario => ({
-        ...horario,
-        hora_inicio: formatTimeForDisplay(horario.hora_inicio), // Converte para "HH:mm"
-        hora_fim: formatTimeForDisplay(horario.hora_fim) // Converte para "HH:mm"
-      }));
+      const formattedHorarios = Array.isArray(horariosRes?.data?.data)
+        ? horariosRes.data.data.map(horario => ({
+          ...horario,
+          hora_inicio: formatTimeForDisplay(horario.hora_inicio), // Converte para "HH:mm"
+          hora_fim: formatTimeForDisplay(horario.hora_fim) // Converte para "HH:mm"
+        }))
+        : []; // Se não for um array, retorna um array vazio
 
       setHorarios(formattedHorarios);
 
