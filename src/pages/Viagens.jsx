@@ -87,29 +87,32 @@ const Viagens = () => {
         HorarioService.getHorarios()
       ]);
 
+      console.log("Resposta da API para horários:", horariosRes); // LOG DOS DADOS DA API
+
       setRotas(rotasRes?.data?.data ?? []);
       setOnibus(onibusRes?.data?.data ?? []);
       setMotoristas(motoristasRes?.data?.data ?? []);
       setMonitores(monitoresRes?.data?.data ?? []);
 
-      // Atualizando horários para o formato correto
       const formattedHorarios = Array.isArray(horariosRes?.data?.data)
         ? horariosRes.data.data.map(horario => ({
           ...horario,
-          hora_inicio: formatTimeForDisplay(horario.hora_inicio), // Converte para "HH:mm"
-          hora_fim: formatTimeForDisplay(horario.hora_fim) // Converte para "HH:mm"
+          hora_inicio: formatTimeForDisplay(horario.hora_inicio),
+          hora_fim: formatTimeForDisplay(horario.hora_fim)
         }))
-        : []; // Se não for um array, retorna um array vazio
+        : [];
+
+      console.log("Horários processados:", formattedHorarios); // LOG DOS DADOS FORMATADOS
 
       setHorarios(formattedHorarios);
-
     } catch (err) {
-      console.error('Erro ao buscar dados relacionados:', err);
-      showError('Erro ao carregar dados relacionados: ' + err.message);
+      console.error("Erro ao buscar dados relacionados:", err);
+      showError("Erro ao carregar dados relacionados: " + err.message);
     } finally {
       setRelatedDataLoading(false);
     }
   };
+
 
 
   const handleInputChange = (e) => {
@@ -174,6 +177,7 @@ const Viagens = () => {
   const formatTimeForDisplay = (time) => {
     if (!time) return '';
     try {
+      console.log("Formatando horário:", time); // DEBUG
       const [hours, minutes] = time.split(':');
       return `${hours}:${minutes}`;
     } catch (error) {
@@ -181,6 +185,7 @@ const Viagens = () => {
       return '';
     }
   };
+
 
   const formatTimeForApi = (time) => {
     if (!time) return null;
@@ -438,7 +443,7 @@ const Viagens = () => {
               value={formData.horario_id || ""}
               onChange={handleInputChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              disabled={relatedDataLoading || horarios.length === 0}
+              disabled={relatedDataLoading || horarios.length === 0} // SOMENTE DESABILITA SE AMBOS FOREM VERDADEIROS
             >
               <option value="">Nenhum horário selecionado</option>
               {horarios.length > 0 ? (
@@ -451,6 +456,7 @@ const Viagens = () => {
                 <option disabled>Nenhum horário disponível</option>
               )}
             </select>
+
           </div>
 
 
