@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViagemService, RotaService, OnibusService, MotoristaService, MonitorService } from '../api/services';
+import { ViagemService, RotaService, OnibusService, MotoristaService, MonitorService, HorarioService } from '../api/services';
 import DataTable from '../components/common/DataTable';
 import StatusBadge from '../components/common/StatusBadge';
 import FormModal from '../components/common/FormModal';
@@ -27,6 +27,7 @@ const Viagens = () => {
   const [motoristas, setMotoristas] = useState([]);
   const [monitores, setMonitores] = useState([]);
   const [relatedDataLoading, setRelatedDataLoading] = useState(false);
+  const [horarios, setHorarios] = useState([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -35,7 +36,7 @@ const Viagens = () => {
     onibus_id: '',
     motorista_id: '',
     monitor_id: '',
-    horario_id: '1', // Default value, will be replaced with actual data
+    horario_id: '', // Default value, will be replaced with actual data
     hora_saida_prevista: '',
     hora_chegada_prevista: '',
     hora_saida_real: '',
@@ -78,20 +79,23 @@ const Viagens = () => {
   const fetchRelatedData = async () => {
     setRelatedDataLoading(true);
     try {
-      // Fetch related data for dropdowns
-      const [rotasRes, onibusRes, motoristasRes, monitoresRes] = await Promise.all([
+      // Buscar todos os dados relacionados
+      const [rotasRes, onibusRes, motoristasRes, monitoresRes, horariosRes] = await Promise.all([
         RotaService.getRotas(),
         OnibusService.getOnibus(),
         MotoristaService.getMotoristas(),
-        MonitorService.getMonitores()
+        MonitorService.getMonitores(),
+        HorarioService.getHorarios() // Adicionando a busca pelos horários
       ]);
 
-      setRotas(rotasRes.data.data || []);
-      setOnibus(onibusRes.data.data || []);
-      setMotoristas(motoristasRes.data.data || []);
-      setMonitores(monitoresRes.data.data || []);
+      setRotas(rotasRes?.data?.data ?? rotasRes?.data ?? []);
+      setOnibus(onibusRes?.data?.data ?? onibusRes?.data ?? []);
+      setMotoristas(motoristasRes?.data?.data ?? motoristasRes?.data ?? []);
+      setMonitores(monitoresRes?.data?.data ?? monitoresRes?.data ?? []);
+      setHorarios(horariosRes?.data?.data ?? horariosRes?.data ?? []); // Adicionando os horários no state
+
     } catch (err) {
-      console.error('Error fetching related data:', err);
+      console.error('Erro ao buscar dados relacionados:', err);
       showError('Erro ao carregar dados relacionados: ' + err.message);
     } finally {
       setRelatedDataLoading(false);
@@ -108,39 +112,38 @@ const Viagens = () => {
 
   const openModal = (viagem = null) => {
     if (viagem) {
-      // Edit mode
-      // Buscar os dados do motorista e monitor para obter os telefones
       const motorista = motoristas.find(m => m.id === viagem.motorista_id);
       const monitor = monitores.find(m => m.id === viagem.monitor_id);
 
-      const data = {
+      setFormData({
         data_viagem: viagem.data_viagem || '',
         rota_id: viagem.rota_id || '',
         onibus_id: viagem.onibus_id || '',
         motorista_id: viagem.motorista_id || '',
         monitor_id: viagem.monitor_id || '',
-        horario_id: viagem.horario_id || '1',
-        hora_saida_prevista: viagem.hora_saida_prevista ? formatTimeForDisplay(viagem.hora_saida_prevista) : '',
-        hora_chegada_prevista: viagem.hora_chegada_prevista ? formatTimeForDisplay(viagem.hora_chegada_prevista) : '',
-        hora_saida_real: viagem.hora_saida_real ? formatTimeForDisplay(viagem.hora_saida_real) : '',
-        hora_chegada_real: viagem.hora_chegada_real ? formatTimeForDisplay(viagem.hora_chegada_real) : '',
+        horario_id: viagem.horario_id || '', // Mantém vazio caso não exista
+
+        hora_saida_prevista: formatTimeForDisplay(viagem.hora_saida_prevista),
+        hora_chegada_prevista: formatTimeForDisplay(viagem.hora_chegada_prevista),
+        hora_saida_real: formatTimeForDisplay(viagem.hora_saida_real),
+        hora_chegada_real: formatTimeForDisplay(viagem.hora_chegada_real),
+
         observacoes: viagem.observacoes || '',
-        status: viagem.status === 'completed' || viagem.status === true || viagem.status === 1,
+        status: viagem.status === 'concluida' || viagem.status === true,
+
         telefone_motorista: motorista ? motorista.telefone : '',
         telefone_monitor: monitor ? monitor.telefone : ''
-      };
-      setFormData(data);
+      });
+
       setCurrentViagem(viagem);
     } else {
-      // Create mode - set default values
-      const today = new Date().toISOString().split('T')[0];
       setFormData({
-        data_viagem: today,
+        data_viagem: new Date().toISOString().split('T')[0],
         rota_id: '',
         onibus_id: '',
         motorista_id: '',
         monitor_id: '',
-        horario_id: '1', // Default value
+        horario_id: '', // Mantém vazio ao criar uma nova viagem
         hora_saida_prevista: '07:00',
         hora_chegada_prevista: '08:00',
         hora_saida_real: '',
@@ -150,24 +153,26 @@ const Viagens = () => {
         telefone_motorista: '',
         telefone_monitor: ''
       });
+
       setCurrentViagem(null);
     }
     setIsModalOpen(true);
   };
 
+
   // Format time values from API format (H:i) to HTML time input format (HH:mm)
   const formatTimeForDisplay = (time) => {
     if (!time) return '';
-    
+
     try {
       // Handle different time formats that might come from the API
       const timeParts = time.split(':');
-      
+
       if (timeParts.length < 2) return time; // Return as is if not a valid time format
-      
+
       const hours = timeParts[0].padStart(2, '0');
       const minutes = timeParts[1].substring(0, 2).padStart(2, '0'); // Take only first 2 chars & ensure 2 digits
-      
+
       return `${hours}:${minutes}`;
     } catch (error) {
       console.error('Error formatting time for display:', error);
@@ -178,14 +183,14 @@ const Viagens = () => {
   // Format time values from HTML time input format (HH:mm) to API format (H:i)
   const formatTimeForApi = (time) => {
     if (!time) return '';
-    
+
     try {
       // Extract hours and minutes
       const [hours, minutes] = time.split(':');
-      
+
       // Convert hours to integer to remove leading zeros
       const hour = parseInt(hours, 10);
-      
+
       // Return exactly in the format expected by the API (H:i)
       return `${hour}:${minutes}`;
     } catch (error) {
@@ -198,7 +203,7 @@ const Viagens = () => {
   const handleMotoristaChange = (e) => {
     const motoristaId = e.target.value;
     const motorista = motoristas.find(m => m.id === parseInt(motoristaId));
-    
+
     setFormData({
       ...formData,
       motorista_id: motoristaId,
@@ -209,7 +214,7 @@ const Viagens = () => {
   const handleMonitorChange = (e) => {
     const monitorId = e.target.value;
     const monitor = monitores.find(m => m.id === parseInt(monitorId));
-    
+
     setFormData({
       ...formData,
       monitor_id: monitorId,
@@ -222,50 +227,37 @@ const Viagens = () => {
     setIsSubmitting(true);
 
     try {
-      // Format the data for API
       const apiData = {
         ...formData,
-        hora_saida_prevista: formData.hora_saida_prevista,
-        hora_chegada_prevista: formData.hora_chegada_prevista,
+        hora_saida_prevista: formData.hora_saida_prevista || null,
+        hora_chegada_prevista: formData.hora_chegada_prevista || null,
         hora_saida_real: formData.hora_saida_real || null,
         hora_chegada_real: formData.hora_chegada_real || null,
-        status: formData.status
+        horario_id: formData.horario_id || null, // Agora permite enviar null
+        status: formData.status ? 1 : 0
       };
 
-      // Remover campos que não pertencem ao modelo de Viagem
       delete apiData.telefone_motorista;
       delete apiData.telefone_monitor;
 
       if (currentViagem) {
-        // Update
         await ViagemService.updateViagem(currentViagem.id, apiData);
         showSuccess('Viagem atualizada com sucesso!');
       } else {
-        // Create
         await ViagemService.createViagem(apiData);
         showSuccess('Viagem criada com sucesso!');
       }
+
       setIsModalOpen(false);
       fetchViagens();
     } catch (err) {
-      console.error('Error saving viagem:', err);
-
-      if (err.response && err.response.status === 422) {
-        const validationErrors = err.response.data.errors;
-        if (validationErrors) {
-          const errorMessages = Object.entries(validationErrors)
-            .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-            .join('\n');
-
-          showError(`Erro de validação:\n${errorMessages}`);
-        }
-      } else {
-        showError('Erro ao salvar viagem: ' + (err.response?.data?.message || err.message));
-      }
+      console.error('Erro ao salvar viagem:', err);
+      showError('Erro ao salvar viagem: ' + (err.response?.data?.message || err.message));
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   // Get the name of a linked entity based on its ID
   const getRotaName = (id) => {
@@ -322,7 +314,10 @@ const Viagens = () => {
     {
       key: 'status',
       header: 'Status',
-      format: (item) => <StatusBadge status={item.status} type="viagem" />
+      format: (item) => {
+        const statusText = item.status === 'concluida' || item.status === true || item.status === 1 ? 'Concluída' : 'Pendente';
+        return <StatusBadge status={statusText} type="viagem" />;
+      }
     }
   ];
 
@@ -436,6 +431,26 @@ const Viagens = () => {
               onChange={handleInputChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
+          </div>
+
+          <div>
+            <label htmlFor="horario_id" className="block text-sm font-medium text-gray-700">Horário</label>
+            <select
+              name="horario_id"
+              id="horario_id"
+              required
+              value={formData.horario_id}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={relatedDataLoading}
+            >
+              <option value="">Selecione um horário</option>
+              {horarios.map(horario => (
+                <option key={horario.id} value={horario.id}>
+                  {horario.hora_inicio} - {horario.hora_fim}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
