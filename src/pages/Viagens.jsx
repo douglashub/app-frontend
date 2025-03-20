@@ -434,24 +434,34 @@ const Viagens = () => {
           </div>
 
           <div>
-            <label htmlFor="horario_id" className="block text-sm font-medium text-gray-700">Horário</label>
+            <label htmlFor="horario_id" className="block text-sm font-medium text-gray-700">
+              Horário
+            </label>
             <select
               name="horario_id"
               id="horario_id"
               required
               value={formData.horario_id}
               onChange={handleInputChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 
+              focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={relatedDataLoading}
             >
               <option value="">Selecione um horário</option>
-              {horarios.map(horario => (
-                <option key={horario.id} value={horario.id}>
-                  {horario.hora_inicio} - {horario.hora_fim}
-                </option>
-              ))}
+
+              {/* Verifica se `horarios` é um array válido antes de mapear */}
+              {Array.isArray(horarios) && horarios.length > 0 ? (
+                horarios.map(horario => (
+                  <option key={horario.id} value={horario.id}>
+                    {horario.hora_inicio} - {horario.hora_fim}
+                  </option>
+                ))
+              ) : (
+                <option disabled>Nenhum horário disponível</option>
+              )}
             </select>
           </div>
+
 
           <div>
             <label htmlFor="rota_id" className="block text-sm font-medium text-gray-700">Rota</label>
