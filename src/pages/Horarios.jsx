@@ -99,7 +99,7 @@ const Horarios = () => {
             const formattedData = horarioData.map(horario => {
                 // Converter os dias da semana para nomes
                 const diasFormatados = Array.isArray(horario.dias_semana) 
-                    ? horario.dias_semana.map(dia => diasSemanaOptions[dia - 1]?.label || '').join(', ')
+                    ? horario.dias_semana.map(dia => diasSemanaOptions[dia]?.label || '').join(', ')
                     : '';
             
                 return {
@@ -164,7 +164,7 @@ const Horarios = () => {
                 tipo: horario.tipo || 'regular',
                 status: horario.status === 'active' || horario.status === true,
                 rota_id: horario.rota_id || '',
-                dias_semana: Array.isArray(horario.dias_semana) ? horario.dias_semana.map(dia => diasSemanaOptions[dia - 1]?.value || '') : []
+                dias_semana: Array.isArray(horario.dias_semana) ? horario.dias_semana.map(dia => diasSemanaOptions[dia]?.value || '') : []
             });
             setCurrentHorario(horario);
         } else {
@@ -199,13 +199,13 @@ const Horarios = () => {
 
     // Mapeamento dos dias da semana para os valores esperados pela API
     const diasSemanaMap = {
-        'segunda': 1,
-        'terca': 2,
-        'quarta': 3,
-        'quinta': 4,
-        'sexta': 5,
-        'sabado': 6,
-        'domingo': 7
+        'segunda': 0,
+        'terca': 1,
+        'quarta': 2,
+        'quinta': 3,
+        'sexta': 4,
+        'sabado': 5,
+        'domingo': 6
       };
       
 
@@ -282,7 +282,7 @@ const Horarios = () => {
             format: (item) => {
                 if (!Array.isArray(item.dias_semana)) return '—';
                 return item.dias_semana
-                    .map(dia => diasSemanaOptions[dia - 1]?.label || '')
+                    .map(dia => diasSemanaOptions[dia]?.label || '')
                     .filter(Boolean)
                     .join(', ') || '—';
             }
