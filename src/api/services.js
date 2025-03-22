@@ -56,38 +56,15 @@ function formatTimeForApi(time) {
     // Split time into hours and minutes
     const [hours, minutes] = time.split(':');
 
-    // Convert hours to integer to remove leading zeros
-    const hour = parseInt(hours, 10);
+    // Ensure both hours and minutes have two digits
+    const hour = parseInt(hours, 10).toString().padStart(2, '0');
+    const minute = parseInt(minutes, 10).toString().padStart(2, '0');
 
-    // Return formatted time (H:i format as Laravel expects)
-    return `${hour}:${minutes}`;
+    // Return in HH:mm format (both hours and minutes with two digits)
+    return `${hour}:${minute}`;
   } catch (error) {
     console.error('Error formatting time:', error);
     return null;
-  }
-}
-
-/**
- * Format time values from API (H:i) to HTML time input format (HH:mm)
- * @param {string} time - Time in H:i format
- * @returns {string} - Time in HH:mm format
- */
-function formatTimeForDisplay(time) {
-  if (!time) return '';
-
-  try {
-    // Handle different time formats from API
-    const timeParts = time.split(':');
-
-    if (timeParts.length < 2) return time; // Return as is if not valid
-
-    const hours = timeParts[0].padStart(2, '0');
-    const minutes = timeParts[1].substring(0, 2).padStart(2, '0');
-
-    return `${hours}:${minutes}`;
-  } catch (error) {
-    console.error('Error formatting time for display:', error);
-    return time || '';
   }
 }
 
@@ -279,8 +256,13 @@ export const HorarioService = {
   }),
 
   createHorario: (data) => {
-    // Format time fields
+    // Format time fields and validate data
     const formattedData = { ...data };
+
+    // Ensure dias_semana is an array of integers
+    if (formattedData.dias_semana && Array.isArray(formattedData.dias_semana)) {
+      formattedData.dias_semana = formattedData.dias_semana.map(Number);
+    }
 
     if (formattedData.hora_inicio) {
       formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
@@ -301,8 +283,13 @@ export const HorarioService = {
   },
 
   updateHorario: (id, data) => {
-    // Format time fields
+    // Format time fields and validate data
     const formattedData = { ...data };
+
+    // Ensure dias_semana is an array of integers
+    if (formattedData.dias_semana && Array.isArray(formattedData.dias_semana)) {
+      formattedData.dias_semana = formattedData.dias_semana.map(Number);
+    }
 
     if (formattedData.hora_inicio) {
       formattedData.hora_inicio = formatTimeForApi(formattedData.hora_inicio);
@@ -851,4 +838,5 @@ export const ParadaService = {
   })
 };
 
+export { formatTimeForApi };
 export default api;

@@ -8,8 +8,14 @@ export default function DataTable({
   loading,
   error
 }) {
-  // Ensure data is always an array
-  const safeData = Array.isArray(data) ? data : [];
+  // Ensure data is always an array and handle nested data structures
+  const safeData = Array.isArray(data) 
+    ? data 
+    : Array.isArray(data?.data) 
+      ? data.data 
+      : Array.isArray(data?.data?.data) 
+        ? data.data.data 
+        : [];
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);

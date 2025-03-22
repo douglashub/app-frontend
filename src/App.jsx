@@ -9,7 +9,8 @@ import Rotas from './pages/Rotas'
 import Viagens from './pages/Viagens'
 import Monitores from './pages/Monitores'
 import Motoristas from './pages/Motoristas'
-import Paradas from './pages/Paradas' // Import the new Paradas component
+import Paradas from './pages/Paradas'
+import Horarios from './pages/Horarios'
 import Reports from './pages/Reports'
 import brasaoLogo from './assets/images/Brasao.png'
 
@@ -167,6 +168,18 @@ const AppContent = () => {
               </li>
               <li>
                 <Link 
+                  to="/horarios"
+                  className={`flex items-center py-3 px-4 w-full text-left ${isActive('/horarios') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                  title="Horários"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {!sidebarCollapsed && <span className="ml-3">Horários</span>}
+                </Link>
+              </li>
+              <li>
+                <Link 
                   to="/viagens"
                   className={`flex items-center py-3 px-4 w-full text-left ${isActive('/viagens') ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
                   title="Viagens"
@@ -238,7 +251,8 @@ const AppContent = () => {
               <Route path="alunos/*" element={<Alunos />} />
               <Route path="onibus/*" element={<Onibus />} />
               <Route path="rotas/*" element={<Rotas />} />
-              <Route path="paradas/*" element={<Paradas />} /> {/* Added new route for Paradas */}
+              <Route path="paradas/*" element={<Paradas />} />
+              <Route path="horarios/*" element={<Horarios />} />
               <Route path="viagens/*" element={<Viagens />} />
               <Route path="motoristas/*" element={<Motoristas />} />
               <Route path="monitores/*" element={<Monitores />} />

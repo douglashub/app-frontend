@@ -52,24 +52,29 @@ export default function FormModal({
   const handleSubmit = (event) => {
     event.preventDefault();
     
-    // Create a FormData object
     const formElements = event.target.elements;
     const formValues = {};
+    const diasSelecionados = [];
     
     // Debug form elements directly
     console.log('=== ELEMENTOS DO FORMULÁRIO ===');
     for (let i = 0; i < formElements.length; i++) {
       const element = formElements[i];
-      if (element.name) {
-        console.log(`${element.name}: ${element.value}`);
-        // Only add elements with names to our form values
-        if (element.type === 'checkbox') {
+      if (!element.name) continue;
+      
+      if (element.type === 'checkbox') {
+        if (element.name === 'dias_semana' && element.checked) {
+          diasSelecionados.push(element.value);
+        } else if (element.name !== 'dias_semana') {
           formValues[element.name] = element.checked;
-        } else {
-          formValues[element.name] = element.value;
         }
+      } else {
+        formValues[element.name] = element.value;
       }
     }
+    
+    formValues.dias_semana = diasSelecionados;
+    console.log('✔️ dias_semana coletado corretamente:', formValues.dias_semana);
     
     // Debug formData
     console.log('=== DADOS SENDO ENVIADOS PARA O BACKEND ===');
@@ -116,44 +121,38 @@ export default function FormModal({
                 <div className="mt-4">
                   <form onSubmit={handleSubmit}>
                     {React.Children.map(children, child => {
-                      // Debug each child to see what's being rendered
-                      console.log('Rendering child:', child?.props?.name);
-                      
-                      if (child?.type === 'input' && maskedFields[child.props.name]) {
-                        const isQuilometragem = child.props.name === 'quilometragem';
-                        
-                        // Log input properties
-                        console.log(`Input field: ${child.props.name}`, {
-                          value: child.props.value,
-                          hasValue: !!child.props.value,
-                          inFormData: formData?.[child.props.name] !== undefined
-                        });
-                        
-                        const clonedChild = React.cloneElement(child, {
-                          component: MaskedInput,
-                          mask: MASKS[maskedFields[child.props.name] === 'PLACA' ? 'PLACA_MERCOSUL' : maskedFields[child.props.name]],
-                          placeholder: isQuilometragem ? 'Ex: 15000.50 km' : child.props.placeholder,
-                          step: isQuilometragem ? '0.01' : child.props.step,
-                          onChange: (e) => {
-                            console.log(`Changing ${child.props.name} to:`, e.target.value);
-                            if (child.props.onChange) child.props.onChange(e);
-                            if (onInputChange) onInputChange(e);
-                          }
-                        });
+                    if (!React.isValidElement(child)) return child;
 
-                        return (
-                          <>
-                            {clonedChild}
-                            {isQuilometragem && formData.quilometragem && !unmaskQuilometragem(formData.quilometragem) && (
-                              <div className="text-red-500 text-sm mt-1">
-                                Formato inválido! Use números com até 2 casas decimais (Ex: 15000.50)
-                              </div>
-                            )}
-                          </>
-                        );
-                      }
-                      return child;
-                    })}
+                    // Se o elemento for um input direto e tiver uma máscara definida
+                    if (child.type === 'input' && child.props?.name && maskedFields[child.props.name]) {
+                      const isQuilometragem = child.props.name === 'quilometragem';
+                      
+                      const clonedChild = React.cloneElement(child, {
+                        component: MaskedInput,
+                        mask: MASKS[maskedFields[child.props.name] === 'PLACA' ? 'PLACA_MERCOSUL' : maskedFields[child.props.name]],
+                        placeholder: isQuilometragem ? 'Ex: 15000.50 km' : child.props.placeholder,
+                        step: isQuilometragem ? '0.01' : child.props.step,
+                        onChange: (e) => {
+                          if (child.props.onChange) child.props.onChange(e);
+                          if (onInputChange) onInputChange(e);
+                        }
+                      });
+
+                      return (
+                        <>
+                          {clonedChild}
+                          {isQuilometragem && formData.quilometragem && !unmaskQuilometragem(formData.quilometragem) && (
+                            <div className="text-red-500 text-sm mt-1">
+                              Formato inválido! Use números com até 2 casas decimais (Ex: 15000.50)
+                            </div>
+                          )}
+                        </>
+                      );
+                    }
+
+                    // Para elementos que não são inputs com máscara, renderiza normalmente
+                    return child;
+                  })}
 
                     <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                       <button
