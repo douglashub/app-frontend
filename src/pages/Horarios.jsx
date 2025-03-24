@@ -216,12 +216,14 @@ const Horarios = () => {
         try {
             const apiData = {
                 ...formData,
-                status: formData.status,
+                status: Boolean(formData.status),
                 tipo: formData.tipo.toUpperCase(),
                 hora_inicio: formatTimeForApi(formData.hora_inicio),
                 hora_fim: formatTimeForApi(formData.hora_fim),
                 dias_semana: formData.dias_semana.map(dia => diasSemanaMap[dia])
             };
+            
+            console.log('Dados enviados para API:', apiData);
     
             if (currentHorario) {
                 await HorarioService.updateHorario(currentHorario.id, apiData);
@@ -288,11 +290,14 @@ const Horarios = () => {
             }
         },
         { 
-            key: 'tipo', 
-            header: 'Tipo', 
+            key: 'tipo',
+            header: 'Tipo',
             format: (item) => {
-                const tipo = item.tipo?.toLowerCase() || 'regular';
-                return tipo.charAt(0).toUpperCase() + tipo.slice(1);
+                if (!item.tipo) return '—';
+                const tipoLower = item.tipo.toString().toLowerCase();
+                if (tipoLower === 'especial') return 'Especial';
+                if (tipoLower === 'regular') return 'Regular';
+                return tipoLower.charAt(0).toUpperCase() + tipoLower.slice(1);
             }
         },
         {
