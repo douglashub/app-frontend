@@ -17,23 +17,18 @@ COPY . .
 # Faz o build (gera /dist)
 RUN npm run build
 
-
 # ======================================
-# STAGE 2: Container final (Nginx)
+# STAGE 2: Contêiner de deploy (só os arquivos estáticos)
 # ======================================
-FROM nginx:1.25-alpine
+FROM busybox:latest
 
-# Copia build gerada do stage anterior
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Cria diretório para o Certbot
-RUN mkdir -p /var/www/letsencrypt
+# Copia os arquivos de build
+COPY --from=builder /app/dist /app/dist
 
-# Copia a configuração do Nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Define volume para compartilhar os arquivos estáticos
+VOLUME /app/dist
 
-# Expõe portas 80 e 443
-EXPOSE 80 443
-
-# Inicia Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Comando que mantém o contêiner rodando
+CMD ["tail", "-f", "/dev/null"]
