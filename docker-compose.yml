@@ -2,12 +2,48 @@ services:
   frontend:
     build: .
     container_name: frontend
-    # Mapeia a porta 80 do container (Nginx) para 80 do host
+    restart: unless-stopped
+    # Não exponha diretamente a porta 80 - o NGINX vai fazer isso
+    # ports:
+    #   - "80:80"
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+    networks:
+      - frontend_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: frontend_nginx
+    restart: unless-stopped
     ports:
       - "80:80"
-    # Variáveis de ambiente
-    environment:
-      # VITE_API_URL pode ser lido dentro do Vite no build
-      # Mas lembre que no Vite, as variáveis de build precisam estar definidas ANTES do build
-      - VITE_API_URL=${VITE_API_URL}
-    restart: unless-stopped
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt           # Montar certificados SSL no container
+      - /var/lib/letsencrypt:/var/lib/letsencrypt
+      - ./certbot-www:/var/www/letsencrypt
+    depends_on:
+      - frontend
+    networks:
+      - frontend_network
+
+  certbot:
+    image: certbot/certbot
+    container_name: frontend_certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/lib/letsencrypt:/var/lib/letsencrypt
+      - ./certbot-www:/var/www/letsencrypt
+    depends_on:
+      - nginx
+    entrypoint: >
+      /bin/sh -c 'trap exit TERM;
+      while :;
+      do certbot renew --webroot -w /var/www/letsencrypt --quiet;
+      sleep 12h & wait $${!};
+      done'
+
+networks:
+  frontend_network:
+    driver: bridge

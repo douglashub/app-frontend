@@ -26,13 +26,14 @@ FROM nginx:1.25-alpine
 # Copia build gerada do stage anterior
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Opcional: se você tiver um nginx.conf customizado para rotas, etc.
-# Exemplo: redirecionar /api para https://api.micasan.com.br
-# Se não precisar, pode remover essa parte e usar o default do Nginx
+# Cria diretório para o Certbot
+RUN mkdir -p /var/www/letsencrypt
+
+# Copia a configuração do Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expõe porta 80
-EXPOSE 80
+# Expõe portas 80 e 443
+EXPOSE 80 443
 
 # Inicia Nginx
 CMD ["nginx", "-g", "daemon off;"]
