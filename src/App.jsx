@@ -54,15 +54,32 @@ const AppContent = () => {
 
   return (
     <NotificationProvider>
-      <div className="h-screen flex flex-col md:flex-row w-full bg-blue-50 overflow-hidden">
-        {/* Sidebar - Always visible but collapsible on smaller screens */}
+      <div className="h-screen flex flex-col md:flex-row w-full bg-blue-50 overflow-hidden relative">
+        {/* Dark overlay for mobile */}
+        {!sidebarCollapsed && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+        {/* Mobile menu button */}
+        <button 
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="md:hidden fixed top-4 right-4 z-40 bg-gray-800 text-white p-2 rounded-lg shadow-lg"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        {/* Sidebar - Responsive and collapsible */}
         <div className={`
-          bg-gray-800 text-white transition-all duration-300 
-          ${sidebarCollapsed ? 'w-16' : 'w-64'} 
-          flex-shrink-0 sticky top-0 h-screen z-30
+          bg-gray-800 text-white transition-all duration-300 ease-in-out
+          ${sidebarCollapsed ? 'w-0 md:w-16' : 'w-64'} 
+          fixed md:relative md:flex-shrink-0 h-screen z-30
+          transform ${sidebarCollapsed ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}
         `}>
           {/* Sidebar Header with Toggle Button */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between p-2 md:p-4 border-b border-gray-700">
             {!sidebarCollapsed && (
               <div className="flex items-center">
                 <img 
@@ -103,8 +120,8 @@ const AppContent = () => {
           </div>
           
           {/* Navigation Links */}
-          <nav className="mt-4 overflow-y-auto h-[calc(100%-4rem)]">
-            <ul>
+          <nav className="mt-2 md:mt-4 overflow-y-auto h-[calc(100%-4rem)]">
+            <ul className="space-y-1">
               <li>
                 <Link 
                   to="/dashboard"

@@ -6,17 +6,16 @@ export default function PageHeader({
   actionButton = null 
 }) {
   return (
-    <div className="bg-blue-50 flex flex-col sm:flex-row 2xl:flex-row justify-between items-start sm:items-center xl:items-center gap-4 mb-4 sm:mb-6 xl:mb-8 2xl:mb-10">
-      <div>
-        <h1 className="text-2xl sm:text-3xl xl:text-4xl 2xl:text-5xl font-bold">{title}</h1>
-        {description && <p className="text-gray-600 mt-1 sm:mt-1.5 xl:mt-2 text-sm sm:text-base xl:text-lg 2xl:text-xl">{description}</p>}
-      </div>
-      
-      {actionButton && (
-        <div className="self-stretch sm:self-auto">
-          {actionButton}
+    <div className="bg-blue-50 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 p-4 md:p-6 mb-4 md:mb-6 rounded-lg shadow-sm">
+        <div className="w-full md:flex-1 space-y-2">
+            <h1 className="text-2xl md:text-3xl font-bold break-words leading-tight">{title}</h1>
+            {description && <p className="text-gray-600 text-base md:text-lg break-words leading-relaxed">{description}</p>}
         </div>
-      )}
+        {actionButton && (
+          <div className="w-full md:w-auto flex justify-start md:justify-end">
+            {actionButton}
+          </div>
+        )}
     </div>
   );
 }

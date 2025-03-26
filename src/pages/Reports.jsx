@@ -295,38 +295,36 @@ export default function Reports() {
 
             {/* Filters */}
             <div className="bg-white rounded-lg shadow p-4 mb-4">
-                <div className="flex space-x-4 items-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Date Range Inputs */}
-                    <div className="flex space-x-4">
-                        <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Data Inicial
-                            </label>
-                            <input
-                                type="date"
-                                value={filters.startDate || ''}
-                                onChange={(e) => setFilters(prev => ({
-                                    ...prev,
-                                    startDate: e.target.value
-                                }))}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Data Final
-                            </label>
-                            <input
-                                type="date"
-                                value={filters.endDate || ''}
-                                min={filters.startDate || undefined}
-                                onChange={(e) => setFilters(prev => ({
-                                    ...prev,
-                                    endDate: e.target.value
-                                }))}
-                                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Data Inicial
+                        </label>
+                        <input
+                            type="date"
+                            value={filters.startDate || ''}
+                            onChange={(e) => setFilters(prev => ({
+                                ...prev,
+                                startDate: e.target.value
+                            }))}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Data Final
+                        </label>
+                        <input
+                            type="date"
+                            value={filters.endDate || ''}
+                            min={filters.startDate || undefined}
+                            onChange={(e) => setFilters(prev => ({
+                                ...prev,
+                                endDate: e.target.value
+                            }))}
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        />
                     </div>
 
                     {/* Status Filter */}
