@@ -18,17 +18,18 @@ COPY . .
 RUN npm run build
 
 # ======================================
-# STAGE 2: Contêiner de deploy (só os arquivos estáticos)
+# STAGE 2: Container final (Nginx)
 # ======================================
-FROM busybox:latest
+FROM nginx:1.25-alpine
 
-WORKDIR /app
+# Copia build gerada do stage anterior
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copia os arquivos de build
-COPY --from=builder /app/dist /app/dist
+# Opcional: se você tiver um nginx.conf customizado
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Define volume para compartilhar os arquivos estáticos
-VOLUME /app/dist
+# Expõe porta 80
+EXPOSE 80 443
 
-# Comando que mantém o contêiner rodando
-CMD ["tail", "-f", "/dev/null"]
+# Inicia Nginx
+CMD ["nginx", "-g", "daemon off;"]

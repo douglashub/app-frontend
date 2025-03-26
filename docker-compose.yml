@@ -3,51 +3,15 @@ services:
     build: .
     container_name: frontend
     restart: unless-stopped
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
-    networks:
-      - frontend_network
-
-  nginx:
-    image: nginx:alpine
-    container_name: frontend_nginx
-    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      # Arquivo é copiado para o contêiner, em vez de montado
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/lib/letsencrypt:/var/lib/letsencrypt
       - ./certbot-www:/var/www/letsencrypt
-      # Adicione este volume para acessar os arquivos estáticos da aplicação
-      - frontend-data:/usr/share/nginx/html
-    depends_on:
-      - frontend
-    networks:
-      - frontend_network
-
-  certbot:
-    image: certbot/certbot
-    container_name: frontend_certbot
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
-      - /var/lib/letsencrypt:/var/lib/letsencrypt
-      - ./certbot-www:/var/www/letsencrypt
-    depends_on:
-      - nginx
-    entrypoint: >
-      /bin/sh -c 'trap exit TERM;
-      while :;
-      do certbot renew --webroot -w /var/www/letsencrypt --quiet;
-      sleep 12h & wait $${!};
-      done'
-
-volumes:
-  frontend-data:
-    name: frontend-data
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
 
 networks:
-  frontend_network:
-    driver: bridge
+  default:
+    name: frontend_network
